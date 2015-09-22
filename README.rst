@@ -31,3 +31,12 @@ this::
 
   $ ./kinto-update --records=new-records.json --pubkey=pubkey.jwk --privkey=privkey.jwk
 
+How to run the tests?
+=====================
+
+In order to run the tests, you need to install the dev environment, and then
+invoke py.test::
+
+  $ pip install -r dev-requirements.txt
+  $ py.test
+

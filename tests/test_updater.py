@@ -6,10 +6,10 @@ import mock
 import pytest
 
 
-class UpdaterTest(unittest.TestCase):
+class UpdaterConstructorTest(unittest.TestCase):
     @mock.patch('kintoupdater.kintoclient.create_session')
     def test_session_is_defined_if_not_passed(self, create_session):
-        updater = kintoupdater.Updater(
+        kintoupdater.Updater(
             "bucket", "collection",
             auth=("user", "pass"))
 
@@ -32,3 +32,41 @@ class UpdaterTest(unittest.TestCase):
         kintoupdater.Updater("bucket", "collection",
                              auth=("user", "pass"))
         endpoints.assert_called_with()
+
+    def test_endpoints_is_used_if_passed(self):
+        updater = kintoupdater.Updater("bucket", "collection",
+                                       auth=("user", "pass"),
+                                       endpoints=mock.sentinel.endpoints)
+        assert updater.endpoints == mock.sentinel.endpoints
+
+
+class UpdaterGatherRemoteCollectionTest(unittest.TestCase):
+
+    def setUp(self):
+        self._session = mock.MagicMock()
+
+    def _get_response(self, data, headers=None):
+        if headers is None:
+            headers = {}
+        resp = {
+            'data': data
+        }
+        return resp, headers
+
+    def test_pagination_is_followed(self):
+        # Mock the calls to request.
+        expected_collection_data = {'hash': 'super_hash', 'signature': 'sig'}
+        self._session.request.side_effect = [
+            # First one returns the collection information.
+            self._get_response(expected_collection_data),
+            # Second one returns a list of items with a pagination token.
+            self._get_response(['item1', 'item2'], {'Next-Page': 'token'}),
+            # Third one returns a list of items without a pagination token.
+            self._get_response(['item3', 'item4']),
+        ]
+        updater = kintoupdater.Updater(
+            "bucket", "collection", session=self._session)
+
+        records, collection_data = updater.gather_remote_collection()
+        assert collection_data == expected_collection_data
+        assert records == ['item1', 'item2', 'item3', 'item4']

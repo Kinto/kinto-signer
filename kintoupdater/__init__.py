@@ -23,13 +23,15 @@ class Updater(object):
 
     def __init__(self, bucket, collection, auth=None,
                  server_url=kintoclient.DEFAULT_SERVER_URL,
-                 session=None):
+                 session=None, endpoints=None):
         if session is None and auth is None:
             raise ValueError("session or auth should be defined")
         if session is None:
             session = kintoclient.create_session(server_url, auth)
         self.session = session
-        self.endpoints = Endpoints()
+        if endpoints is None:
+            endpoints = Endpoints()
+        self.endpoints = endpoints
         self.bucket = bucket
         self.collection = collection
         self.server_url = server_url

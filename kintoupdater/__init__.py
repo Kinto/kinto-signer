@@ -1,6 +1,10 @@
-import kintoclient
-import json
+import copy
 import hashlib
+import json
+import operator
+import uuid
+
+import kintoclient
 
 
 class Endpoints(object):
@@ -15,6 +19,9 @@ class Endpoints(object):
         return ('{root}/buckets/{bucket}/collections/{coll}/records'
                 .format(root=self.root, bucket=bucket, coll=coll))
 
+    def batch(self):
+        return '{root}/batch'.format(root=self.root)
+
     def root(self):
         return '{root}/'.format(root=self.root)
 
@@ -28,9 +35,9 @@ class Updater(object):
             raise ValueError("session or auth should be defined")
         if session is None:
             session = kintoclient.create_session(server_url, auth)
-        self.session = session
         if endpoints is None:
             endpoints = Endpoints()
+        self.session = session
         self.endpoints = endpoints
         self.bucket = bucket
         self.collection = collection
@@ -71,18 +78,8 @@ class Updater(object):
             message = "The local hash differs from the remote one. Aborting."
             raise ValueError(message)
 
-    def compute_hash(self, records):
-        records = records.copy()
-
-        for record in records:
-            del record.last_modified
-
-        serialized = json.dumps(records, sort_keys=True)
-        h = hashlib.new('sha256')
-        h.update(serialized)
-        return h.hexdigest()
-
-    def add(self, new_records):
+    def add_records(self, new_records):
+        new_records = copy.deepcopy(new_records)
         records, collection_data = self.gather_remote_collection()
 
         if records:
@@ -90,15 +87,45 @@ class Updater(object):
             signature = collection_data['signature']
             self.check_data_validity(records, remote_hash, signature)
 
+        # Create IDs for records which don't already have one.
+        for record in new_records:
+            if 'id' not in record:
+                record['id'] = uuid.uuid4()
+
         # Compute the hash of the old + new records
+        records.extend(new_records)
+        hash_ = compute_hash(records)
+
         # Sign it.
+        # XXX Do it with trunion
         # Send the new records and the new hash + signature to the remote.
+
+
+
+def compute_hash(records):
+    records = copy.deepcopy(records)
+
+    for record in records:
+        del record['last_modified']
+
+    records = sorted(records, key=operator.itemgetter("id"))
+
+    serialized = json.dumps(records, sort_keys=True)
+    print(serialized)
+    h = hashlib.new('sha256')
+    h.update(serialized)
+    return h.hexdigest()
 
 
 def main():
     updater = Updater('default', 'items', auth=('user', 'pass'),
                       server_url='http://localhost:8888/v1')
-    print(updater.gather_remote_collection())
+    new_records = [
+        {"data": "foo"},
+        {"data": "bar"},
+        {"data": "baz"}
+    ]
+    updater.add_records(new_records)
 
 
 if __name__ == '__main__':

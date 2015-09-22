@@ -70,3 +70,28 @@ class UpdaterGatherRemoteCollectionTest(unittest.TestCase):
         records, collection_data = updater.gather_remote_collection()
         assert collection_data == expected_collection_data
         assert records == ['item1', 'item2', 'item3', 'item4']
+
+
+class HashComputingTest(unittest.TestCase):
+    def test_records_are_not_altered(self):
+        records = [
+            {'foo': 'bar', 'last_modified': '12345', 'id': '1'},
+            {'bar': 'baz', 'last_modified': '45678', 'id': '2'},
+        ]
+        kintoupdater.compute_hash(records)
+        assert records == [
+            {'foo': 'bar', 'last_modified': '12345', 'id': '1'},
+            {'bar': 'baz', 'last_modified': '45678', 'id': '2'},
+        ]
+
+    def test_order_doesnt_matters(self):
+        hash1 = kintoupdater.compute_hash([
+            {'foo': 'bar', 'last_modified': '12345', 'id': '1'},
+            {'bar': 'baz', 'last_modified': '45678', 'id': '2'},
+        ])
+        hash2 = kintoupdater.compute_hash([
+            {'last_modified': '45678', 'id': '2', 'bar': 'baz'},
+            {'foo': 'bar', 'id': '1', 'last_modified': '12345'},
+        ])
+
+        assert hash1 == hash2

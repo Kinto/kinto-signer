@@ -20,28 +20,29 @@ class Batch(object):
         # is called.
         self.requests.append((method, url, data, permissions))
 
-    def build_requests(self):
+    def _build_requests(self):
         requests = []
         for (method, url, data, permissions) in self.requests:
             request = {
                 'method': method,
                 'path': url}
 
-            body = {}
+            request['body'] = {}
             if data is not None:
-                body['data'] = data
+                request['body']['data'] = data
             if permissions is not None:
-                body['permissions'] = permissions
-            if body:
-                request['body'] = json.dumps(body)
+                request['body']['permissions'] = permissions
+            requests.append(request)
         return requests
 
     def send(self):
-        return self.session.request(
+        resp = self.session.request(
             'POST',
             self.endpoints.batch(),
-            data={'requests': self.build_requests()}
+            data={'requests': self._build_requests()}
         )
+        self.requests = []
+        return resp
 
 
 class Endpoints(object):

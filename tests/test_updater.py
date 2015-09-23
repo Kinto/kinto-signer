@@ -10,32 +10,32 @@ class UpdaterConstructorTest(unittest.TestCase):
     @mock.patch('kintoupdater.kintoclient.create_session')
     def test_session_is_defined_if_not_passed(self, create_session):
         kintoupdater.Updater(
-            "bucket", "collection",
-            auth=("user", "pass"))
+            'bucket', 'collection',
+            auth=('user', 'pass'))
 
         create_session.assert_called_with(kintoclient.DEFAULT_SERVER_URL,
                                           ('user', 'pass'))
 
     def test_session_is_used_if_passed(self):
         updater = kintoupdater.Updater(
-            "bucket", "collection",
+            'bucket', 'collection',
             session=mock.sentinel.session)
         assert updater.session == mock.sentinel.session
 
     def test_error_is_raised_on_missing_args(self):
         with pytest.raises(ValueError) as e:
-            kintoupdater.Updater("bucket", "collection")
-        assert "session or auth should be defined" in e.value
+            kintoupdater.Updater('bucket', 'collection')
+        assert 'session or auth should be defined' in e.value
 
     @mock.patch('kintoupdater.Endpoints')
     def test_endpoints_is_created_by_constructor(self, endpoints):
-        kintoupdater.Updater("bucket", "collection",
-                             auth=("user", "pass"))
+        kintoupdater.Updater('bucket', 'collection',
+                             auth=('user', 'pass'))
         endpoints.assert_called_with()
 
     def test_endpoints_is_used_if_passed(self):
-        updater = kintoupdater.Updater("bucket", "collection",
-                                       auth=("user", "pass"),
+        updater = kintoupdater.Updater('bucket', 'collection',
+                                       auth=('user', 'pass'),
                                        endpoints=mock.sentinel.endpoints)
         assert updater.endpoints == mock.sentinel.endpoints
 
@@ -65,7 +65,7 @@ class UpdaterGatherRemoteCollectionTest(unittest.TestCase):
             self._get_response(['item3', 'item4']),
         ]
         updater = kintoupdater.Updater(
-            "bucket", "collection", session=self._session)
+            'bucket', 'collection', session=self._session)
 
         records, collection_data = updater.gather_remote_collection()
         assert collection_data == expected_collection_data
@@ -104,14 +104,14 @@ class BatchRequestsTest(unittest.TestCase):
 
     def test_requests_are_stacked(self):
         batch = kintoupdater.Batch(self.session, self.endpoints)
-        batch.add("GET", "/foobar/baz",
+        batch.add('GET', '/foobar/baz',
                   mock.sentinel.data,
                   mock.sentinel.permissions)
         assert len(batch.requests) == 1
 
     def test_send_adds_data_attribute(self):
         batch = kintoupdater.Batch(self.session, self.endpoints)
-        batch.add("GET", "/foobar/baz", data={'foo': 'bar'})
+        batch.add('GET', '/foobar/baz', data={'foo': 'bar'})
         batch.send()
 
         self.session.request.assert_called_with(
@@ -126,7 +126,7 @@ class BatchRequestsTest(unittest.TestCase):
 
     def test_send_adds_permissions_attribute(self):
         batch = kintoupdater.Batch(self.session, self.endpoints)
-        batch.add("GET", "/foobar/baz", permissions=mock.sentinel.permissions)
+        batch.add('GET', '/foobar/baz', permissions=mock.sentinel.permissions)
         batch.send()
 
         self.session.request.assert_called_with(
@@ -141,7 +141,7 @@ class BatchRequestsTest(unittest.TestCase):
 
     def test_send_empties_the_requests_cache(self):
         batch = kintoupdater.Batch(self.session, self.endpoints)
-        batch.add("GET", "/foobar/baz", permissions=mock.sentinel.permissions)
+        batch.add('GET', '/foobar/baz', permissions=mock.sentinel.permissions)
         assert len(batch.requests) == 1
         batch.send()
         assert len(batch.requests) == 0

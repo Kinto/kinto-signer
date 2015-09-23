@@ -4,8 +4,16 @@ import json
 import operator
 import uuid
 import collections
+from contextlib import contextmanager
 
 import kintoclient
+
+
+@contextmanager
+def batch_requests(session, endpoints):
+    batch = Batch(session, endpoints)
+    yield batch
+    batch.send()
 
 
 class Batch(object):
@@ -70,7 +78,7 @@ class Updater(object):
                  server_url=kintoclient.DEFAULT_SERVER_URL,
                  session=None, endpoints=None):
         if session is None and auth is None:
-            raise ValueError("session or auth should be defined")
+            raise ValueError('session or auth should be defined')
         if session is None:
             session = kintoclient.create_session(server_url, auth)
         if endpoints is None:
@@ -82,7 +90,7 @@ class Updater(object):
         self.server_url = server_url
 
     def gather_remote_collection(self):
-        """Retrieves the remote collection and returns it."""
+        '''Retrieves the remote collection and returns it.'''
         collection_resp, _ = self.session.request(
             'get',
             self.endpoints.collection(self.bucket, self.collection))
@@ -113,7 +121,7 @@ class Updater(object):
         # XXX do it with trunion.
         local_hash = self.compute_hash(records)
         if local_hash != remote_hash:
-            message = "The local hash differs from the remote one. Aborting."
+            message = 'The local hash differs from the remote one. Aborting.'
             raise ValueError(message)
 
     def add_records(self, new_records):
@@ -125,20 +133,28 @@ class Updater(object):
             signature = collection_data['signature']
             self.check_data_validity(records, remote_hash, signature)
 
-        # Create IDs for records which don't already have one.
-        for record in new_records:
-            if 'id' not in record:
-                record['id'] = uuid.uuid4()
+        with batch_requests(self.session, self.endpoints) as batch:
+            # Create IDs for records which don't already have one.
+            for record in new_records:
+                if 'id' not in record:
+                    record['id'] = uuid.uuid4()
 
-        # Compute the hash of the old + new records
-        records.extend(new_records)
-        hash_ = compute_hash(records)
+                record_endpoint = self.endpoints.record(
+                    self.bucket, self.collection, record['id'])
 
-        # Sign it.
-        # XXX Do it with trunion
-        # Send the new records and the new hash + signature to the remote.
+                batch.add('PUT', record_endpoint, data=record)
 
+                # Compute the hash of the old + new records
+                # Sign it.
+                # XXX Do it with trunion
+                records.extend(new_records)
+                hash_ = compute_hash(records)
 
+                # Send the new hash + signature to the remote.
+                batch.add(
+                    'PUT',
+                    self.endpoints.records(self.bucket, self.collection),
+                    data={'hash': hash_})
 
 def compute_hash(records):
     records = copy.deepcopy(records)
@@ -146,7 +162,7 @@ def compute_hash(records):
     for record in records:
         del record['last_modified']
 
-    records = sorted(records, key=operator.itemgetter("id"))
+    records = sorted(records, key=operator.itemgetter('id'))
 
     serialized = json.dumps(records, sort_keys=True)
     print(serialized)
@@ -159,9 +175,9 @@ def main():
     updater = Updater('default', 'items', auth=('user', 'pass'),
                       server_url='http://localhost:8888/v1')
     new_records = [
-        {"data": "foo"},
-        {"data": "bar"},
-        {"data": "baz"}
+        {'data': 'foo'},
+        {'data': 'bar'},
+        {'data': 'baz'}
     ]
     updater.add_records(new_records)
 

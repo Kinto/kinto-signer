@@ -145,3 +145,10 @@ class BatchRequestsTest(unittest.TestCase):
         assert len(batch.requests) == 1
         batch.send()
         assert len(batch.requests) == 0
+
+    def test_context_manager_works_as_expected(self):
+        with kintoupdater.batch_requests(self.session, self.endpoints) as batch:
+            batch.add('PUT', '/records/1234', data={'foo': 'bar'})
+            batch.add('PUT', '/records/5678', data={'bar': 'baz'})
+
+        assert self.session.request.called

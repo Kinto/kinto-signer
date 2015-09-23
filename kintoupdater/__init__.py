@@ -7,25 +7,22 @@ import collections
 
 import kintoclient
 
-class Batch(kintoclient.Session):
 
-    def __init__(self, *args, **kwargs):
-        if 'endpoints' in kwargs.keys():
-            endpoints = kwargs['endpoints']
-        else:
-            endpoints = Endpoints()
+class Batch(object):
+
+    def __init__(self, session, endpoints):
+        self.session = session
         self.endpoints = endpoints
         self.requests = []
-        super(BatchSession, self).__init__(*args, **kwargs)
 
-    def request(self, method, url, data=None, permissions=None, **kwargs):
+    def add(self, method, url, data=None, permissions=None):
         # Store all the requests in a dict, to be read later when .send()
         # is called.
-        self.requests.append((method, url, data, permissions, kwargs))
+        self.requests.append((method, url, data, permissions))
 
     def build_requests(self):
         requests = []
-        for (method, url, data, permissions, kwargs) in self.requests:
+        for (method, url, data, permissions) in self.requests:
             request = {
                 'method': method,
                 'path': url}
@@ -40,12 +37,11 @@ class Batch(kintoclient.Session):
         return requests
 
     def send(self):
-        super(BatchSession, self).request(
+        return self.session.request(
             'POST',
             self.endpoints.batch(),
             data={'requests': self.build_requests()}
         )
-
 
 
 class Endpoints(object):

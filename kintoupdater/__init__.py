@@ -3,8 +3,49 @@ import hashlib
 import json
 import operator
 import uuid
+import collections
 
 import kintoclient
+
+class Batch(kintoclient.Session):
+
+    def __init__(self, *args, **kwargs):
+        if 'endpoints' in kwargs.keys():
+            endpoints = kwargs['endpoints']
+        else:
+            endpoints = Endpoints()
+        self.endpoints = endpoints
+        self.requests = []
+        super(BatchSession, self).__init__(*args, **kwargs)
+
+    def request(self, method, url, data=None, permissions=None, **kwargs):
+        # Store all the requests in a dict, to be read later when .send()
+        # is called.
+        self.requests.append((method, url, data, permissions, kwargs))
+
+    def build_requests(self):
+        requests = []
+        for (method, url, data, permissions, kwargs) in self.requests:
+            request = {
+                'method': method,
+                'path': url}
+
+            body = {}
+            if data is not None:
+                body['data'] = data
+            if permissions is not None:
+                body['permissions'] = permissions
+            if body:
+                request['body'] = json.dumps(body)
+        return requests
+
+    def send(self):
+        super(BatchSession, self).request(
+            'POST',
+            self.endpoints.batch(),
+            data={'requests': self.build_requests()}
+        )
+
 
 
 class Endpoints(object):

@@ -97,7 +97,7 @@ class Updater(object):
 
         def _get_records(records=None, token=None):
             if records is None:
-                records = []
+                records = {}
 
             kwargs = {}
             if token is not None:
@@ -107,7 +107,8 @@ class Updater(object):
                 self.endpoints.records(self.bucket, self.collection),
                 **kwargs)
 
-            records.extend(record_resp['data'])
+            records.update({record['id']: record
+                            for record in record_resp['data']})
 
             if 'Next-Page' in headers.keys():
                 return _get_records(records, token=headers['Next-Page'])
@@ -144,17 +145,17 @@ class Updater(object):
 
                 batch.add('PUT', record_endpoint, data=record)
 
-                # Compute the hash of the old + new records
-                # Sign it.
-                # XXX Do it with trunion
-                records.extend(new_records)
-                hash_ = compute_hash(records)
+            # Compute the hash of the old + new records
+            # Sign it.
+            # XXX Do it with trunion
+            records.update({record['id']: record for record in new_records})
+            hash_ = compute_hash(records.values())
 
-                # Send the new hash + signature to the remote.
-                batch.add(
-                    'PUT',
-                    self.endpoints.records(self.bucket, self.collection),
-                    data={'hash': hash_})
+            # Send the new hash + signature to the remote.
+            batch.add(
+                'PUT',
+                self.endpoints.records(self.bucket, self.collection),
+                data={'hash': hash_})
 
 def compute_hash(records):
     records = copy.deepcopy(records)

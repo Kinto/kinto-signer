@@ -45,7 +45,7 @@ class UpdaterGatherRemoteCollectionTest(unittest.TestCase):
     def setUp(self):
         self._session = mock.MagicMock()
 
-    def _get_response(self, data, headers=None):
+    def _build_response(self, data, headers=None):
         if headers is None:
             headers = {}
         resp = {
@@ -58,18 +58,29 @@ class UpdaterGatherRemoteCollectionTest(unittest.TestCase):
         expected_collection_data = {'hash': 'super_hash', 'signature': 'sig'}
         self._session.request.side_effect = [
             # First one returns the collection information.
-            self._get_response(expected_collection_data),
+            self._build_response(expected_collection_data),
             # Second one returns a list of items with a pagination token.
-            self._get_response(['item1', 'item2'], {'Next-Page': 'token'}),
+            self._build_response(
+                [{'id': '1', 'value': 'item1'},
+                {'id': '2', 'value': 'item2'},],
+                {'Next-Page': 'token'}),
             # Third one returns a list of items without a pagination token.
-            self._get_response(['item3', 'item4']),
+            self._build_response(
+                [{'id': '3', 'value': 'item3'},
+                {'id': '4', 'value': 'item4'},],
+            ),
         ]
         updater = kintoupdater.Updater(
             'bucket', 'collection', session=self._session)
 
         records, collection_data = updater.gather_remote_collection()
         assert collection_data == expected_collection_data
-        assert records == ['item1', 'item2', 'item3', 'item4']
+        assert records == {
+            '1': {'id': '1', 'value': 'item1'},
+            '2': {'id': '2', 'value': 'item2'},
+            '3': {'id': '3', 'value': 'item3'},
+            '4': {'id': '4', 'value': 'item4'},
+        }
 
 
 class HashComputingTest(unittest.TestCase):

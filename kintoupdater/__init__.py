@@ -8,6 +8,8 @@ from contextlib import contextmanager
 
 import kintoclient
 
+from . import signing
+
 
 @contextmanager
 def batch_requests(session, endpoints):
@@ -76,15 +78,27 @@ class Updater(object):
 
     def __init__(self, bucket, collection, auth=None,
                  server_url=kintoclient.DEFAULT_SERVER_URL,
-                 session=None, endpoints=None):
+                 session=None, endpoints=None,
+                 signer=None, settings=None):
         if session is None and auth is None:
             raise ValueError('session or auth should be defined')
         if session is None:
-            session = kintoclient.create_session(server_url, auth)
+            session = kintoclient.create_session(
+                server_url, auth)
+        self.session = session
+
+        if settings is None:
+            settings = {}
+        self.settings = settings
+
+        if signer is None:
+            signer = signing.RSABackend(self.settings)
+        self.signer = signer
+
         if endpoints is None:
             endpoints = Endpoints()
-        self.session = session
         self.endpoints = endpoints
+
         self.bucket = bucket
         self.collection = collection
         self.server_url = server_url
@@ -117,13 +131,9 @@ class Updater(object):
         records = _get_records()
         return records, collection_resp['data']
 
-    def check_data_validity(self, records, remote_hash, signature):
-        # Check the validity of the signature.
-        # XXX do it with trunion.
+    def check_data_validity(self, records, signature):
         local_hash = self.compute_hash(records)
-        if local_hash != remote_hash:
-            message = 'The local hash differs from the remote one. Aborting.'
-            raise ValueError(message)
+        self.signer.verify(local_hash, signature)
 
     def add_records(self, new_records):
         new_records = copy.deepcopy(new_records)
@@ -132,7 +142,7 @@ class Updater(object):
         if records:
             remote_hash = collection_data['hash']
             signature = collection_data['signature']
-            self.check_data_validity(records, remote_hash, signature)
+            self.check_data_validity(records, signature)
 
         with batch_requests(self.session, self.endpoints) as batch:
             # Create IDs for records which don't already have one.
@@ -146,16 +156,17 @@ class Updater(object):
                 batch.add('PUT', record_endpoint, data=record)
 
             # Compute the hash of the old + new records
-            # Sign it.
-            # XXX Do it with trunion
-            records.update({record['id']: record for record in new_records})
-            hash_ = compute_hash(records.values())
+            records.update({record['id']: record
+                            for record in new_records})
+            new_hash = compute_hash(records.values())
+            signature = self.signer.sign(new_hash)
 
             # Send the new hash + signature to the remote.
             batch.add(
                 'PUT',
                 self.endpoints.records(self.bucket, self.collection),
-                data={'hash': hash_})
+                data={'signature': signature}
+            )
 
 def compute_hash(records):
     records = copy.deepcopy(records)

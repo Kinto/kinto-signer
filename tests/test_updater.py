@@ -11,7 +11,8 @@ class UpdaterConstructorTest(unittest.TestCase):
     def test_session_is_defined_if_not_passed(self, create_session):
         kintoupdater.Updater(
             'bucket', 'collection',
-            auth=('user', 'pass'))
+            auth=('user', 'pass'),
+            signer=mock.MagicMock())
 
         create_session.assert_called_with(kintoclient.DEFAULT_SERVER_URL,
                                           ('user', 'pass'))
@@ -19,7 +20,8 @@ class UpdaterConstructorTest(unittest.TestCase):
     def test_session_is_used_if_passed(self):
         updater = kintoupdater.Updater(
             'bucket', 'collection',
-            session=mock.sentinel.session)
+            session=mock.sentinel.session,
+            signer=mock.MagicMock())
         assert updater.session == mock.sentinel.session
 
     def test_error_is_raised_on_missing_args(self):
@@ -30,12 +32,14 @@ class UpdaterConstructorTest(unittest.TestCase):
     @mock.patch('kintoupdater.Endpoints')
     def test_endpoints_is_created_by_constructor(self, endpoints):
         kintoupdater.Updater('bucket', 'collection',
-                             auth=('user', 'pass'))
+                             auth=('user', 'pass'),
+                             signer=mock.MagicMock())
         endpoints.assert_called_with()
 
     def test_endpoints_is_used_if_passed(self):
         updater = kintoupdater.Updater('bucket', 'collection',
                                        auth=('user', 'pass'),
+                                       signer=mock.MagicMock(),
                                        endpoints=mock.sentinel.endpoints)
         assert updater.endpoints == mock.sentinel.endpoints
 
@@ -71,7 +75,8 @@ class UpdaterGatherRemoteCollectionTest(unittest.TestCase):
             ),
         ]
         updater = kintoupdater.Updater(
-            'bucket', 'collection', session=self._session)
+            'bucket', 'collection', session=self._session,
+            signer=mock.MagicMock())
 
         records, collection_data = updater.gather_remote_collection()
         assert collection_data == expected_collection_data
@@ -163,3 +168,28 @@ class BatchRequestsTest(unittest.TestCase):
             batch.add('PUT', '/records/5678', data={'bar': 'baz'})
 
         assert self.session.request.called
+
+
+class DataValidityTest(unittest.TestCase):
+
+    def setUp(self):
+        self.session = mock.MagicMock()
+        self.endpoints = mock.MagicMock()
+        self.signer = mock.MagicMock()
+
+    def test_data_validity_uses_configured_backend(self):
+        updater = kintoupdater.Updater(
+            'bucket', 'collection',
+            auth=('user', 'pass'),
+            session=self.session,
+            endpoints=self.endpoints,
+            signer=self.signer
+        )
+        updater.compute_hash = mock.MagicMock(return_value='1234')
+
+        records = [{'id': '1', 'data': 'value'}]
+        updater.check_data_validity(records, mock.sentinel.signature)
+        self.signer.verify.assert_called_with(
+            '1234',
+            mock.sentinel.signature
+        )

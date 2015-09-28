@@ -1,3 +1,6 @@
+import binascii
+
+
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
@@ -46,12 +49,14 @@ class RSABackend(object):
             hashes.SHA256())
 
         signer.update(payload)
-        return signer.finalize()
+        signature = signer.finalize()
+        return binascii.b2a_base64(signature)
 
     def verify(self, payload, signature):
+        signature_bytes = binascii.a2b_base64(signature)
         public_key = self.load_private_key().public_key()
         verifier = public_key.verifier(
-            signature,
+            signature_bytes,
             self._get_padding(),
             hashes.SHA256())
         verifier.update(payload)

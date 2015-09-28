@@ -1,5 +1,7 @@
-import pytest
 import tempfile
+import re
+
+import pytest
 from cryptography.exceptions import InvalidSignature
 
 from kintoupdater import signing
@@ -36,3 +38,9 @@ class RSABackendTest(unittest.TestCase):
     def test_wrong_signature_raises_an_error(self):
         with pytest.raises(InvalidSignature):
             self.signer.verify("this is some text", "wrong sig")
+
+    def test_signing_returns_a_hexadecimal_string(self):
+        signature = self.signer.sign("this is some text")
+        assert re.match(
+            r'(?:[A-Za-z0-9+/]{4}){2,}(?:[A-Za-z0-9+/]{2}[AEIMQUYcgkosw048]' +
+             '=|[A-Za-z0-9+/][AQgw]==)', signature) is not None

@@ -8,7 +8,7 @@ from contextlib import contextmanager
 
 import kintoclient
 
-from . import signing
+import signing
 
 
 @contextmanager
@@ -46,10 +46,11 @@ class Batch(object):
         return requests
 
     def send(self):
+        requests = self._build_requests()
         resp = self.session.request(
             'POST',
             self.endpoints.batch(),
-            data={'requests': self._build_requests()}
+            data={'requests': requests}
         )
         self.requests = []
         return resp
@@ -66,6 +67,11 @@ class Endpoints(object):
     def records(self, bucket, coll):
         return ('{root}/buckets/{bucket}/collections/{coll}/records'
                 .format(root=self.root, bucket=bucket, coll=coll))
+
+    def record(self, bucket, coll, record_id):
+        return ('{root}/buckets/{bucket}/collections/{coll}/records/{rid}'
+                .format(root=self.root, bucket=bucket, coll=coll,
+                        rid=record_id))
 
     def batch(self):
         return '{root}/batch'.format(root=self.root)
@@ -132,7 +138,7 @@ class Updater(object):
         return records, collection_resp['data']
 
     def check_data_validity(self, records, signature):
-        local_hash = self.compute_hash(records)
+        local_hash = compute_hash(records.values())
         self.signer.verify(local_hash, signature)
 
     def add_records(self, new_records):
@@ -148,7 +154,7 @@ class Updater(object):
             # Create IDs for records which don't already have one.
             for record in new_records:
                 if 'id' not in record:
-                    record['id'] = uuid.uuid4()
+                    record['id'] = str(uuid.uuid4())
 
                 record_endpoint = self.endpoints.record(
                     self.bucket, self.collection, record['id'])
@@ -170,9 +176,9 @@ class Updater(object):
 
 def compute_hash(records):
     records = copy.deepcopy(records)
-
     for record in records:
-        del record['last_modified']
+        if 'last_modified' in record.keys():
+            del record['last_modified']
 
     records = sorted(records, key=operator.itemgetter('id'))
 
@@ -182,16 +188,26 @@ def compute_hash(records):
     h.update(serialized)
     return h.hexdigest()
 
+def generate_key():
+    signer = signing.RSABackend()
+    return signer.generate_key()
+
+def add_new_items(items, settings):
+    updater = Updater('default', 'items', auth=('user', 'pass'),
+                      server_url='http://localhost:8888/v1',
+                      settings=settings)
+    updater.add_records(items)
 
 def main():
-    updater = Updater('default', 'items', auth=('user', 'pass'),
-                      server_url='http://localhost:8888/v1')
-    new_records = [
+    #print generate_key()
+    items = [
         {'data': 'foo'},
         {'data': 'bar'},
         {'data': 'baz'}
     ]
-    updater.add_records(new_records)
+    add_new_items(items, {'private_key': 'test.pem'})
+
+
 
 
 if __name__ == '__main__':

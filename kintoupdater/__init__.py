@@ -193,28 +193,3 @@ def compute_hash(records):
     h = hashlib.new('sha256')
     h.update(serialized)
     return h.hexdigest()
-
-def generate_key():
-    signer = signing.RSABackend()
-    return signer.generate_key()
-
-def add_new_items(items, settings):
-    updater = Updater('default', 'items', auth=('user', 'pass'),
-                      server_url='http://localhost:8888/v1',
-                      settings=settings)
-    updater.add_records(items)
-
-def main():
-    #print generate_key()
-    items = [
-        {'data': 'foo'},
-        {'data': 'bar'},
-        {'data': 'baz'}
-    ]
-    add_new_items(items, {'private_key': 'test.pem'})
-
-
-
-
-if __name__ == '__main__':
-    main()

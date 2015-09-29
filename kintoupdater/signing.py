@@ -1,6 +1,5 @@
 import binascii
 
-
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa
@@ -9,10 +8,10 @@ from cryptography.hazmat.primitives.asymmetric import padding, rsa
 class RSABackend(object):
     """Local RSA signature backend.
     """
+    key_size = 4096
+
     def __init__(self, settings=None):
-        if settings is None:
-            settings = {}
-        self.settings = settings
+        self.settings = settings or {}
 
     def _get_padding(self):
         return padding.PSS(
@@ -33,7 +32,7 @@ class RSABackend(object):
     def generate_key(self):
         private_key = rsa.generate_private_key(
             public_exponent=65537,
-            key_size=4096,
+            key_size=self.key_size,
             backend=default_backend())
         pem = private_key.private_bytes(
             encoding=serialization.Encoding.PEM,

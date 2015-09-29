@@ -5,7 +5,7 @@ import os
 import pytest
 from cryptography.exceptions import InvalidSignature
 
-from kintoupdater import signing
+from kinto_updater import signing
 from .support import unittest
 
 

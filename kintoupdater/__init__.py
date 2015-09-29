@@ -30,14 +30,14 @@ class Batch(object):
         self.endpoints = endpoints
         self.requests = []
 
-    def add(self, method, url, data=None, permissions=None):
+    def add(self, method, url, data=None, permissions=None, headers=None):
         # Store all the requests in a dict, to be read later when .send()
         # is called.
-        self.requests.append((method, url, data, permissions))
+        self.requests.append((method, url, data, permissions, headers))
 
     def _build_requests(self):
         requests = []
-        for (method, url, data, permissions) in self.requests:
+        for (method, url, data, permissions, headers) in self.requests:
             request = {
                 'method': method,
                 'path': url}
@@ -47,6 +47,8 @@ class Batch(object):
                 request['body']['data'] = data
             if permissions is not None:
                 request['body']['permissions'] = permissions
+            if headers is not None:
+                request['headers'] = headers
             requests.append(request)
         return requests
 
@@ -155,13 +157,15 @@ class Updater(object):
         with batch_requests(self.session, self.endpoints) as batch:
             # Create IDs for records which don't already have one.
             for record in new_records:
+                headers = {}
                 if 'id' not in record:
                     record['id'] = str(uuid.uuid4())
+                headers['If-None-Match'] = '*'
 
                 record_endpoint = self.endpoints.record(
                     self.bucket, self.collection, record['id'])
 
-                batch.add('PUT', record_endpoint, data=record)
+                batch.add('PUT', record_endpoint, data=record, headers=headers)
 
             # Compute the hash of the old + new records
             records.update({record['id']: record

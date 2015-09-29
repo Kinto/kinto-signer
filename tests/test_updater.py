@@ -175,12 +175,14 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
                 {
                     'body': {'data': {'foo': 'bar', 'id': '1'}},
                     'path': '/buckets/bucket/collections/collection/records/1',
-                    'method': 'PUT'
+                    'method': 'PUT',
+                    'headers': {'If-None-Match': '*'}
                 },
                 {
                     'body': {'data': {'bar': 'baz', 'id': '2'}},
                     'path': '/buckets/bucket/collections/collection/records/2',
-                    'method': 'PUT'
+                    'method': 'PUT',
+                    'headers': {'If-None-Match': '*'}
                 },
                 {
                     'body': {'data': {'signature': '1234'}},
@@ -219,12 +221,14 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
                 {
                     'body': {'data': {'foo': 'bar', 'id': '1'}},
                     'path': '/buckets/bucket/collections/collection/records/1',
-                    'method': 'PUT'
+                    'method': 'PUT',
+                    'headers': {'If-None-Match': '*'}
                 },
                 {
                     'body': {'data': {'bar': 'baz', 'id': '2'}},
                     'path': '/buckets/bucket/collections/collection/records/2',
-                    'method': 'PUT'
+                    'method': 'PUT',
+                    'headers': {'If-None-Match': '*'}
                 },
                 {
                     'body': {'data': {'signature': '1234'}},
@@ -299,6 +303,22 @@ class BatchRequestsTest(unittest.TestCase):
                 'method': 'GET',
                 'path': '/foobar/baz',
                 'body': {'permissions': mock.sentinel.permissions}
+            }]}
+        )
+
+    def test_send_adds_headers_if_specified(self):
+        batch = kintoupdater.Batch(self.session, self.endpoints)
+        batch.add('GET', '/foobar/baz', headers={'Foo': 'Bar'})
+        batch.send()
+
+        self.session.request.assert_called_with(
+            'POST',
+            self.endpoints.batch(),
+            data={'requests': [{
+                'method': 'GET',
+                'path': '/foobar/baz',
+                'headers': {'Foo': 'Bar'},
+                'body': {}
             }]}
         )
 

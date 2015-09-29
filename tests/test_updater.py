@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from .support import unittest
 
 import kintoupdater
@@ -253,12 +255,12 @@ class HashComputingTest(unittest.TestCase):
 
     def test_order_doesnt_matters(self):
         hash1 = kintoupdater.compute_hash([
-            {'foo': 'bar', 'last_modified': '12345', 'id': '1'},
-            {'bar': 'baz', 'last_modified': '45678', 'id': '2'},
+            OrderedDict({'foo': 'bar', 'last_modified': '12345', 'id': '1'}),
+            OrderedDict({'bar': 'baz', 'last_modified': '45678', 'id': '2'}),
         ])
         hash2 = kintoupdater.compute_hash([
-            {'last_modified': '45678', 'id': '2', 'bar': 'baz'},
-            {'foo': 'bar', 'id': '1', 'last_modified': '12345'},
+            OrderedDict({'last_modified': '45678', 'id': '2', 'bar': 'baz'}),
+            OrderedDict({'foo': 'bar', 'id': '1', 'last_modified': '12345'}),
         ])
 
         assert hash1 == hash2

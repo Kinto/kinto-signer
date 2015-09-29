@@ -1,5 +1,6 @@
 import tempfile
 import re
+import os
 
 import pytest
 from cryptography.exceptions import InvalidSignature
@@ -22,6 +23,10 @@ class RSABackendTest(unittest.TestCase):
             {'private_key': self.key_location}
         )
 
+    @classmethod
+    def tearDownClass(self):
+        os.remove(self.key_location)
+
     def test_keyloading_fails_if_no_settings(self):
         backend = signing.RSABackend()
         with pytest.raises(ValueError) as e:
@@ -41,6 +46,6 @@ class RSABackendTest(unittest.TestCase):
 
     def test_signing_returns_a_hexadecimal_string(self):
         signature = self.signer.sign("this is some text")
-        assert re.match(
-            r'(?:[A-Za-z0-9+/]{4}){2,}(?:[A-Za-z0-9+/]{2}[AEIMQUYcgkosw048]' +
-             '=|[A-Za-z0-9+/][AQgw]==)', signature) is not None
+        hexa_regexp = (r'(?:[A-Za-z0-9+/]{4}){2,}(?:[A-Za-z0-9+/]'
+                        '{2}[AEIMQUYcgkosw048]=|[A-Za-z0-9+/][AQgw]==)')
+        assert re.match(hexa_regexp, signature) is not None

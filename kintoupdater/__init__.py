@@ -1,9 +1,10 @@
+import collections
 import copy
 import hashlib
 import json
 import operator
 import uuid
-import collections
+import urlparse
 from contextlib import contextmanager
 
 import kintoclient
@@ -89,8 +90,7 @@ class Updater(object):
         if session is None and auth is None:
             raise ValueError('session or auth should be defined')
         if session is None:
-            session = kintoclient.create_session(
-                server_url, auth)
+            session = kintoclient.create_session(server_url, auth)
         self.session = session
 
         if settings is None:
@@ -111,27 +111,24 @@ class Updater(object):
 
     def gather_remote_collection(self):
         '''Retrieves the remote collection and returns it.'''
-        collection_resp, _ = self.session.request(
-            'get',
-            self.endpoints.collection(self.bucket, self.collection))
+        coll_url = self.endpoints.collection(self.bucket, self.collection)
+        collection_resp, _ = self.session.request('get', coll_url)
 
-        def _get_records(records=None, token=None):
+        def _get_records(records=None, url=None):
             if records is None:
                 records = {}
 
-            kwargs = {}
-            if token is not None:
-                kwargs['_token'] = token
-            record_resp, headers = self.session.request(
-                'get',
-                self.endpoints.records(self.bucket, self.collection),
-                **kwargs)
+            if url is None:
+                url = self.endpoints.records(self.bucket, self.collection)
+            record_resp, headers = self.session.request('get', url)
 
             records.update({record['id']: record
                             for record in record_resp['data']})
 
             if 'Next-Page' in headers.keys():
-                return _get_records(records, token=headers['Next-Page'])
+                parsed = urlparse.urlparse(headers['Next-Page'])
+                url = "{0}?{1}".format(parsed.path, parsed.query)
+                return _get_records(records, url=url)
             return records
 
         records = _get_records()

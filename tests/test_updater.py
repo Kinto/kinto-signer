@@ -62,6 +62,9 @@ class UpdaterGatherRemoteCollectionTest(unittest.TestCase, BaseUpdaterTest):
     def test_pagination_is_followed(self):
         # Mock the calls to request.
         expected_collection_data = {'hash': 'super_hash', 'signature': 'sig'}
+        link = ('http://example.org/buckets/buck/collections/coll/records/'
+                '?token=1234')
+
         self.session.request.side_effect = [
             # First one returns the collection information.
             self._build_response(expected_collection_data),
@@ -69,7 +72,7 @@ class UpdaterGatherRemoteCollectionTest(unittest.TestCase, BaseUpdaterTest):
             self._build_response(
                 [{'id': '1', 'value': 'item1'},
                 {'id': '2', 'value': 'item2'},],
-                {'Next-Page': 'token'}),
+                {'Next-Page': link}),
             # Third one returns a list of items without a pagination token.
             self._build_response(
                 [{'id': '3', 'value': 'item3'},
@@ -88,6 +91,9 @@ class UpdaterGatherRemoteCollectionTest(unittest.TestCase, BaseUpdaterTest):
             '3': {'id': '3', 'value': 'item3'},
             '4': {'id': '4', 'value': 'item4'},
         }
+        self.session.request.assert_called_with(
+            'get', '/buckets/buck/collections/coll/records/?token=1234'
+        )
 
 
 class UpdaterDataValidityTest(unittest.TestCase, BaseUpdaterTest):

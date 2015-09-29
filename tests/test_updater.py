@@ -186,8 +186,8 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
                 },
                 {
                     'body': {'data': {'signature': '1234'}},
-                    'path': '/buckets/bucket/collections/collection/records',
-                    'method': 'PUT'
+                    'path': '/buckets/bucket/collections/collection',
+                    'method': 'PATCH'
                 }
             ]}
         )
@@ -232,8 +232,8 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
                 },
                 {
                     'body': {'data': {'signature': '1234'}},
-                    'path': '/buckets/bucket/collections/collection/records',
-                    'method': 'PUT'
+                    'path': '/buckets/bucket/collections/collection',
+                    'method': 'PATCH'
                 }
             ]}
         )

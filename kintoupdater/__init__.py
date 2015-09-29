@@ -175,8 +175,8 @@ class Updater(object):
 
             # Send the new hash + signature to the remote.
             batch.add(
-                'PUT',
-                self.endpoints.records(self.bucket, self.collection),
+                'PATCH',
+                self.endpoints.collection(self.bucket, self.collection),
                 data={'signature': signature}
             )
 

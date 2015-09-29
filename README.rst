@@ -23,13 +23,6 @@ How to install?
   $ mkvirtualenv kinto-updater
   $ pip install -r requirements.txt
 
-How to use it?
-==============
-
-Once installed, in order to use it, you can use the `kinto-update` script, like
-this::
-
-  $ ./kinto-update --records=new-records.json --pubkey=pubkey.jwk --privkey=privkey.jwk
 
 How to run the tests?
 =====================

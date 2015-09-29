@@ -337,3 +337,21 @@ class BatchRequestsTest(unittest.TestCase):
             batch.add('PUT', '/records/5678', data={'bar': 'baz'})
 
         assert self.session.request.called
+
+
+class EndpointsTest(unittest.TestCase):
+
+    def test_endpoints(self):
+        endpoints = kinto_updater.Endpoints()
+
+        collection_endpoint = '/buckets/buck/collections/coll'
+        assert endpoints.collection('buck', 'coll') == collection_endpoint
+
+        root_endpont = '/'
+        assert endpoints.root() == root_endpoint
+
+        records_endpoint = '/buckets/buck/collections/coll/records'
+        assert endpoints.records('buck', 'coll') == records_endpoints
+
+        record_endpoint = '/bucket/buck/collections/coll/records/1'
+        assert endpoints.record('buck', 'coll', '1') == record_endpoint

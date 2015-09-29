@@ -136,6 +136,24 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
             signer=self.signer
         )
 
+    def test_add_records_fails_if_existing_collection_without_signature(self):
+        records = [
+            {'foo': 'bar'},
+            {'bar': 'baz'},
+        ]
+        self.session.request.side_effect = [
+            # First one returns the collection information (without sig).
+            self._build_response({}),
+            # Second returns the items in the collection.
+            self._build_response([
+                {'id': '1', 'value': 'item1'},
+                {'id': '2', 'value': 'item2'}]
+            ),
+        ]
+
+        with pytest.raises(kintoupdater.UpdaterException):
+            self.updater.add_records(records)
+
     @mock.patch('uuid.uuid4')
     def test_add_records_to_empty_collection(self, uuid4):
         records = [
@@ -144,7 +162,7 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
         ]
         self.session.request.side_effect = [
             # First one returns the collection information.
-            self._build_response({'hash': 'super_hash', 'signature': 'sig'}),
+            self._build_response({}),
             self._build_response([]),
         ]
         uuid4.side_effect = [1, 2]
@@ -181,7 +199,7 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
         ]
         self.session.request.side_effect = [
             # First one returns the collection information.
-            self._build_response({'hash': 'super_hash', 'signature': 'sig'}),
+            self._build_response({'signature': 'sig'}),
             # Second returns the items in the collection.
             self._build_response([
                 {'id': '1', 'value': 'item1'},

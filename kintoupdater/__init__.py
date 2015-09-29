@@ -12,6 +12,10 @@ import kintoclient
 import signing
 
 
+class UpdaterException(Exception):
+    pass
+
+
 @contextmanager
 def batch_requests(session, endpoints):
     batch = Batch(session, endpoints)
@@ -143,7 +147,8 @@ class Updater(object):
         records, collection_data = self.gather_remote_collection()
 
         if records:
-            remote_hash = collection_data['hash']
+            if 'signature' not in collection_data:
+                raise UpdaterException("Unable to verify unsigned data")
             signature = collection_data['signature']
             self.check_data_validity(records, signature)
 

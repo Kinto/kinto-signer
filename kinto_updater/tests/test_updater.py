@@ -41,7 +41,7 @@ class UpdaterConstructorTest(unittest.TestCase, BaseUpdaterTest):
             kinto_updater.Updater('bucket', 'collection')
         assert 'session or auth should be defined' in e.value
 
-    @mock.patch('kinto_updater.Endpoints')
+    @mock.patch('kinto_client.Endpoints')
     def test_endpoints_is_created_by_constructor(self, endpoints):
         kinto_updater.Updater('bucket', 'collection',
                               auth=('user', 'pass'),
@@ -135,7 +135,7 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
 
     def setUp(self):
         self.session = mock.MagicMock()
-        self.endpoints = kinto_updater.Endpoints()
+        self.endpoints = kinto_client.Endpoints()
         self.signer = mock.MagicMock()
         self.updater = kinto_updater.Updater(
             'bucket', 'collection',

@@ -6,6 +6,7 @@ import uuid
 import urlparse
 
 import kinto_client
+from kinto_client import batch_requests
 
 import signing
 
@@ -35,7 +36,7 @@ class Updater(object):
         self.signer = signer
 
         if endpoints is None:
-            endpoints = Endpoints()
+            endpoints = kinto_client.Endpoints()
         self.endpoints = endpoints
 
         self.bucket = bucket

@@ -1,6 +1,12 @@
 Kinto updater
 #############
 
+|travis|
+
+.. |travis| image:: https://travis-ci.org/mozilla-services/kinto-updater.svg?branch=master
+    :target: https://travis-ci.org/mozilla-services/kinto-updater
+
+
 What does this do?
 ==================
 

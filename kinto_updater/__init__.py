@@ -4,9 +4,9 @@ import json
 import operator
 import uuid
 import urlparse
-from contextlib import contextmanager
 
-import kintoclient
+import kinto_client
+from kinto_client import batch_requests
 
 import signing
 
@@ -15,87 +15,16 @@ class UpdaterException(Exception):
     pass
 
 
-@contextmanager
-def batch_requests(session, endpoints):
-    batch = Batch(session, endpoints)
-    yield batch
-    batch.send()
-
-
-class Batch(object):
-
-    def __init__(self, session, endpoints):
-        self.session = session
-        self.endpoints = endpoints
-        self.requests = []
-
-    def add(self, method, url, data=None, permissions=None, headers=None):
-        # Store all the requests in a dict, to be read later when .send()
-        # is called.
-        self.requests.append((method, url, data, permissions, headers))
-
-    def _build_requests(self):
-        requests = []
-        for (method, url, data, permissions, headers) in self.requests:
-            request = {
-                'method': method,
-                'path': url}
-
-            request['body'] = {}
-            if data is not None:
-                request['body']['data'] = data
-            if permissions is not None:
-                request['body']['permissions'] = permissions
-            if headers is not None:
-                request['headers'] = headers
-            requests.append(request)
-        return requests
-
-    def send(self):
-        requests = self._build_requests()
-        resp = self.session.request(
-            'POST',
-            self.endpoints.batch(),
-            data={'requests': requests}
-        )
-        self.requests = []
-        return resp
-
-
-class Endpoints(object):
-    def __init__(self, root=''):
-        self._root = root
-
-    def collection(self, bucket, coll):
-        return ('{root}/buckets/{bucket}/collections/{coll}'
-                .format(root=self._root, bucket=bucket, coll=coll))
-
-    def records(self, bucket, coll):
-        return ('{root}/buckets/{bucket}/collections/{coll}/records'
-                .format(root=self._root, bucket=bucket, coll=coll))
-
-    def record(self, bucket, coll, record_id):
-        return ('{root}/buckets/{bucket}/collections/{coll}/records/{rid}'
-                .format(root=self._root, bucket=bucket, coll=coll,
-                        rid=record_id))
-
-    def batch(self):
-        return '{root}/batch'.format(root=self._root)
-
-    def root(self):
-        return '{root}/'.format(root=self._root)
-
-
 class Updater(object):
 
     def __init__(self, bucket, collection, auth=None,
-                 server_url=kintoclient.DEFAULT_SERVER_URL,
+                 server_url=kinto_client.DEFAULT_SERVER_URL,
                  session=None, endpoints=None,
                  signer=None, settings=None):
         if session is None and auth is None:
             raise ValueError('session or auth should be defined')
         if session is None:
-            session = kintoclient.create_session(server_url, auth)
+            session = kinto_client.create_session(server_url, auth)
         self.session = session
 
         if settings is None:
@@ -107,7 +36,7 @@ class Updater(object):
         self.signer = signer
 
         if endpoints is None:
-            endpoints = Endpoints()
+            endpoints = kinto_client.Endpoints()
         self.endpoints = endpoints
 
         self.bucket = bucket

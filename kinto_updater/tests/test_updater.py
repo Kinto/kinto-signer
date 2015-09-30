@@ -3,7 +3,7 @@ from collections import OrderedDict
 from .support import unittest
 
 import kinto_updater
-import kintoclient
+import kinto_client
 import mock
 import pytest
 
@@ -19,14 +19,14 @@ class BaseUpdaterTest(object):
 
 
 class UpdaterConstructorTest(unittest.TestCase, BaseUpdaterTest):
-    @mock.patch('kinto_updater.kintoclient.create_session')
+    @mock.patch('kinto_updater.kinto_client.create_session')
     def test_session_is_defined_if_not_passed(self, create_session):
         kinto_updater.Updater(
             'bucket', 'collection',
             auth=('user', 'pass'),
             signer=mock.MagicMock())
 
-        create_session.assert_called_with(kintoclient.DEFAULT_SERVER_URL,
+        create_session.assert_called_with(kinto_client.DEFAULT_SERVER_URL,
                                           ('user', 'pass'))
 
     def test_session_is_used_if_passed(self):
@@ -271,95 +271,3 @@ class HashComputingTest(unittest.TestCase):
         ])
 
         assert hash1 == hash2
-
-
-class BatchRequestsTest(unittest.TestCase):
-    def setUp(self):
-        self.session = mock.MagicMock()
-        self.endpoints = mock.MagicMock()
-
-    def test_requests_are_stacked(self):
-        batch = kinto_updater.Batch(self.session, self.endpoints)
-        batch.add('GET', '/foobar/baz',
-                  mock.sentinel.data,
-                  mock.sentinel.permissions)
-        assert len(batch.requests) == 1
-
-    def test_send_adds_data_attribute(self):
-        batch = kinto_updater.Batch(self.session, self.endpoints)
-        batch.add('GET', '/foobar/baz', data={'foo': 'bar'})
-        batch.send()
-
-        self.session.request.assert_called_with(
-            'POST',
-            self.endpoints.batch(),
-            data={'requests': [{
-                'method': 'GET',
-                'path': '/foobar/baz',
-                'body': {'data': {'foo': 'bar'}}
-            }]}
-        )
-
-    def test_send_adds_permissions_attribute(self):
-        batch = kinto_updater.Batch(self.session, self.endpoints)
-        batch.add('GET', '/foobar/baz', permissions=mock.sentinel.permissions)
-        batch.send()
-
-        self.session.request.assert_called_with(
-            'POST',
-            self.endpoints.batch(),
-            data={'requests': [{
-                'method': 'GET',
-                'path': '/foobar/baz',
-                'body': {'permissions': mock.sentinel.permissions}
-            }]}
-        )
-
-    def test_send_adds_headers_if_specified(self):
-        batch = kinto_updater.Batch(self.session, self.endpoints)
-        batch.add('GET', '/foobar/baz', headers={'Foo': 'Bar'})
-        batch.send()
-
-        self.session.request.assert_called_with(
-            'POST',
-            self.endpoints.batch(),
-            data={'requests': [{
-                'method': 'GET',
-                'path': '/foobar/baz',
-                'headers': {'Foo': 'Bar'},
-                'body': {}
-            }]}
-        )
-
-    def test_send_empties_the_requests_cache(self):
-        batch = kinto_updater.Batch(self.session, self.endpoints)
-        batch.add('GET', '/foobar/baz', permissions=mock.sentinel.permissions)
-        assert len(batch.requests) == 1
-        batch.send()
-        assert len(batch.requests) == 0
-
-    def test_context_manager_works_as_expected(self):
-        batcher = kinto_updater.batch_requests
-        with batcher(self.session, self.endpoints) as batch:
-            batch.add('PUT', '/records/1234', data={'foo': 'bar'})
-            batch.add('PUT', '/records/5678', data={'bar': 'baz'})
-
-        assert self.session.request.called
-
-
-class EndpointsTest(unittest.TestCase):
-
-    def test_endpoints(self):
-        endpoints = kinto_updater.Endpoints()
-
-        collection_endpoint = '/buckets/buck/collections/coll'
-        assert endpoints.collection('buck', 'coll') == collection_endpoint
-
-        root_endpoint = '/'
-        assert endpoints.root() == root_endpoint
-
-        records_endpoint = '/buckets/buck/collections/coll/records'
-        assert endpoints.records('buck', 'coll') == records_endpoint
-
-        record_endpoint = '/buckets/buck/collections/coll/records/1'
-        assert endpoints.record('buck', 'coll', '1') == record_endpoint

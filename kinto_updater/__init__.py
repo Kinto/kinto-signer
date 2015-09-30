@@ -1,4 +1,3 @@
-import collections
 import copy
 import hashlib
 import json
@@ -179,6 +178,7 @@ class Updater(object):
                 self.endpoints.collection(self.bucket, self.collection),
                 data={'signature': signature}
             )
+
 
 def compute_hash(records):
     records = copy.deepcopy(records)

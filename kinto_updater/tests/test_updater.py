@@ -57,11 +57,10 @@ class UpdaterConstructorTest(unittest.TestCase, BaseUpdaterTest):
 
     @mock.patch('kinto_updater.signing.RSABackend')
     def test_signer_defaults_to_rsa(self, backend):
-        updater = kinto_updater.Updater('bucket', 'collection',
-                                        auth=('user', 'pass'),
-                                        settings=mock.sentinel.settings)
+        kinto_updater.Updater('bucket', 'collection',
+                              auth=('user', 'pass'),
+                              settings=mock.sentinel.settings)
         backend.assert_called_with(mock.sentinel.settings)
-
 
 
 class UpdaterGatherRemoteCollectionTest(unittest.TestCase, BaseUpdaterTest):
@@ -81,12 +80,12 @@ class UpdaterGatherRemoteCollectionTest(unittest.TestCase, BaseUpdaterTest):
             # Second one returns a list of items with a pagination token.
             self._build_response(
                 [{'id': '1', 'value': 'item1'},
-                {'id': '2', 'value': 'item2'},],
+                 {'id': '2', 'value': 'item2'}, ],
                 {'Next-Page': link}),
             # Third one returns a list of items without a pagination token.
             self._build_response(
                 [{'id': '3', 'value': 'item3'},
-                {'id': '4', 'value': 'item4'},],
+                 {'id': '4', 'value': 'item4'}, ],
             ),
         ]
         updater = kinto_updater.Updater(

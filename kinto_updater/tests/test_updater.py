@@ -44,16 +44,24 @@ class UpdaterConstructorTest(unittest.TestCase, BaseUpdaterTest):
     @mock.patch('kinto_updater.Endpoints')
     def test_endpoints_is_created_by_constructor(self, endpoints):
         kinto_updater.Updater('bucket', 'collection',
-                             auth=('user', 'pass'),
-                             signer=mock.MagicMock())
+                              auth=('user', 'pass'),
+                              signer=mock.MagicMock())
         endpoints.assert_called_with()
 
     def test_endpoints_is_used_if_passed(self):
         updater = kinto_updater.Updater('bucket', 'collection',
-                                       auth=('user', 'pass'),
-                                       signer=mock.MagicMock(),
-                                       endpoints=mock.sentinel.endpoints)
+                                        auth=('user', 'pass'),
+                                        signer=mock.MagicMock(),
+                                        endpoints=mock.sentinel.endpoints)
         assert updater.endpoints == mock.sentinel.endpoints
+
+    @mock.patch('kinto_updater.signing.RSABackend')
+    def test_signer_defaults_to_rsa(self, backend):
+        updater = kinto_updater.Updater('bucket', 'collection',
+                                        auth=('user', 'pass'),
+                                        settings=mock.sentinel.settings)
+        backend.assert_called_with(mock.sentinel.settings)
+
 
 
 class UpdaterGatherRemoteCollectionTest(unittest.TestCase, BaseUpdaterTest):
@@ -332,7 +340,8 @@ class BatchRequestsTest(unittest.TestCase):
         assert len(batch.requests) == 0
 
     def test_context_manager_works_as_expected(self):
-        with kinto_updater.batch_requests(self.session, self.endpoints) as batch:
+        batcher = kinto_updater.batch_requests
+        with batcher(self.session, self.endpoints) as batch:
             batch.add('PUT', '/records/1234', data={'foo': 'bar'})
             batch.add('PUT', '/records/5678', data={'bar': 'baz'})
 
@@ -347,11 +356,11 @@ class EndpointsTest(unittest.TestCase):
         collection_endpoint = '/buckets/buck/collections/coll'
         assert endpoints.collection('buck', 'coll') == collection_endpoint
 
-        root_endpont = '/'
+        root_endpoint = '/'
         assert endpoints.root() == root_endpoint
 
         records_endpoint = '/buckets/buck/collections/coll/records'
-        assert endpoints.records('buck', 'coll') == records_endpoints
+        assert endpoints.records('buck', 'coll') == records_endpoint
 
-        record_endpoint = '/bucket/buck/collections/coll/records/1'
+        record_endpoint = '/buckets/buck/collections/coll/records/1'
         assert endpoints.record('buck', 'coll', '1') == record_endpoint

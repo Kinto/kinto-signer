@@ -65,26 +65,26 @@ class Batch(object):
 
 class Endpoints(object):
     def __init__(self, root=''):
-        self.root = root
+        self._root = root
 
     def collection(self, bucket, coll):
         return ('{root}/buckets/{bucket}/collections/{coll}'
-                .format(root=self.root, bucket=bucket, coll=coll))
+                .format(root=self._root, bucket=bucket, coll=coll))
 
     def records(self, bucket, coll):
         return ('{root}/buckets/{bucket}/collections/{coll}/records'
-                .format(root=self.root, bucket=bucket, coll=coll))
+                .format(root=self._root, bucket=bucket, coll=coll))
 
     def record(self, bucket, coll, record_id):
         return ('{root}/buckets/{bucket}/collections/{coll}/records/{rid}'
-                .format(root=self.root, bucket=bucket, coll=coll,
+                .format(root=self._root, bucket=bucket, coll=coll,
                         rid=record_id))
 
     def batch(self):
-        return '{root}/batch'.format(root=self.root)
+        return '{root}/batch'.format(root=self._root)
 
     def root(self):
-        return '{root}/'.format(root=self.root)
+        return '{root}/'.format(root=self._root)
 
 
 class Updater(object):

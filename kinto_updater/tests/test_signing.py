@@ -29,7 +29,7 @@ class RSABackendTest(unittest.TestCase):
 
     def test_keyloading_fails_if_no_settings(self):
         backend = signing.RSABackend()
-        with pytest.raises(ValueError) as e:
+        with pytest.raises(ValueError):
             backend.load_private_key()
 
     def test_key_loading_works(self):
@@ -47,5 +47,5 @@ class RSABackendTest(unittest.TestCase):
     def test_signing_returns_a_hexadecimal_string(self):
         signature = self.signer.sign("this is some text")
         hexa_regexp = (r'(?:[A-Za-z0-9+/]{4}){2,}(?:[A-Za-z0-9+/]'
-                        '{2}[AEIMQUYcgkosw048]=|[A-Za-z0-9+/][AQgw]==)')
+                       '{2}[AEIMQUYcgkosw048]=|[A-Za-z0-9+/][AQgw]==)')
         assert re.match(hexa_regexp, signature) is not None

@@ -44,16 +44,23 @@ class UpdaterConstructorTest(unittest.TestCase, BaseUpdaterTest):
     @mock.patch('kinto_updater.Endpoints')
     def test_endpoints_is_created_by_constructor(self, endpoints):
         kinto_updater.Updater('bucket', 'collection',
-                             auth=('user', 'pass'),
-                             signer=mock.MagicMock())
+                              auth=('user', 'pass'),
+                              signer=mock.MagicMock())
         endpoints.assert_called_with()
 
     def test_endpoints_is_used_if_passed(self):
         updater = kinto_updater.Updater('bucket', 'collection',
-                                       auth=('user', 'pass'),
-                                       signer=mock.MagicMock(),
-                                       endpoints=mock.sentinel.endpoints)
+                                        auth=('user', 'pass'),
+                                        signer=mock.MagicMock(),
+                                        endpoints=mock.sentinel.endpoints)
         assert updater.endpoints == mock.sentinel.endpoints
+
+    @mock.patch('kinto_updater.signing.RSABackend')
+    def test_signer_defaults_to_rsa(self, backend):
+        kinto_updater.Updater('bucket', 'collection',
+                              auth=('user', 'pass'),
+                              settings=mock.sentinel.settings)
+        backend.assert_called_with(mock.sentinel.settings)
 
 
 class UpdaterGatherRemoteCollectionTest(unittest.TestCase, BaseUpdaterTest):
@@ -73,12 +80,12 @@ class UpdaterGatherRemoteCollectionTest(unittest.TestCase, BaseUpdaterTest):
             # Second one returns a list of items with a pagination token.
             self._build_response(
                 [{'id': '1', 'value': 'item1'},
-                {'id': '2', 'value': 'item2'},],
+                 {'id': '2', 'value': 'item2'}, ],
                 {'Next-Page': link}),
             # Third one returns a list of items without a pagination token.
             self._build_response(
                 [{'id': '3', 'value': 'item3'},
-                {'id': '4', 'value': 'item4'},],
+                 {'id': '4', 'value': 'item4'}, ],
             ),
         ]
         updater = kinto_updater.Updater(
@@ -332,8 +339,27 @@ class BatchRequestsTest(unittest.TestCase):
         assert len(batch.requests) == 0
 
     def test_context_manager_works_as_expected(self):
-        with kinto_updater.batch_requests(self.session, self.endpoints) as batch:
+        batcher = kinto_updater.batch_requests
+        with batcher(self.session, self.endpoints) as batch:
             batch.add('PUT', '/records/1234', data={'foo': 'bar'})
             batch.add('PUT', '/records/5678', data={'bar': 'baz'})
 
         assert self.session.request.called
+
+
+class EndpointsTest(unittest.TestCase):
+
+    def test_endpoints(self):
+        endpoints = kinto_updater.Endpoints()
+
+        collection_endpoint = '/buckets/buck/collections/coll'
+        assert endpoints.collection('buck', 'coll') == collection_endpoint
+
+        root_endpoint = '/'
+        assert endpoints.root() == root_endpoint
+
+        records_endpoint = '/buckets/buck/collections/coll/records'
+        assert endpoints.records('buck', 'coll') == records_endpoint
+
+        record_endpoint = '/buckets/buck/collections/coll/records/1'
+        assert endpoints.record('buck', 'coll', '1') == record_endpoint

@@ -3,10 +3,8 @@ import hashlib
 import json
 import operator
 import uuid
-import urlparse
-from contextlib import contextmanager
 
-import kintoclient
+from kinto_client import Client
 
 import signing
 
@@ -15,88 +13,14 @@ class UpdaterException(Exception):
     pass
 
 
-@contextmanager
-def batch_requests(session, endpoints):
-    batch = Batch(session, endpoints)
-    yield batch
-    batch.send()
-
-
-class Batch(object):
-
-    def __init__(self, session, endpoints):
-        self.session = session
-        self.endpoints = endpoints
-        self.requests = []
-
-    def add(self, method, url, data=None, permissions=None, headers=None):
-        # Store all the requests in a dict, to be read later when .send()
-        # is called.
-        self.requests.append((method, url, data, permissions, headers))
-
-    def _build_requests(self):
-        requests = []
-        for (method, url, data, permissions, headers) in self.requests:
-            request = {
-                'method': method,
-                'path': url}
-
-            request['body'] = {}
-            if data is not None:
-                request['body']['data'] = data
-            if permissions is not None:
-                request['body']['permissions'] = permissions
-            if headers is not None:
-                request['headers'] = headers
-            requests.append(request)
-        return requests
-
-    def send(self):
-        requests = self._build_requests()
-        resp = self.session.request(
-            'POST',
-            self.endpoints.batch(),
-            data={'requests': requests}
-        )
-        self.requests = []
-        return resp
-
-
-class Endpoints(object):
-    def __init__(self, root=''):
-        self._root = root
-
-    def collection(self, bucket, coll):
-        return ('{root}/buckets/{bucket}/collections/{coll}'
-                .format(root=self._root, bucket=bucket, coll=coll))
-
-    def records(self, bucket, coll):
-        return ('{root}/buckets/{bucket}/collections/{coll}/records'
-                .format(root=self._root, bucket=bucket, coll=coll))
-
-    def record(self, bucket, coll, record_id):
-        return ('{root}/buckets/{bucket}/collections/{coll}/records/{rid}'
-                .format(root=self._root, bucket=bucket, coll=coll,
-                        rid=record_id))
-
-    def batch(self):
-        return '{root}/batch'.format(root=self._root)
-
-    def root(self):
-        return '{root}/'.format(root=self._root)
-
-
 class Updater(object):
 
-    def __init__(self, bucket, collection, auth=None,
-                 server_url=kintoclient.DEFAULT_SERVER_URL,
-                 session=None, endpoints=None,
+    def __init__(self, bucket, collection, server_url=None,
+                 auth=None, session=None, endpoints=None,
                  signer=None, settings=None):
-        if session is None and auth is None:
-            raise ValueError('session or auth should be defined')
-        if session is None:
-            session = kintoclient.create_session(server_url, auth)
-        self.session = session
+        self.client = Client(
+            bucket=bucket, collection=collection,
+            server_url=server_url, session=session)
 
         if settings is None:
             settings = {}
@@ -106,38 +30,16 @@ class Updater(object):
             signer = signing.RSABackend(self.settings)
         self.signer = signer
 
-        if endpoints is None:
-            endpoints = Endpoints()
-        self.endpoints = endpoints
-
         self.bucket = bucket
         self.collection = collection
-        self.server_url = server_url
 
     def gather_remote_collection(self):
         '''Retrieves the remote collection and returns it.'''
-        coll_url = self.endpoints.collection(self.bucket, self.collection)
-        collection_resp, _ = self.session.request('get', coll_url)
+        collection = self.client.get_collection()
+        records = {record['id']: record
+                   for record in self.client.get_records()}
 
-        def _get_records(records=None, url=None):
-            if records is None:
-                records = {}
-
-            if url is None:
-                url = self.endpoints.records(self.bucket, self.collection)
-            record_resp, headers = self.session.request('get', url)
-
-            records.update({record['id']: record
-                            for record in record_resp['data']})
-
-            if 'Next-Page' in headers.keys():
-                parsed = urlparse.urlparse(headers['Next-Page'])
-                url = "{0}?{1}".format(parsed.path, parsed.query)
-                return _get_records(records, url=url)
-            return records
-
-        records = _get_records()
-        return records, collection_resp['data']
+        return records, collection['data']
 
     def check_data_validity(self, records, signature):
         local_hash = compute_hash(records.values())
@@ -153,18 +55,15 @@ class Updater(object):
             signature = collection_data['signature']
             self.check_data_validity(records, signature)
 
-        with batch_requests(self.session, self.endpoints) as batch:
+        with self.client.batch() as batch:
             # Create IDs for records which don't already have one.
             for record in new_records:
-                headers = {}
+
                 if 'id' not in record:
                     record['id'] = str(uuid.uuid4())
-                headers['If-None-Match'] = '*'
-
-                record_endpoint = self.endpoints.record(
-                    self.bucket, self.collection, record['id'])
-
-                batch.add('PUT', record_endpoint, data=record, headers=headers)
+                    batch.create_record(id=record['id'], data=record)
+                else:
+                    batch.update_record(id=record['id'], data=record)
 
             # Compute the hash of the old + new records
             records.update({record['id']: record
@@ -173,11 +72,7 @@ class Updater(object):
             signature = self.signer.sign(new_hash)
 
             # Send the new hash + signature to the remote.
-            batch.add(
-                'PATCH',
-                self.endpoints.collection(self.bucket, self.collection),
-                data={'signature': signature}
-            )
+            batch.patch_collection(data={'signature': signature})
 
 
 def compute_hash(records):

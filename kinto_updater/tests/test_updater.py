@@ -3,9 +3,10 @@ from collections import OrderedDict
 from .support import unittest
 
 import kinto_updater
-import kintoclient
 import mock
 import pytest
+
+SERVER_URL = "http://kinto-storage.org"
 
 
 class BaseUpdaterTest(object):
@@ -19,90 +20,14 @@ class BaseUpdaterTest(object):
 
 
 class UpdaterConstructorTest(unittest.TestCase, BaseUpdaterTest):
-    @mock.patch('kinto_updater.kintoclient.create_session')
-    def test_session_is_defined_if_not_passed(self, create_session):
-        kinto_updater.Updater(
-            'bucket', 'collection',
-            auth=('user', 'pass'),
-            signer=mock.MagicMock())
-
-        create_session.assert_called_with(kintoclient.DEFAULT_SERVER_URL,
-                                          ('user', 'pass'))
-
-    def test_session_is_used_if_passed(self):
-        updater = kinto_updater.Updater(
-            'bucket', 'collection',
-            session=mock.sentinel.session,
-            signer=mock.MagicMock())
-        assert updater.session == mock.sentinel.session
-
-    def test_error_is_raised_on_missing_args(self):
-        with pytest.raises(ValueError) as e:
-            kinto_updater.Updater('bucket', 'collection')
-        assert 'session or auth should be defined' in e.value
-
-    @mock.patch('kinto_updater.Endpoints')
-    def test_endpoints_is_created_by_constructor(self, endpoints):
-        kinto_updater.Updater('bucket', 'collection',
-                              auth=('user', 'pass'),
-                              signer=mock.MagicMock())
-        endpoints.assert_called_with()
-
-    def test_endpoints_is_used_if_passed(self):
-        updater = kinto_updater.Updater('bucket', 'collection',
-                                        auth=('user', 'pass'),
-                                        signer=mock.MagicMock(),
-                                        endpoints=mock.sentinel.endpoints)
-        assert updater.endpoints == mock.sentinel.endpoints
 
     @mock.patch('kinto_updater.signing.RSABackend')
     def test_signer_defaults_to_rsa(self, backend):
         kinto_updater.Updater('bucket', 'collection',
+                              SERVER_URL,
                               auth=('user', 'pass'),
                               settings=mock.sentinel.settings)
         backend.assert_called_with(mock.sentinel.settings)
-
-
-class UpdaterGatherRemoteCollectionTest(unittest.TestCase, BaseUpdaterTest):
-
-    def setUp(self):
-        self.session = mock.MagicMock()
-
-    def test_pagination_is_followed(self):
-        # Mock the calls to request.
-        expected_collection_data = {'hash': 'super_hash', 'signature': 'sig'}
-        link = ('http://example.org/buckets/buck/collections/coll/records/'
-                '?token=1234')
-
-        self.session.request.side_effect = [
-            # First one returns the collection information.
-            self._build_response(expected_collection_data),
-            # Second one returns a list of items with a pagination token.
-            self._build_response(
-                [{'id': '1', 'value': 'item1'},
-                 {'id': '2', 'value': 'item2'}, ],
-                {'Next-Page': link}),
-            # Third one returns a list of items without a pagination token.
-            self._build_response(
-                [{'id': '3', 'value': 'item3'},
-                 {'id': '4', 'value': 'item4'}, ],
-            ),
-        ]
-        updater = kinto_updater.Updater(
-            'bucket', 'collection', session=self.session,
-            signer=mock.MagicMock())
-
-        records, collection_data = updater.gather_remote_collection()
-        assert collection_data == expected_collection_data
-        assert records == {
-            '1': {'id': '1', 'value': 'item1'},
-            '2': {'id': '2', 'value': 'item2'},
-            '3': {'id': '3', 'value': 'item3'},
-            '4': {'id': '4', 'value': 'item4'},
-        }
-        self.session.request.assert_called_with(
-            'get', '/buckets/buck/collections/coll/records/?token=1234'
-        )
 
 
 class UpdaterDataValidityTest(unittest.TestCase, BaseUpdaterTest):
@@ -118,7 +43,6 @@ class UpdaterDataValidityTest(unittest.TestCase, BaseUpdaterTest):
             'bucket', 'collection',
             auth=('user', 'pass'),
             session=self.session,
-            endpoints=self.endpoints,
             signer=self.signer
         )
         compute_hash.return_value = '1234'
@@ -135,13 +59,11 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
 
     def setUp(self):
         self.session = mock.MagicMock()
-        self.endpoints = kinto_updater.Endpoints()
         self.signer = mock.MagicMock()
         self.updater = kinto_updater.Updater(
             'bucket', 'collection',
             auth=('user', 'pass'),
             session=self.session,
-            endpoints=self.endpoints,
             signer=self.signer
         )
 
@@ -180,7 +102,7 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
         self.updater.add_records(records)
 
         self.session.request.assert_called_with(
-            'POST', '/batch', data={'requests': [
+            'POST', '/batch', payload={'requests': [
                 {
                     'body': {'data': {'foo': 'bar', 'id': '1'}},
                     'path': '/buckets/bucket/collections/collection/records/1',
@@ -226,7 +148,7 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
         self.signer.verify.assert_called_with('hash', 'sig')
 
         self.session.request.assert_called_with(
-            'POST', '/batch', data={'requests': [
+            'POST', '/batch', payload={'requests': [
                 {
                     'body': {'data': {'foo': 'bar', 'id': '1'}},
                     'path': '/buckets/bucket/collections/collection/records/1',
@@ -271,95 +193,3 @@ class HashComputingTest(unittest.TestCase):
         ])
 
         assert hash1 == hash2
-
-
-class BatchRequestsTest(unittest.TestCase):
-    def setUp(self):
-        self.session = mock.MagicMock()
-        self.endpoints = mock.MagicMock()
-
-    def test_requests_are_stacked(self):
-        batch = kinto_updater.Batch(self.session, self.endpoints)
-        batch.add('GET', '/foobar/baz',
-                  mock.sentinel.data,
-                  mock.sentinel.permissions)
-        assert len(batch.requests) == 1
-
-    def test_send_adds_data_attribute(self):
-        batch = kinto_updater.Batch(self.session, self.endpoints)
-        batch.add('GET', '/foobar/baz', data={'foo': 'bar'})
-        batch.send()
-
-        self.session.request.assert_called_with(
-            'POST',
-            self.endpoints.batch(),
-            data={'requests': [{
-                'method': 'GET',
-                'path': '/foobar/baz',
-                'body': {'data': {'foo': 'bar'}}
-            }]}
-        )
-
-    def test_send_adds_permissions_attribute(self):
-        batch = kinto_updater.Batch(self.session, self.endpoints)
-        batch.add('GET', '/foobar/baz', permissions=mock.sentinel.permissions)
-        batch.send()
-
-        self.session.request.assert_called_with(
-            'POST',
-            self.endpoints.batch(),
-            data={'requests': [{
-                'method': 'GET',
-                'path': '/foobar/baz',
-                'body': {'permissions': mock.sentinel.permissions}
-            }]}
-        )
-
-    def test_send_adds_headers_if_specified(self):
-        batch = kinto_updater.Batch(self.session, self.endpoints)
-        batch.add('GET', '/foobar/baz', headers={'Foo': 'Bar'})
-        batch.send()
-
-        self.session.request.assert_called_with(
-            'POST',
-            self.endpoints.batch(),
-            data={'requests': [{
-                'method': 'GET',
-                'path': '/foobar/baz',
-                'headers': {'Foo': 'Bar'},
-                'body': {}
-            }]}
-        )
-
-    def test_send_empties_the_requests_cache(self):
-        batch = kinto_updater.Batch(self.session, self.endpoints)
-        batch.add('GET', '/foobar/baz', permissions=mock.sentinel.permissions)
-        assert len(batch.requests) == 1
-        batch.send()
-        assert len(batch.requests) == 0
-
-    def test_context_manager_works_as_expected(self):
-        batcher = kinto_updater.batch_requests
-        with batcher(self.session, self.endpoints) as batch:
-            batch.add('PUT', '/records/1234', data={'foo': 'bar'})
-            batch.add('PUT', '/records/5678', data={'bar': 'baz'})
-
-        assert self.session.request.called
-
-
-class EndpointsTest(unittest.TestCase):
-
-    def test_endpoints(self):
-        endpoints = kinto_updater.Endpoints()
-
-        collection_endpoint = '/buckets/buck/collections/coll'
-        assert endpoints.collection('buck', 'coll') == collection_endpoint
-
-        root_endpoint = '/'
-        assert endpoints.root() == root_endpoint
-
-        records_endpoint = '/buckets/buck/collections/coll/records'
-        assert endpoints.records('buck', 'coll') == records_endpoint
-
-        record_endpoint = '/buckets/buck/collections/coll/records/1'
-        assert endpoints.record('buck', 'coll', '1') == record_endpoint

@@ -196,8 +196,7 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
         self.session.request.assert_called_with(
             'POST', '/batch', payload={'requests': [
                 {
-                    'body': {'data': {'foo': 'bar', 'id': '1',
-                                      'last_modified': '1234'}},
+                    'body': {'data': {'foo': 'bar', 'id': '1'}},
                     'path': '/buckets/bucket/collections/collection/records/1',
                     'method': 'PUT',
                     'headers': {'If-Match': '"1234"'}

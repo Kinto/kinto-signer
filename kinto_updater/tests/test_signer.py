@@ -5,7 +5,7 @@ import os
 import pytest
 from cryptography.exceptions import InvalidSignature
 
-from kinto_updater import signing
+from kinto_updater import signer
 from .support import unittest
 
 
@@ -13,13 +13,13 @@ class RSABackendTest(unittest.TestCase):
 
     @classmethod
     def setUpClass(self):
-        backend = signing.RSABackend()
+        backend = signer.RSABackend()
         key = backend.generate_key()
         tmp = tempfile.mktemp('key')
         with open(tmp, 'wc') as tmp_file:
             tmp_file.write(key)
         self.key_location = tmp
-        self.signer = signing.RSABackend(
+        self.signer = signer.RSABackend(
             {'private_key': self.key_location}
         )
 
@@ -28,7 +28,7 @@ class RSABackendTest(unittest.TestCase):
         os.remove(self.key_location)
 
     def test_keyloading_fails_if_no_settings(self):
-        backend = signing.RSABackend()
+        backend = signer.RSABackend()
         with pytest.raises(ValueError):
             backend.load_private_key()
 
@@ -36,7 +36,7 @@ class RSABackendTest(unittest.TestCase):
         key = self.signer.load_private_key()
         assert key is not None
 
-    def test_signing_roundtrip(self):
+    def test_signer_roundtrip(self):
         signature = self.signer.sign("this is some text")
         self.signer.verify("this is some text", signature)
 
@@ -44,7 +44,7 @@ class RSABackendTest(unittest.TestCase):
         with pytest.raises(InvalidSignature):
             self.signer.verify("this is some text", "wrong sig")
 
-    def test_signing_returns_a_hexadecimal_string(self):
+    def test_signer_returns_a_hexadecimal_string(self):
         signature = self.signer.sign("this is some text")
         hexa_regexp = (r'(?:[A-Za-z0-9+/]{4}){2,}(?:[A-Za-z0-9+/]'
                        '{2}[AEIMQUYcgkosw048]=|[A-Za-z0-9+/][AQgw]==)')

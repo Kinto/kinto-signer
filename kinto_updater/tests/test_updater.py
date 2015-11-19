@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 from .support import unittest
 
 import kinto_updater
@@ -21,8 +19,8 @@ class BaseUpdaterTest(object):
 
 class UpdaterConstructorTest(unittest.TestCase, BaseUpdaterTest):
 
-    @mock.patch('kinto_updater.signing.RSABackend')
-    def test_signer_defaults_to_rsa(self, backend):
+    @mock.patch('kinto_updater.signer.RSABackend')
+    def test_signer_instance_defaults_to_rsa(self, backend):
         kinto_updater.Updater('bucket', 'collection',
                               SERVER_URL,
                               auth=('user', 'pass'),
@@ -35,21 +33,21 @@ class UpdaterDataValidityTest(unittest.TestCase, BaseUpdaterTest):
     def setUp(self):
         self.session = mock.MagicMock()
         self.endpoints = mock.MagicMock()
-        self.signer = mock.MagicMock()
+        self.signer_instance = mock.MagicMock()
 
-    @mock.patch('kinto_updater.compute_hash')
+    @mock.patch('kinto_updater.hasher.compute_hash')
     def test_data_validity_uses_configured_backend(self, compute_hash):
         updater = kinto_updater.Updater(
             'bucket', 'collection',
             auth=('user', 'pass'),
             session=self.session,
-            signer=self.signer
+            signer_instance=self.signer_instance
         )
         compute_hash.return_value = '1234'
 
         records = {'1': {'id': '1', 'data': 'value'}}
         updater.check_data_validity(records, mock.sentinel.signature)
-        self.signer.verify.assert_called_with(
+        self.signer_instance.verify.assert_called_with(
             '1234',
             mock.sentinel.signature
         )
@@ -59,12 +57,12 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
 
     def setUp(self):
         self.session = mock.MagicMock()
-        self.signer = mock.MagicMock()
+        self.signer_instance = mock.MagicMock()
         self.updater = kinto_updater.Updater(
             'bucket', 'collection',
             auth=('user', 'pass'),
             session=self.session,
-            signer=self.signer
+            signer_instance=self.signer_instance
         )
 
     def test_add_records_fails_if_existing_collection_without_signature(self):
@@ -74,7 +72,7 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
         ]
         self.session.request.side_effect = [
             # First one returns the collection information (without sig).
-            self._build_response({}),
+            self._build_response({'last_modified': '1234'}),
             # Second returns the items in the collection.
             self._build_response([
                 {'id': '1', 'value': 'item1'},
@@ -82,7 +80,7 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
             ),
         ]
 
-        with pytest.raises(kinto_updater.UpdaterException):
+        with pytest.raises(kinto_updater.exceptions.UpdaterException):
             self.updater.add_records(records)
 
     @mock.patch('uuid.uuid4')
@@ -93,11 +91,11 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
         ]
         self.session.request.side_effect = [
             # First one returns the collection information.
-            self._build_response({}),
+            self._build_response({'last_modified': '1234'}),
             self._build_response([]),
         ]
         uuid4.side_effect = [1, 2]
-        self.signer.sign.return_value = '1234'
+        self.signer_instance.sign.return_value = '1234'
 
         self.updater.add_records(records)
 
@@ -118,12 +116,12 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
                 {
                     'body': {'data': {'signature': '1234'}},
                     'path': '/buckets/bucket/collections/collection',
-                    'method': 'PATCH'
+                    'method': 'PATCH',
                 }
             ]}
         )
 
-    @mock.patch('kinto_updater.compute_hash')
+    @mock.patch('kinto_updater.hasher.compute_hash')
     @mock.patch('uuid.uuid4')
     def test_add_records_to_existing_collection(self, uuid4, compute_hash):
         records = [
@@ -132,7 +130,8 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
         ]
         self.session.request.side_effect = [
             # First one returns the collection information.
-            self._build_response({'signature': 'sig'}),
+            self._build_response({'signature': 'sig',
+                                  'last_modified': '1234'}),
             # Second returns the items in the collection.
             self._build_response([
                 {'id': '1', 'value': 'item1'},
@@ -140,12 +139,12 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
             ),
         ]
         uuid4.side_effect = [1, 2]
-        self.signer.sign.return_value = '1234'
+        self.signer_instance.sign.return_value = '1234'
         compute_hash.return_value = 'hash'
 
         self.updater.add_records(records)
 
-        self.signer.verify.assert_called_with('hash', 'sig')
+        self.signer_instance.verify.assert_called_with('hash', 'sig')
 
         self.session.request.assert_called_with(
             'POST', '/batch', payload={'requests': [
@@ -164,12 +163,12 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
                 {
                     'body': {'data': {'signature': '1234'}},
                     'path': '/buckets/bucket/collections/collection',
-                    'method': 'PATCH'
+                    'method': 'PATCH',
                 }
             ]}
         )
 
-    @mock.patch('kinto_updater.compute_hash')
+    @mock.patch('kinto_updater.hasher.compute_hash')
     @mock.patch('uuid.uuid4')
     def test_add_records_can_update_existing_ones(self, uuid4, compute_hash):
         records = [
@@ -178,7 +177,8 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
         ]
         self.session.request.side_effect = [
             # First one returns the collection information.
-            self._build_response({'signature': 'sig'}),
+            self._build_response({'signature': 'sig',
+                                  'last_modified': '1234'}),
             # Second returns the items in the collection.
             self._build_response([
                 {'id': '1', 'value': 'item1'},
@@ -186,12 +186,12 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
             ),
         ]
         uuid4.side_effect = [3, ]
-        self.signer.sign.return_value = '1234'
+        self.signer_instance.sign.return_value = '1234'
         compute_hash.return_value = 'hash'
 
         self.updater.add_records(records)
 
-        self.signer.verify.assert_called_with('hash', 'sig')
+        self.signer_instance.verify.assert_called_with('hash', 'sig')
 
         self.session.request.assert_called_with(
             'POST', '/batch', payload={'requests': [
@@ -211,32 +211,7 @@ class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
                 {
                     'body': {'data': {'signature': '1234'}},
                     'path': '/buckets/bucket/collections/collection',
-                    'method': 'PATCH'
+                    'method': 'PATCH',
                 }
             ]}
         )
-
-
-class HashComputingTest(unittest.TestCase):
-    def test_records_are_not_altered(self):
-        records = [
-            {'foo': 'bar', 'last_modified': '12345', 'id': '1'},
-            {'bar': 'baz', 'last_modified': '45678', 'id': '2'},
-        ]
-        kinto_updater.compute_hash(records)
-        assert records == [
-            {'foo': 'bar', 'last_modified': '12345', 'id': '1'},
-            {'bar': 'baz', 'last_modified': '45678', 'id': '2'},
-        ]
-
-    def test_order_doesnt_matters(self):
-        hash1 = kinto_updater.compute_hash([
-            OrderedDict({'foo': 'bar', 'last_modified': '12345', 'id': '1'}),
-            OrderedDict({'bar': 'baz', 'last_modified': '45678', 'id': '2'}),
-        ])
-        hash2 = kinto_updater.compute_hash([
-            OrderedDict({'last_modified': '45678', 'id': '2', 'bar': 'baz'}),
-            OrderedDict({'foo': 'bar', 'id': '1', 'last_modified': '12345'}),
-        ])
-
-        assert hash1 == hash2

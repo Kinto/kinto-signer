@@ -5,7 +5,7 @@ DEV_STAMP = $(VENV)/.dev_env_installed.stamp
 INSTALL_STAMP = $(VENV)/.install.stamp
 
 .IGNORE: clean
-.PHONY: all install virtualenv tests
+.PHONY: all install virtualenv tests install-dev tests-once
 
 OBJECTS = .venv .coverage
 
@@ -29,3 +29,7 @@ tests-once: install-dev
 
 tests: install-dev
 	$(VENV)/bin/py.test kinto_updater/tests --cov-report term-missing --cov-fail-under 100 --cov kinto_updater
+
+clean:
+	find . -name '*.pyc' -delete
+	find . -name '__pycache__' -type d -exec rm -fr {} \;

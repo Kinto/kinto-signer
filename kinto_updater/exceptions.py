@@ -1,0 +1,2 @@
+class UpdaterException(Exception):
+    pass

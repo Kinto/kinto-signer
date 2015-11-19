@@ -38,4 +38,3 @@ invoke py.test::
 
   $ pip install -r dev-requirements.txt
   $ py.test
-

@@ -1,7 +1,3 @@
-import copy
-import uuid
-
-from kinto_client import Client
 
 import hasher
 import signer

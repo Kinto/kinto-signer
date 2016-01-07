@@ -1,53 +1,72 @@
 from cliquet.events import ResourceChanged
-from cliquet.utils import current_service, COMPARISON
+from cliquet.utils import COMPARISON
 from cliquet.storage import Filter
-
-from kinto_updater import Updater
-
 import kinto_client
 
+from kinto_updater import hasher, signer
 
-def sign_and_update_remote(event, client):
-    request = event.request
-    registry = request.registry
-    payload = event.payload
-    storage = registry.storage
-    # service = current_service(request).
 
-    bucket_id = payload['bucket_id']
-    collection_id = payload['collection_id']
+class RemoteUpdater(object):
 
-    # First, get the last time the collection was pushed.
-    parent_id = "/buckets/%s" % bucket_id
-    collection_data = storage.get_record(
-        parent_id=parent_id,
-        collection_id='collection',
-        object_id=collection_id)
-    last_sync = int(collection_data.get('last_sync', 0))
+    def __init__(self, remote, event):
+        self.remote = remote
 
-    # Get the list of records that has been updated since the last time we
-    # updated them.
-    parent_id = "/buckets/%s/collections/%s" % (bucket_id, colllection_id)
-    all_records = storage.get_records(
-        parent_id=parent_id,
-        collection_id='record',
-        filters=filters)
+        # Handle a few shortcuts to ease the reading of the script.
+        self.request = event.request
+        self.registry = self.request.registry
+        self.payload = event.payload
+        self.storage = self.registry.storage
+        self.signer = self.registry.signer
+        self.bucket_id = self.payload['bucket_id']
+        self.collection_id = self.payload['collection_id']
+        # service = current_service(request).
 
-    # Get the new records now, so we minimize the risks of them being updated
-    # when computing the signature.
-    filters = [Filter('last_modified', last_sync, COMPARISON.GT), ]
-    new_records = storage.get_records(parent_id=parent_id, collection_id='record',
-                                      filters=filters)
+    def get_collection_records(self, last_modified=None):
+        # If a last_modified value was specified, filter on it.
+        storage_kwargs = {}
+        if last_modified is not None:
+            gt_last_modified = Filter('last_modified', last_modified,
+                                      COMPARISON.GT)
+            storage_kwargs['filters'] = [gt_last_modified, ]
 
-    # Compute the hash of the entire collection.
-    new_hash = hasher.compute_hash(all_records)
-    signature = config.signer_instance.sign(new_hash)
+        parent_id = "/buckets/%s/collections/%s" % (
+            self.bucket_id, self.collection_id)
 
-    # Update the remote collection.
-    with client.batch() as batch:
-        for record in new_records:
-            batch.update_record(record=record, id=record['id'], safe=False)
-        batch.patch_collection(data={'signature': signature})
+        records, _ = self.storage.get_all(
+            parent_id=parent_id,
+            collection_id='record', **storage_kwargs)
+        return records
+
+    def get_remote_last_modified(self):
+        endpoint = self.remote._get_endpoint('records')
+        # XXX Replace with a HEAD request.
+        _, headers = self.remote.session.request('get', endpoint)
+        return int(headers['Etag'].strip('"'))
+
+    def update_remote(self, new_hash, signature):
+        last_modified = self.get_remote_last_modified()
+        new_records = self.get_collection_records(last_modified)
+
+        # Update the remote collection.
+        with self.remote.batch() as batch:
+            for record in new_records:
+                batch.update_record(data=record, id=record['id'], safe=False)
+            batch.patch_collection(data={'signature': signature})
+
+    def sign_and_update_remote(self):
+        """Sign the specified collection.
+
+        1. Get all the records of the collection;
+        2. Compute a hash of these records;
+        3. Ask the signer for a signature;
+        4. Send all records since the last_modified field of the Authoritative
+           server;
+        5. Send the signature to the Authoritative server.
+        """
+        records = self.get_collection_records()
+        new_hash = hasher.compute_hash(records)
+        signature = self.signer.sign(new_hash)
+        self.update_remote(new_hash, signature)
 
 
 def includeme(config):
@@ -57,21 +76,23 @@ def includeme(config):
     expected_bucket = settings.get('kinto_updater.bucket')
     expected_collection = settings.get('kinto_updater.collection')
 
-    updater = Updater(expected_bucket, expected_collection, settings={
-        'private_key': 'test.pem'
-    })
-    config.registry.updater = updater
+    priv_key = settings.get('kinto_updater.private_key')
+    config.registry.signer = signer.RSABackend({'private_key': priv_key})
 
     remote_url = settings['kinto_updater.remote_server_url']
+
+    # XXX Get the auth from settings.
     remote = kinto_client.Client(server_url=remote_url, bucket=expected_bucket,
                                  collection=expected_collection,
-                                 auth="user:password")
+                                 auth=('user', 'p4ssw0rd'))
 
     def on_resource_changed(event):
         payload = event.payload
         resource_name = payload['resource_name']
         action = payload['action']
 
+        # XXX Replace the filtering by events predicates (on the next Kinto
+        # release)
         correct_bucket = payload.get('bucket_id') == expected_bucket
         correct_coll = payload.get('collection_id') == expected_collection
         is_coll = resource_name == 'collection'
@@ -80,8 +101,9 @@ def includeme(config):
         if correct_coll and correct_bucket:
             if is_creation and is_coll:
                 should_sign = any([True for r in event.impacted_records
-                                   if r['new'].get('status') == 'unsigned'])
+                                   if r['new'].get('status') == 'to-sign'])
                 if should_sign:
-                    sign_and_update_remote(event, remote)
+                    updater = RemoteUpdater(remote, event)
+                    updater.sign_and_update_remote()
 
     config.add_subscriber(on_resource_changed, ResourceChanged)

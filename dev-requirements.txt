@@ -5,3 +5,5 @@ pytest-cache
 pytest-capturelog
 pytest-cover
 pytest-sugar
+kinto
+unittest2

@@ -1,1 +1,1 @@
-from updater import Updater  # noqa
+from updater import RemoteUpdater  # noqa

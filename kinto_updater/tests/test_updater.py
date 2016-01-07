@@ -1,6 +1,6 @@
 from .support import unittest
 
-import kinto_updater
+from kinto_updater import RemoteUpdater
 import mock
 import pytest
 
@@ -15,42 +15,6 @@ class BaseUpdaterTest(object):
             'data': data
         }
         return resp, headers
-
-
-class UpdaterConstructorTest(unittest.TestCase, BaseUpdaterTest):
-
-    @mock.patch('kinto_updater.signer.RSABackend')
-    def test_signer_instance_defaults_to_rsa(self, backend):
-        kinto_updater.Updater('bucket', 'collection',
-                              SERVER_URL,
-                              auth=('user', 'pass'),
-                              settings=mock.sentinel.settings)
-        backend.assert_called_with(mock.sentinel.settings)
-
-
-class UpdaterDataValidityTest(unittest.TestCase, BaseUpdaterTest):
-
-    def setUp(self):
-        self.session = mock.MagicMock()
-        self.endpoints = mock.MagicMock()
-        self.signer_instance = mock.MagicMock()
-
-    @mock.patch('kinto_updater.hasher.compute_hash')
-    def test_data_validity_uses_configured_backend(self, compute_hash):
-        updater = kinto_updater.Updater(
-            'bucket', 'collection',
-            auth=('user', 'pass'),
-            session=self.session,
-            signer_instance=self.signer_instance
-        )
-        compute_hash.return_value = '1234'
-
-        records = {'1': {'id': '1', 'data': 'value'}}
-        updater.check_data_validity(records, mock.sentinel.signature)
-        self.signer_instance.verify.assert_called_with(
-            '1234',
-            mock.sentinel.signature
-        )
 
 
 class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):

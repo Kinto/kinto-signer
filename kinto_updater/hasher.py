@@ -14,7 +14,6 @@ def compute_hash(records):
     records = sorted(records, key=operator.itemgetter('id'))
 
     serialized = json.dumps(records, sort_keys=True)
-    print(serialized)
     h = hashlib.new('sha256')
     h.update(serialized)
     return h.hexdigest()

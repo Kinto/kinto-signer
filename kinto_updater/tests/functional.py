@@ -3,7 +3,6 @@ from six.moves.urllib.parse import urljoin
 
 import unittest2
 import requests
-import time
 from six.moves import configparser
 
 from cliquet import utils as cliquet_utils
@@ -112,8 +111,6 @@ class FunctionalTest(unittest2.TestCase):
         records = self.remote_client.get_records()
         assert len(records) == 15
         local_hash = compute_hash(records)
-        print("hash", local_hash)
-        print("signature", signature)
         self.signer.verify(local_hash, signature)
 
 

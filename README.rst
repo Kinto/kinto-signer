@@ -25,48 +25,11 @@ How to sign data
 4. Then, the signer updates its current collection status back to "signed" (with
    the signature and hash).
 
-How to keep S up to date
-------------------------
+How to test the signature flow
+==============================
 
-1. Gather the latest changes from A,
-2. Check their validity
+In order to test the signature flow, you can run the functional tests::
 
-  2a. check the validity of the signature (with the pub key)
-  2b. compute the collection hash locally;
-  2c. compare it with the one stored in the collection;
-
-You can run a command to verify this, by doing::
-
-    $ kinto_updater gather-changes --
-
-How to install?
-===============
-
-::
-
-  $ mkvirtualenv kinto-updater
-  $ pip install -r requirements.txt
-
-
-How to run the tests?
-=====================
-
-In order to run the tests, you need to install the dev environment, and then
-invoke py.test::
-
-  $ pip install -r dev-requirements.txt
-  $ py.test
-
-Architecture
-============
-
-We have two parts: one one side, there is a client that's able to replicate
-a collection from one server to another one, using a local cache. It checks
-that the signature is valid at the same time.
-
-On the other hand, we have a hook that's triggered when new items are sent to
-the Kinto server. It does the following:
-
-1. Compute the hash + signature of all the records in the database.
-2. Gather all the local changes, since the last timestamp that was synced.
-3. Send them to the remote, using a BATCH with PUTs + PATCH for the coll.
+  $ make run-remote
+  $ make run-signer
+  $ make functional

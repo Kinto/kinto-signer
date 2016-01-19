@@ -1,8 +1,11 @@
+from cliquet.storage import Filter
+from cliquet.utils import COMPARISON
+
 from .support import unittest
 
+from kinto_client import Client
 from kinto_updater import RemoteUpdater
 import mock
-import pytest
 
 SERVER_URL = "http://kinto-storage.org"
 
@@ -17,164 +20,73 @@ class BaseUpdaterTest(object):
         return resp, headers
 
 
-class AddRecordsTest(unittest.TestCase, BaseUpdaterTest):
+class RemoteUpdaterTest(unittest.TestCase):
 
     def setUp(self):
         self.session = mock.MagicMock()
+        self.remote = Client(
+            bucket="buck",
+            collection="coll",
+            session=self.session)
+        self.storage = mock.MagicMock()
         self.signer_instance = mock.MagicMock()
-        self.updater = kinto_updater.Updater(
-            'bucket', 'collection',
-            auth=('user', 'pass'),
-            session=self.session,
-            signer_instance=self.signer_instance
-        )
+        self.updater = RemoteUpdater(
+            remote=self.remote,
+            signer=self.signer_instance,
+            storage=self.storage,
+            bucket_id='bucket',
+            collection_id='collection')
 
-    def test_add_records_fails_if_existing_collection_without_signature(self):
-        records = [
-            {'foo': 'bar'},
-            {'bar': 'baz'},
-        ]
-        self.session.request.side_effect = [
-            # First one returns the collection information (without sig).
-            self._build_response({'last_modified': '1234'}),
-            # Second returns the items in the collection.
-            self._build_response([
-                {'id': '1', 'value': 'item1'},
-                {'id': '2', 'value': 'item2'}]
-            ),
-        ]
+    def test_collection_records_asks_storage_for_records(self):
+        records = mock.sentinel.records
+        count = mock.sentinel.count
+        self.storage.get_all.return_value = (records, count)
 
-        with pytest.raises(kinto_updater.exceptions.UpdaterException):
-            self.updater.add_records(records)
+        self.updater.get_collection_records()
+        self.storage.get_all.assert_called_with(
+            collection_id='record',
+            parent_id='/buckets/bucket/collections/collection')
 
-    @mock.patch('uuid.uuid4')
-    def test_add_records_to_empty_collection(self, uuid4):
-        records = [
-            {'foo': 'bar'},
-            {'bar': 'baz'},
-        ]
-        self.session.request.side_effect = [
-            # First one returns the collection information.
-            self._build_response({'last_modified': '1234'}),
-            self._build_response([]),
-        ]
-        uuid4.side_effect = [1, 2]
-        self.signer_instance.sign.return_value = '1234'
+    def test_collection_records_asks_storage_for_last_modified_records(self):
+        records = mock.sentinel.records
+        count = mock.sentinel.count
+        self.storage.get_all.return_value = (records, count)
 
-        self.updater.add_records(records)
+        self.updater.get_collection_records(1234)
+        self.storage.get_all.assert_called_with(
+            collection_id='record',
+            parent_id='/buckets/bucket/collections/collection',
+            filters=[Filter('last_modified', 1234, COMPARISON.GT)])
 
-        self.session.request.assert_called_with(
-            'POST', '/batch', payload={'requests': [
-                {
-                    'body': {'data': {'foo': 'bar', 'id': '1'}},
-                    'path': '/buckets/bucket/collections/collection/records/1',
-                    'method': 'PUT',
-                    'headers': {'If-None-Match': '*'}
-                },
-                {
-                    'body': {'data': {'bar': 'baz', 'id': '2'}},
-                    'path': '/buckets/bucket/collections/collection/records/2',
-                    'method': 'PUT',
-                    'headers': {'If-None-Match': '*'}
-                },
-                {
-                    'body': {'data': {'signature': '1234'}},
-                    'path': '/buckets/bucket/collections/collection',
-                    'method': 'PATCH',
-                }
-            ]}
-        )
+    def test_get_remote_last_modified(self):
+        headers = {'Etag': '"1234"'}
+        self.remote.session.request.return_value = (None, headers)
+        self.updater.get_remote_last_modified()
+        self.remote.session.request.assert_called_with(
+            'get', '/buckets/buck/collections/coll/records')
 
-    @mock.patch('kinto_updater.hasher.compute_hash')
-    @mock.patch('uuid.uuid4')
-    def test_add_records_to_existing_collection(self, uuid4, compute_hash):
-        records = [
-            {'foo': 'bar'},
-            {'bar': 'baz'},
-        ]
-        self.session.request.side_effect = [
-            # First one returns the collection information.
-            self._build_response({'signature': 'sig',
-                                  'last_modified': '1234'}),
-            # Second returns the items in the collection.
-            self._build_response([
-                {'id': '1', 'value': 'item1'},
-                {'id': '2', 'value': 'item2'}]
-            ),
-        ]
-        uuid4.side_effect = [1, 2]
-        self.signer_instance.sign.return_value = '1234'
-        compute_hash.return_value = 'hash'
+    def test_update_remote(self):
+        records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 3)]
+        self.updater.get_remote_last_modified = mock.MagicMock(
+            return_value=1234)
+        self.updater.get_collection_records = mock.MagicMock(
+            return_value=records)
 
-        self.updater.add_records(records)
+        batch = mock.MagicMock()
+        self.remote.batch = mock.MagicMock(return_value=batch)
+        self.updater.update_remote("hash", "signature")
 
-        self.signer_instance.verify.assert_called_with('hash', 'sig')
+        batch.__enter__().update_record.assert_any_call(
+            data={'foo': 'bar 2', 'id': 2}, id=2, safe=False)
+        batch.__enter__().update_record.assert_any_call(
+            data={'foo': 'bar 1', 'id': 1}, id=1, safe=False)
+        batch.__enter__().patch_collection.assert_called_with(
+            data={'signature': 'signature'})
 
-        self.session.request.assert_called_with(
-            'POST', '/batch', payload={'requests': [
-                {
-                    'body': {'data': {'foo': 'bar', 'id': '1'}},
-                    'path': '/buckets/bucket/collections/collection/records/1',
-                    'method': 'PUT',
-                    'headers': {'If-None-Match': '*'}
-                },
-                {
-                    'body': {'data': {'bar': 'baz', 'id': '2'}},
-                    'path': '/buckets/bucket/collections/collection/records/2',
-                    'method': 'PUT',
-                    'headers': {'If-None-Match': '*'}
-                },
-                {
-                    'body': {'data': {'signature': '1234'}},
-                    'path': '/buckets/bucket/collections/collection',
-                    'method': 'PATCH',
-                }
-            ]}
-        )
+    def test_sign_and_update_remote(self):
+        records = [{'id': idx, 'foo': 'bar %s' % idx}
+                   for idx in range(1, 3)]
+        self.storage.get_all.return_value = (records, 2)
+        self.updater.update_remote = mock.MagicMock()
 
-    @mock.patch('kinto_updater.hasher.compute_hash')
-    @mock.patch('uuid.uuid4')
-    def test_add_records_can_update_existing_ones(self, uuid4, compute_hash):
-        records = [
-            {'id': '1', 'last_modified': '1234', 'foo': 'bar'},
-            {'bar': 'baz'},
-        ]
-        self.session.request.side_effect = [
-            # First one returns the collection information.
-            self._build_response({'signature': 'sig',
-                                  'last_modified': '1234'}),
-            # Second returns the items in the collection.
-            self._build_response([
-                {'id': '1', 'value': 'item1'},
-                {'id': '2', 'value': 'item2'}]
-            ),
-        ]
-        uuid4.side_effect = [3, ]
-        self.signer_instance.sign.return_value = '1234'
-        compute_hash.return_value = 'hash'
-
-        self.updater.add_records(records)
-
-        self.signer_instance.verify.assert_called_with('hash', 'sig')
-
-        self.session.request.assert_called_with(
-            'POST', '/batch', payload={'requests': [
-                {
-                    'body': {'data': {'foo': 'bar', 'id': '1'}},
-                    'path': '/buckets/bucket/collections/collection/records/1',
-                    'method': 'PUT',
-                    'headers': {'If-Match': '"1234"'}
-                },
-                {
-                    'body': {'data': {'bar': 'baz', 'id': '3'}},
-                    'path': '/buckets/bucket/collections/collection/records/3',
-                    'method': 'PUT',
-                    'headers': {'If-None-Match': '*'}
-                },
-                {
-                    'body': {'data': {'signature': '1234'}},
-                    'path': '/buckets/bucket/collections/collection',
-                    'method': 'PATCH',
-                }
-            ]}
-        )
+        self.updater.sign_and_update_remote()

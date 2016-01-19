@@ -1,0 +1,4 @@
+[run]
+omit = kinto_updater/tests/*
+       kinto_updater/hook.py
+       kinto_updater/gather_remote.py

@@ -2,21 +2,21 @@ import binascii
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.hazmat.primitives.asymmetric import padding, rsa, ec
 
 
-class RSABackend(object):
-    """Local RSA signature backend.
-    """
-    key_size = 4096
+class SignerBackend(object):
+    padding = False
 
     def __init__(self, settings=None):
         self.settings = settings or {}
 
-    def _get_padding(self):
-        return padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH)
+    def export_private_key_as_pem(self, key):
+        pem = key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.PKCS8,
+            encryption_algorithm=serialization.NoEncryption())
+        return pem
 
     def load_private_key(self):
         # Check settings validity
@@ -29,23 +29,10 @@ class RSABackend(object):
                 password=None,
                 backend=default_backend())
 
-    def generate_key(self):
-        private_key = rsa.generate_private_key(
-            public_exponent=65537,
-            key_size=self.key_size,
-            backend=default_backend())
-        pem = private_key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption())
-        return pem
-
     def sign(self, payload):
         private_key = self.load_private_key()
 
-        signer = private_key.signer(
-            self._get_padding(),
-            hashes.SHA256())
+        signer = private_key.signer(*self.get_signer_args())
 
         signer.update(payload)
         signature = signer.finalize()
@@ -56,7 +43,41 @@ class RSABackend(object):
         public_key = self.load_private_key().public_key()
         verifier = public_key.verifier(
             signature_bytes,
-            self._get_padding(),
-            hashes.SHA256())
+            *self.get_signer_args())
         verifier.update(payload)
         verifier.verify()
+
+
+class RSABackend(SignerBackend):
+    """Local RSA signature backend.
+    """
+    key_size = 4096
+
+    def _get_padding(self):
+        return padding.PSS(
+            mgf=padding.MGF1(hashes.SHA256()),
+            salt_length=padding.PSS.MAX_LENGTH)
+
+    def get_signer_args(self):
+        return [self._get_padding(), hashes.SHA256()]
+
+    def generate_key(self):
+        private_key = rsa.generate_private_key(
+            public_exponent=65537,
+            key_size=self.key_size,
+            backend=default_backend())
+        return self.export_private_key_as_pem(private_key)
+
+
+class ECDSABackend(SignerBackend):
+    """Local ECDSA signature backend.
+    """
+
+    def get_signer_args(self):
+        return [ec.ECDSA(hashes.SHA256())]
+
+    def generate_key(self):
+        private_key = ec.generate_private_key(
+            ec.SECP384R1(), default_backend()
+        )
+        return self.export_private_key_as_pem(private_key)

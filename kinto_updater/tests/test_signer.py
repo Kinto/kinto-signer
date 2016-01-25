@@ -9,26 +9,30 @@ from kinto_updater import signer
 from .support import unittest
 
 
-class RSABackendTest(unittest.TestCase):
+class BackendTestBase(object):
 
     @classmethod
-    def setUpClass(self):
-        backend = signer.RSABackend()
+    def get_backend(cls, options=None):
+        return cls.backend_class(options)
+
+    @classmethod
+    def setUpClass(cls):
+        backend = cls.get_backend()
         key = backend.generate_key()
         tmp = tempfile.mktemp('key')
         with open(tmp, 'wc') as tmp_file:
             tmp_file.write(key)
-        self.key_location = tmp
-        self.signer = signer.RSABackend(
-            {'private_key': self.key_location}
+        cls.key_location = tmp
+        cls.signer = cls.get_backend(
+            {'private_key': cls.key_location}
         )
 
     @classmethod
-    def tearDownClass(self):
-        os.remove(self.key_location)
+    def tearDownClass(cls):
+        os.remove(cls.key_location)
 
     def test_keyloading_fails_if_no_settings(self):
-        backend = signer.RSABackend()
+        backend = self.get_backend()
         with pytest.raises(ValueError):
             backend.load_private_key()
 
@@ -49,3 +53,11 @@ class RSABackendTest(unittest.TestCase):
         hexa_regexp = (r'(?:[A-Za-z0-9+/]{4}){2,}(?:[A-Za-z0-9+/]'
                        '{2}[AEIMQUYcgkosw048]=|[A-Za-z0-9+/][AQgw]==)')
         assert re.match(hexa_regexp, signature) is not None
+
+
+class RSABackendTest(BackendTestBase, unittest.TestCase):
+    backend_class = signer.RSABackend
+
+
+class ECDSABackendTest(BackendTestBase, unittest.TestCase):
+    backend_class = signer.ECDSABackend

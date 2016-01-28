@@ -1,7 +1,7 @@
 from cliquet.events import ResourceChanged
 
-from kinto_updater import signer as signer_module
-from kinto_updater.updater import RemoteUpdater
+from kinto_signer import signer as signer_module
+from kinto_signer.updater import RemoteUpdater
 import kinto_client
 
 
@@ -9,16 +9,16 @@ def includeme(config):
     # Process settings to remove storage wording.
     settings = config.get_settings()
 
-    expected_bucket = settings.get('kinto_updater.bucket')
-    expected_collection = settings.get('kinto_updater.collection')
+    expected_bucket = settings.get('kinto_signer.bucket')
+    expected_collection = settings.get('kinto_signer.collection')
 
-    priv_key = settings.get('kinto_updater.private_key')
+    priv_key = settings.get('kinto_signer.private_key')
     config.registry.signer = signer_module.ECDSABackend(
         {'private_key': priv_key})
 
-    remote_url = settings['kinto_updater.remote_server_url']
+    remote_url = settings['kinto_signer.remote_server_url']
 
-    auth = settings.get('kinto_updater.remote_server_auth', None)
+    auth = settings.get('kinto_signer.remote_server_auth', None)
     if auth is not None:
         auth = tuple(auth.split(':'))
     remote = kinto_client.Client(server_url=remote_url, bucket=expected_bucket,

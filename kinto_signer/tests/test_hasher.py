@@ -2,7 +2,7 @@ from collections import OrderedDict
 
 from .support import unittest
 
-from kinto_updater import hasher
+from kinto_signer import hasher
 
 
 class HashComputingTest(unittest.TestCase):

@@ -4,7 +4,7 @@ from cliquet.utils import COMPARISON
 from .support import unittest
 
 from kinto_client import Client
-from kinto_updater import RemoteUpdater
+from kinto_signer import RemoteUpdater
 import mock
 
 SERVER_URL = "http://kinto-storage.org"

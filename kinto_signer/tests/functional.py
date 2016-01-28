@@ -7,9 +7,9 @@ from six.moves import configparser
 
 from cliquet import utils as cliquet_utils
 
-from kinto_updater.gather_remote import GatherRemoteChanges
-from kinto_updater.hasher import compute_hash
-from kinto_updater import signer
+from kinto_signer.gather_remote import GatherRemoteChanges
+from kinto_signer.hasher import compute_hash
+from kinto_signer import signer
 
 from kinto_client import Client
 
@@ -48,7 +48,7 @@ class FunctionalTest(unittest2.TestCase):
 
         # XXX Handle locations
         priv_key = self.signer_config.get(
-            'app:main', 'kinto_updater.private_key')
+            'app:main', 'kinto_signer.private_key')
         self.signer = signer.ECDSABackend({'private_key': priv_key})
 
     def tearDown(self):

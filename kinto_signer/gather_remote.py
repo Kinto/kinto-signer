@@ -6,8 +6,8 @@ logger = logging.getLogger(__name__)
 
 from kinto_client import Client
 from kinto_client import exceptions
-from kinto_updater import signer
-from kinto_updater.hasher import compute_hash
+from kinto_signer import signer
+from kinto_signer.hasher import compute_hash
 
 import json
 

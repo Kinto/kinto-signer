@@ -48,10 +48,11 @@ class BackendTestBase(object):
         with pytest.raises(InvalidSignature):
             self.signer.verify("this is some text", "wrong sig")
 
-    def test_signer_returns_a_hexadecimal_string(self):
+    def test_signer_returns_a_base64_string(self):
         signature = self.signer.sign("this is some text")
-        hexa_regexp = (r'(?:[A-Za-z0-9+/]{4}){2,}(?:[A-Za-z0-9+/]'
-                       '{2}[AEIMQUYcgkosw048]=|[A-Za-z0-9+/][AQgw]==)')
+        hexa_regexp = (
+            r'^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}'
+            '==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$')
         assert re.match(hexa_regexp, signature) is not None
 
     def test_load_private_key_raises_if_no_key_specified(self):

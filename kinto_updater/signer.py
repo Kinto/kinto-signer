@@ -1,4 +1,4 @@
-import binascii
+import base64
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes
@@ -18,6 +18,12 @@ class SignerBackend(object):
             encryption_algorithm=serialization.NoEncryption())
         return pem
 
+    def export_public_key_as_pem(self, key):
+        return key.public_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PublicFormat.SubjectPublicKeyInfo
+        )
+
     def load_private_key(self):
         # Check settings validity
         if 'private_key' not in self.settings:
@@ -36,10 +42,10 @@ class SignerBackend(object):
 
         signer.update(payload)
         signature = signer.finalize()
-        return binascii.b2a_base64(signature)
+        return base64.b64encode(signature)
 
     def verify(self, payload, signature):
-        signature_bytes = binascii.a2b_base64(signature)
+        signature_bytes = base64.b64decode(signature)
         public_key = self.load_private_key().public_key()
         verifier = public_key.verifier(
             signature_bytes,
@@ -61,12 +67,15 @@ class RSABackend(SignerBackend):
     def get_signer_args(self):
         return [self._get_padding(), hashes.SHA256()]
 
-    def generate_key(self):
+    def generate_keypair(self):
         private_key = rsa.generate_private_key(
             public_exponent=65537,
             key_size=self.key_size,
             backend=default_backend())
-        return self.export_private_key_as_pem(private_key)
+        return (
+            self.export_private_key_as_pem(private_key),
+            self.export_public_key_as_pem(private_key.public_key())
+        )
 
 
 class ECDSABackend(SignerBackend):
@@ -76,8 +85,11 @@ class ECDSABackend(SignerBackend):
     def get_signer_args(self):
         return [ec.ECDSA(hashes.SHA256())]
 
-    def generate_key(self):
+    def generate_keypair(self):
         private_key = ec.generate_private_key(
             ec.SECP384R1(), default_backend()
         )
-        return self.export_private_key_as_pem(private_key)
+        return (
+            self.export_private_key_as_pem(private_key),
+            self.export_public_key_as_pem(private_key.public_key())
+        )

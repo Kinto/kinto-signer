@@ -1,0 +1,21 @@
+import sys
+from kinto_updater.signer import ECDSABackend
+
+
+def generate_keypair(private_key_location, public_key_location):
+    backend = ECDSABackend()
+    private_key, public_key = backend.generate_key()
+
+    with open(private_key_location, 'wc') as tmp_file:
+        tmp_file.write(private_key)
+
+    with open(public_key_location, 'wc') as tmp_file:
+        tmp_file.write(public_key)
+
+
+if __name__ == "__main__":
+    if (len(sys.argv) != 3):
+        print("Usage: python -m kinto_updater.generate_keypair "
+              "{public_key} {private_key}")
+        sys.exit(0)
+    generate_keypair(sys.argv[1], sys.argv[2])

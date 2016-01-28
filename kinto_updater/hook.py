@@ -13,15 +13,17 @@ def includeme(config):
     expected_collection = settings.get('kinto_updater.collection')
 
     priv_key = settings.get('kinto_updater.private_key')
-    config.registry.signer = signer_module.RSABackend(
+    config.registry.signer = signer_module.ECDSABackend(
         {'private_key': priv_key})
 
     remote_url = settings['kinto_updater.remote_server_url']
 
-    # XXX Get the auth from settings.
+    auth = settings.get('kinto_updater.remote_server_auth', None)
+    if auth is not None:
+        auth = tuple(auth.split(':'))
     remote = kinto_client.Client(server_url=remote_url, bucket=expected_bucket,
                                  collection=expected_collection,
-                                 auth=('user', 'p4ssw0rd'))
+                                 auth=auth)
 
     def on_resource_changed(event):
         payload = event.payload
@@ -30,7 +32,8 @@ def includeme(config):
 
         # XXX Replace the filtering by events predicates (on the next Kinto
         # release)
-        correct_bucket = payload.get('bucket_id') == expected_bucket
+        # XXX Add a concept of local and remote buckets/collections
+        correct_bucket = True  # payload.get('bucket_id') == expected_bucket
         correct_coll = payload.get('collection_id') == expected_collection
         is_coll = resource_name == 'collection'
         is_creation = action in ('create', 'update')

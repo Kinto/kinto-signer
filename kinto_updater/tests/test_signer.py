@@ -18,7 +18,7 @@ class BackendTestBase(object):
     @classmethod
     def setUpClass(cls):
         backend = cls.get_backend()
-        key = backend.generate_key()
+        key, _ = backend.generate_keypair()
         tmp = tempfile.mktemp('key')
         with open(tmp, 'wc') as tmp_file:
             tmp_file.write(key)
@@ -53,6 +53,10 @@ class BackendTestBase(object):
         hexa_regexp = (r'(?:[A-Za-z0-9+/]{4}){2,}(?:[A-Za-z0-9+/]'
                        '{2}[AEIMQUYcgkosw048]=|[A-Za-z0-9+/][AQgw]==)')
         assert re.match(hexa_regexp, signature) is not None
+
+    def test_load_private_key_raises_if_no_key_specified(self):
+        with pytest.raises(ValueError):
+            self.get_backend().load_private_key()
 
 
 class RSABackendTest(BackendTestBase, unittest.TestCase):

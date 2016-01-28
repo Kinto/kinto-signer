@@ -17,7 +17,7 @@ class GatherRemoteChanges():
                  cache_location='records.json'):
         self.origin = Client(**origin_settings)
         self.destination = Client(**destination_settings)
-        self.signer = signer.RSABackend({'private_key': private_key})
+        self.signer = signer.ECDSABackend({'private_key': private_key})
         self.cache_location = cache_location
         self.cache = self.load_cache(self.cache_location)
         self.ensure_destination_exists()
@@ -51,7 +51,7 @@ class GatherRemoteChanges():
         with open(cache_location, 'wc') as f:
             json.dump(cache, f)
 
-    def sync(self, since=None):
+    def sync(self, since=None, should_sign=False):
         if since is None:
             since = self.cache['last_modified']
         records_diff, headers = self.origin.get_records(
@@ -86,7 +86,12 @@ class GatherRemoteChanges():
                     else:
                         batch.update_record(record, id=record['id'],
                                             safe=False)
-                batch.update_collection(collection_data)
+
+            del collection_data['last_modified']
+            if should_sign:
+                collection_data['status'] = 'to-sign'
+            # Should be part of the batch.
+            self.destination.update_collection(data=collection_data)
 
         # finally, save the cache.
         self.save_cache()
@@ -102,6 +107,10 @@ def get_arguments():
                               '(with prefix)'))
     parser.add_argument('private_key', help=('The location of the private key '
                                              'to use for validation'))
+
+    parser.add_argument('-s', '--sign', dest='should_sign',
+                        action="store_true",
+                        help='Ask the remote to sign the uploaded data.')
 
     # Auth: XXX improve later. For now only support Basic Auth.
     parser.add_argument('-a', '--auth', dest='auth',
@@ -128,12 +137,10 @@ def setup_logger(args):
         logger.setLevel(args.verbosity)
 
 
-def get_server_settings(connection_string):
+def get_server_settings(connection_string, auth=None):
     parsed = urlparse(connection_string)
     if parsed.username and parsed.password:
         auth = (parsed.username, parsed.password)
-    else:
-        auth = None
 
     path_parts = parsed.path.split('/')
 
@@ -154,12 +161,19 @@ def main():
     args = get_arguments()
     setup_logger(args)
 
+    if args.auth is not None:
+        auth = tuple(args.auth.split(':'))
+    else:
+        auth = None
+
     client = GatherRemoteChanges(
-        origin_settings=get_server_settings(args.origin_server),
-        destination_settings=get_server_settings(args.destination_server),
+        origin_settings=get_server_settings(args.origin_server, auth),
+        destination_settings=get_server_settings(
+            args.destination_server,
+            auth),
         private_key=args.private_key
     )
-    client.sync()
+    client.sync(should_sign=args.should_sign)
 
 
 if __name__ == "__main__":

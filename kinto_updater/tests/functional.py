@@ -49,7 +49,7 @@ class FunctionalTest(unittest2.TestCase):
         # XXX Handle locations
         priv_key = self.signer_config.get(
             'app:main', 'kinto_updater.private_key')
-        self.signer = signer.RSABackend({'private_key': priv_key})
+        self.signer = signer.ECDSABackend({'private_key': priv_key})
 
     def tearDown(self):
         # Delete all the created objects

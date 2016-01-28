@@ -3,7 +3,7 @@ import tempfile
 from .support import unittest
 
 from kinto_signer.signer import ECDSABackend
-from kinto_signer import generate_keypair
+from kinto_signer.generate_keypair import generate_keypair
 
 
 class KeyPairGeneratorTest(unittest.TestCase):
@@ -13,4 +13,5 @@ class KeyPairGeneratorTest(unittest.TestCase):
         public_key_location = tempfile.mktemp('public_key')
 
         generate_keypair(private_key_location, public_key_location)
-        backend = ECDSABackend(settings={})
+        backend = ECDSABackend(settings={'private_key': private_key_location})
+        backend.sign("test")

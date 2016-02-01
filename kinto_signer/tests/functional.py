@@ -7,10 +7,10 @@ from six.moves import configparser
 
 from cliquet import utils as cliquet_utils
 
-from kinto_signer.gather_remote import GatherRemoteChanges
 from kinto_signer.hasher import compute_hash
 from kinto_signer import signer
 
+from kinto_client.replication import replicate
 from kinto_client import Client
 
 __HERE__ = os.path.abspath(os.path.dirname(__file__))
@@ -46,7 +46,6 @@ class FunctionalTest(unittest2.TestCase):
             bucket="buck",
             collection="coll")
 
-        # XXX Handle locations
         priv_key = self.signer_config.get(
             'app:main', 'kinto_signer.private_key')
         self.signer = signer.ECDSABackend({'private_key': priv_key})
@@ -78,20 +77,19 @@ class FunctionalTest(unittest2.TestCase):
                 batch.create_record(data={'foo': 'bar', 'n': n})
 
         # Replicate the remote data locally:
-        origin = dict(
+        origin = Client(
             server_url=self.remote_url,
             auth=self.auth,
             bucket='buck',
             collection='coll'
         )
-        destination = dict(
+        destination = Client(
             server_url=self.signer_url,
             auth=self.auth,
             bucket='buck',
             collection='coll')
 
-        replicator = GatherRemoteChanges(origin, destination, self.private_key)
-        replicator.sync()
+        replicate(origin, destination)
 
         # Check that the data has been copied.
         records = self.signer_client.get_records()
@@ -101,7 +99,9 @@ class FunctionalTest(unittest2.TestCase):
         with self.signer_client.batch() as batch:
             for n in range(100, 105):
                 batch.create_record(data={'newdata': n})
-        self.signer_client.update_collection(data={'status': 'to-sign'})
+        self.signer_client.update_collection(
+            data={'status': 'to-sign'},
+            method="put")
 
         # Ensure the remote data is signed properly.
         data = self.remote_client.get_collection()

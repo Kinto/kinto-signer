@@ -38,19 +38,22 @@ def includeme(config):
         is_coll = resource_name == 'collection'
         is_creation = action in ('create', 'update')
 
-        if correct_coll and correct_bucket:
-            if is_creation and is_coll:
-                should_sign = any([True for r in event.impacted_records
-                                   if r['new'].get('status') == 'to-sign'])
-                if should_sign:
-                    registry = event.request.registry
-                    updater = RemoteUpdater(
-                        remote=remote,
-                        signer=registry.signer,
-                        storage=registry.storage,
-                        bucket_id=event.payload['bucket_id'],
-                        collection_id=event.payload['collection_id'])
+        if not (correct_coll and correct_bucket):
+            return
+        if not (is_creation and is_coll):
+            return
 
-                    updater.sign_and_update_remote()
+        should_sign = any([True for r in event.impacted_records
+                           if r['new'].get('status') == 'to-sign'])
+        if should_sign:
+            registry = event.request.registry
+            updater = RemoteUpdater(
+                remote=remote,
+                signer=registry.signer,
+                storage=registry.storage,
+                bucket_id=event.payload['bucket_id'],
+                collection_id=event.payload['collection_id'])
+
+            updater.sign_and_update_remote()
 
     config.add_subscriber(on_resource_changed, ResourceChanged)

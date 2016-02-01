@@ -83,13 +83,13 @@ class FunctionalTest(unittest2.TestCase):
             bucket='buck',
             collection='coll'
         )
-        destination = Client(
+        authority = Client(
             server_url=self.signer_url,
             auth=self.auth,
             bucket='buck',
             collection='coll')
 
-        replicate(origin, destination)
+        replicate(origin, authority)
 
         # Check that the data has been copied.
         records = self.signer_client.get_records()

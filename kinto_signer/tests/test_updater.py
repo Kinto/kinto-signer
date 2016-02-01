@@ -59,7 +59,7 @@ class RemoteUpdaterTest(unittest.TestCase):
             filters=[Filter('last_modified', 1234, COMPARISON.GT)])
 
     def test_get_remote_last_modified(self):
-        headers = {'Etag': '"1234"'}
+        headers = {'ETag': '"1234"'}
         self.remote.session.request.return_value = (None, headers)
         self.updater.get_remote_last_modified()
         self.remote.session.request.assert_called_with(

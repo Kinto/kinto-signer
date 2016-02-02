@@ -12,9 +12,9 @@ REQUIREMENTS = [
     'cryptography'
 ]
 
-setup(name='kinto-updater',
+setup(name='kinto-signer',
       version='0.0.1',
-      description='Kinto updater',
+      description='Kinto signer',
       long_description=README,
       license='Apache License (2.0)',
       classifiers=[

@@ -27,20 +27,12 @@ def includeme(config):
 
     def on_resource_changed(event):
         payload = event.payload
-        resource_name = payload['resource_name']
-        action = payload['action']
 
-        # XXX Replace the filtering by events predicates (on the next Kinto
-        # release)
         # XXX Add a concept of local and remote buckets/collections
-        correct_bucket = True  # payload.get('bucket_id') == expected_bucket
+        correct_bucket = payload.get('bucket_id') == expected_bucket
         correct_coll = payload.get('collection_id') == expected_collection
-        is_coll = resource_name == 'collection'
-        is_creation = action in ('create', 'update')
 
         if not (correct_coll and correct_bucket):
-            return
-        if not (is_creation and is_coll):
             return
 
         should_sign = any([True for r in event.impacted_records
@@ -56,4 +48,9 @@ def includeme(config):
 
             updater.sign_and_update_remote()
 
-    config.add_subscriber(on_resource_changed, ResourceChanged)
+    config.add_subscriber(
+        on_resource_changed,
+        ResourceChanged,
+        for_actions=('create', 'update'),
+        for_resources=('collection',)
+    )

@@ -1,10 +1,10 @@
-Kinto updater
+Kinto signer
 #############
 
 |travis|
 
-.. |travis| image:: https://travis-ci.org/mozilla-services/kinto-updater.svg?branch=master
-    :target: https://travis-ci.org/mozilla-services/kinto-updater
+.. |travis| image:: https://travis-ci.org/mozilla-services/kinto-signer.svg?branch=master
+    :target: https://travis-ci.org/mozilla-services/kinto-signer
 
 
 What does this do?

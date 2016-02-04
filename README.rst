@@ -34,7 +34,7 @@ Once started, the authority is behaving like a normal Kinto server, until you
 ask for a signature of the collection. To trigger this signature operation,
 you need to add a specific field on the **collection**: ``status: "to-sign"``.
 
-Here is how to do it with ```httpie``:
+Here is how to do it with ``httpie``:
 
 .. code-block::
 

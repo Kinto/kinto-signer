@@ -7,3 +7,4 @@ pytest-cover
 pytest-sugar
 kinto>=1.11.1
 unittest2
+webtest

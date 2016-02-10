@@ -59,16 +59,18 @@ class RemoteUpdaterTest(unittest.TestCase):
             filters=[Filter('last_modified', 1234, COMPARISON.GT)])
 
     def test_get_remote_last_modified(self):
-        headers = {'ETag': '"1234"'}
+        headers = {'ETag': '"1234"', 'Total-Records': '10'}
         self.remote.session.request.return_value = (None, headers)
-        self.updater.get_remote_last_modified()
+        collection_timestamp, count = self.updater.get_remote_last_modified()
         self.remote.session.request.assert_called_with(
             'get', '/buckets/buck/collections/coll/records')
+        assert collection_timestamp == 1234
+        assert count == 10
 
     def test_update_remote(self):
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 3)]
         self.updater.get_remote_last_modified = mock.MagicMock(
-            return_value=1234)
+            return_value=(1234, 2))
         self.updater.get_collection_records = mock.MagicMock(
             return_value=records)
 
@@ -82,6 +84,17 @@ class RemoteUpdaterTest(unittest.TestCase):
             data={'foo': 'bar 1', 'id': 1}, id=1, safe=False)
         batch.__enter__().patch_collection.assert_called_with(
             data={'signature': 'signature'})
+
+    def test_update_remote_on_empty_remote(self):
+        records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 3)]
+        self.updater.get_remote_last_modified = mock.MagicMock(
+            return_value=(1234, 0))
+        self.updater.get_collection_records = mock.MagicMock(
+            return_value=records)
+
+        self.updater.update_remote("hash", "signature")
+
+        self.updater.get_collection_records.assert_called_with(None)
 
     def test_sign_and_update_remote(self):
         records = [{'id': idx, 'foo': 'bar %s' % idx}

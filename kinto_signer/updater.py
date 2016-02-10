@@ -46,11 +46,17 @@ class RemoteUpdater(object):
     def get_remote_last_modified(self):
         endpoint = self.remote._get_endpoint('records')
         # XXX Replace with a HEAD request.
+
         _, headers = self.remote.session.request('get', endpoint)
-        return int(headers['ETag'].strip('"'))
+        collection_timestamp = int(headers['ETag'].strip('"'))
+        records_count = int(headers['Total-Records'])
+
+        return collection_timestamp, records_count
 
     def update_remote(self, new_hash, signature):
-        last_modified = self.get_remote_last_modified()
+        last_modified, records_count = self.get_remote_last_modified()
+        if records_count == 0:
+            last_modified = None
         new_records = self.get_collection_records(last_modified)
 
         # Update the remote collection.

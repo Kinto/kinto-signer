@@ -20,7 +20,7 @@ class BackendTestBase(object):
         backend = cls.get_backend()
         key, _ = backend.generate_keypair()
         tmp = tempfile.mktemp('key')
-        with open(tmp, 'wc') as tmp_file:
+        with open(tmp, 'wb+') as tmp_file:
             tmp_file.write(key)
         cls.key_location = tmp
         cls.signer = cls.get_backend(
@@ -53,7 +53,7 @@ class BackendTestBase(object):
         hexa_regexp = (
             r'^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}'
             '==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$')
-        assert re.match(hexa_regexp, signature) is not None
+        assert re.match(hexa_regexp, signature.decode('utf-8')) is not None
 
     def test_load_private_key_raises_if_no_key_specified(self):
         with pytest.raises(ValueError):

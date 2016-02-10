@@ -1,5 +1,5 @@
 from cliquet.utils import COMPARISON
-import hasher
+from kinto_signer import hasher
 from cliquet.storage import Filter
 
 

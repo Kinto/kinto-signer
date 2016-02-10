@@ -12,6 +12,16 @@ def includeme(config):
     expected_bucket = settings.get('kinto_signer.bucket')
     expected_collection = settings.get('kinto_signer.collection')
 
+    message = (
+        "Provide signing capabilities to the "
+        "/buckets/{bucket}/collections/{collection} collection."
+    ).format(bucket=expected_bucket,
+             collection=expected_collection)
+    docs = "https://github.com/mozilla-services/kinto-signer#kinto-signer"
+    config.add_api_capability("signer", message, docs,
+                              bucket=expected_bucket,
+                              collection=expected_collection)
+
     priv_key = settings.get('kinto_signer.private_key')
     config.registry.signer = signer_module.ECDSABackend(
         {'private_key': priv_key})

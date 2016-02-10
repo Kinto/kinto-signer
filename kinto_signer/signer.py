@@ -40,7 +40,7 @@ class SignerBackend(object):
 
         signer = private_key.signer(*self.get_signer_args())
 
-        signer.update(payload)
+        signer.update(payload.encode('utf-8'))
         signature = signer.finalize()
         return base64.b64encode(signature)
 
@@ -50,7 +50,7 @@ class SignerBackend(object):
         verifier = public_key.verifier(
             signature_bytes,
             *self.get_signer_args())
-        verifier.update(payload)
+        verifier.update(payload.encode('utf-8'))
         verifier.verify()
 
 

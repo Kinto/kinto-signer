@@ -2,3 +2,7 @@
 .tox
 .coverage
 records.json
+*.pyc
+__pycache__/
+*.egg-info/
+*.egg

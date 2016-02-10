@@ -6,10 +6,10 @@ def generate_keypair(private_key_location, public_key_location):
     backend = ECDSABackend()
     private_key, public_key = backend.generate_keypair()
 
-    with open(private_key_location, 'wc') as tmp_file:
+    with open(private_key_location, 'wb+') as tmp_file:
         tmp_file.write(private_key)
 
-    with open(public_key_location, 'wc') as tmp_file:
+    with open(public_key_location, 'wb+') as tmp_file:
         tmp_file.write(public_key)
 
 

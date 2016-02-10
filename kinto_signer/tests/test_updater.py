@@ -34,8 +34,8 @@ class RemoteUpdaterTest(unittest.TestCase):
             remote=self.remote,
             signer=self.signer_instance,
             storage=self.storage,
-            bucket_id='bucket',
-            collection_id='collection')
+            local_bucket='bucket',
+            local_collection='collection')
 
     def test_collection_records_asks_storage_for_records(self):
         records = mock.sentinel.records
@@ -91,7 +91,9 @@ class RemoteUpdaterTest(unittest.TestCase):
             return_value=(1234, 0))
         self.updater.get_collection_records = mock.MagicMock(
             return_value=records)
-
+        self.remote._server_settings = {'batch_max_requests': 25}
+        batch = mock.MagicMock()
+        self.remote.batch = mock.MagicMock(return_value=batch)
         self.updater.update_remote("hash", "signature")
 
         self.updater.get_collection_records.assert_called_with(None)

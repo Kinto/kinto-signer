@@ -5,12 +5,13 @@ from cliquet.storage import Filter
 
 class RemoteUpdater(object):
 
-    def __init__(self, remote, signer, storage, bucket_id, collection_id):
+    def __init__(self, remote, signer, storage, local_bucket,
+                 local_collection):
         self.remote = remote
         self.signer = signer
         self.storage = storage
-        self.bucket_id = bucket_id
-        self.collection_id = collection_id
+        self.local_bucket = local_bucket
+        self.local_collection = local_collection
 
     def sign_and_update_remote(self):
         """Sign the specified collection.
@@ -36,7 +37,7 @@ class RemoteUpdater(object):
             storage_kwargs['filters'] = [gt_last_modified, ]
 
         parent_id = "/buckets/%s/collections/%s" % (
-            self.bucket_id, self.collection_id)
+            self.local_bucket, self.local_collection)
 
         records, _ = self.storage.get_all(
             parent_id=parent_id,

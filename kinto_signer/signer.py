@@ -1,4 +1,5 @@
 import base64
+import six
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization, hashes
@@ -40,17 +41,27 @@ class SignerBackend(object):
 
         signer = private_key.signer(*self.get_signer_args())
 
-        signer.update(payload.encode('utf-8'))
+        if isinstance(payload, six.text_type):  # pragma: nocover
+            payload = payload.encode('utf-8')
+
+        signer.update(payload)
         signature = signer.finalize()
         return base64.b64encode(signature)
 
     def verify(self, payload, signature):
+
+        if isinstance(payload, six.text_type):  # pragma: nocover
+            payload = payload.encode('utf-8')
+
+        if isinstance(signature, six.text_type):  # pragma: nocover
+            signature = signature.encode('utf-8')
+
         signature_bytes = base64.b64decode(signature)
         public_key = self.load_private_key().public_key()
         verifier = public_key.verifier(
             signature_bytes,
             *self.get_signer_args())
-        verifier.update(payload.encode('utf-8'))
+        verifier.update(payload)
         verifier.verify()
 
 

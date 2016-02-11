@@ -10,14 +10,14 @@ import kinto_client
 def get_server_settings(connection_string, auth=None, **kwargs):
     if connection_string != "local":
         parsed = urlparse(connection_string)
-        if parsed.username and parsed.password:
+        if parsed.username and parsed.password and not auth:
             auth = (parsed.username, parsed.password)
 
         path_parts = parsed.path.split('/')
 
         if len(path_parts) != 2:
-            raise Exception("Please specify scheme://server/version in the "
-                            "server URL, got %s" % parsed.path)
+            raise ValueError("Please specify scheme://server/version in the "
+                             "server URL, got %s" % connection_string)
         _, version = path_parts
         server_url = '%s://%s/%s' % (parsed.scheme, parsed.hostname, version)
     else:

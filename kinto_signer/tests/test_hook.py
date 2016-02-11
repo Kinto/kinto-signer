@@ -42,3 +42,79 @@ class GetServerSettingsTest(unittest.TestCase):
             foo=mock.sentinel.bar
         )
         assert settings['foo'] == mock.sentinel.bar
+
+
+class ParseResourcesTest(unittest.TestCase):
+
+    def test_missing_semicolumn_raises_an_exception(self):
+        raw_resources = """
+        foo
+        bar
+        """
+        with pytest.raises(ValueError) as excinfo:
+            hook.parse_resources(raw_resources, {})
+        msg = "'local:bucket/coll;remote:bucket/coll'"
+        assert msg in excinfo.value.message
+
+    def test_non_local_first_argument_raises_an_exception(self):
+        raw_resources = """
+        foo;bar
+        bar;baz
+        """
+        with pytest.raises(ValueError) as excinfo:
+            hook.parse_resources(raw_resources, {})
+        msg = "They should start with 'local:'. Got 'foo'"
+        assert msg in excinfo.value.message
+
+    def test_malformed_local_origin_raises_an_exception(self):
+        raw_resources = """
+        local:origin;local:destination
+        """
+        with pytest.raises(ValueError) as excinfo:
+            hook.parse_resources(raw_resources, {})
+        msg = "Resources should be defined as bucket/collection. Got 'origin'"
+        assert msg in excinfo.value.message
+
+    def test_malformed_remote_origin_raises_an_exception(self):
+        raw_resources = """
+        local:bucket/collection;local:destination
+        """
+        with pytest.raises(ValueError) as excinfo:
+            hook.parse_resources(raw_resources, {})
+        msg = ("Resources should be defined as bucket/collection. "
+               "Got 'destination'")
+        assert msg in excinfo.value.message
+
+    def test_missing_remote_alias_raises_an_exception(self):
+        raw_resources = """
+        local:bucket/collection;remote:bucket/destination
+        """
+        with pytest.raises(ValueError) as excinfo:
+            hook.parse_resources(raw_resources, {})
+        msg = ("The remote alias you specified is not defined. "
+               "Check for kinto_signer.")
+        assert msg in excinfo.value.message
+
+    def test_remote_alias_is_substituted_if_present(self):
+        raw_resources = """
+        local:bucket/collection;remote:bucket/destination
+        """
+        settings = {"kinto_signer.remote": "https://notmyidea.org/v1"}
+        resources = hook.parse_resources(raw_resources, settings)
+        resource = resources['bucket/collection']
+        resource['remote']['server_url'] == "https://notmyidea.org/v1"
+
+    def test_returned_resources_match_the_expected_format(self):
+        raw_resources = """
+        local:bucket/collection;remote:bucket/destination
+        """
+        settings = {"kinto_signer.remote": "https://notmyidea.org/v1"}
+        resources = hook.parse_resources(raw_resources, settings)
+        assert resources == {
+            'bucket/collection': {
+                'local': {'bucket': 'bucket',
+                          'collection': 'destination'},
+                'remote': {'auth': None,
+                           'bucket': 'bucket',
+                           'collection': 'destination',
+                           'server_url': 'https://notmyidea.org/v1'}}}

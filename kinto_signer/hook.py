@@ -57,20 +57,28 @@ def parse_resources(raw_resources, settings):
                 raise ValueError(msg)
             remote_server_url = settings[remote_alias_setting]
 
-        remote_bucket_id, remote_collection_id = remote_resource_id.split('/')
-        local_bucket_id, local_collection_id = local_resource_id.split('/')
+        def _get_resource(resource):
+            parts = resource.split('/')
+            if len(parts) != 2:
+                msg = ("Resources should be defined as bucket/collection. "
+                       "Got %r" % resource)
+                raise ValueError(msg)
+            return parts
+
+        local_bucket, local_collection = _get_resource(local_resource_id)
+        remote_bucket, remote_collection = _get_resource(remote_resource_id)
 
         remote_settings = get_server_settings(
             remote_server_url,
-            collection=remote_collection_id,
-            bucket=remote_bucket_id
+            collection=remote_collection,
+            bucket=remote_bucket
         )
 
         resources[local_resource_id] = {
             'remote': remote_settings,
             'local': {
-                'bucket': remote_bucket_id,
-                'collection': remote_collection_id
+                'bucket': remote_bucket,
+                'collection': remote_collection
             }
         }
         return resources

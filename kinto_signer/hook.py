@@ -19,7 +19,7 @@ def get_server_settings(connection_string, auth=None, **kwargs):
             raise Exception("Please specify scheme://server/version in the "
                             "server URL, got %s" % parsed.path)
         _, version = path_parts
-        server_url = '%s://%s/%s' % (parsed.scheme, parsed.netloc, version)
+        server_url = '%s://%s/%s' % (parsed.scheme, parsed.hostname, version)
     else:
         server_url = "local"
 

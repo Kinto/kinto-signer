@@ -48,7 +48,6 @@ class GetServerSettingsTest(unittest.TestCase):
         assert settings['server_url'] == 'https://kinto.notmyidea.org:5000/v1'
 
 
-
 class ParseResourcesTest(unittest.TestCase):
 
     def test_missing_semicolumn_raises_an_exception(self):
@@ -123,3 +122,11 @@ class ParseResourcesTest(unittest.TestCase):
                            'bucket': 'bucket',
                            'collection': 'destination',
                            'server_url': 'https://notmyidea.org/v1'}}}
+    def test_multiple_resources_are_supported(self):
+        raw_resources = """
+        local:bucket/collection;remote:bucket/destination
+        local:bucket/origin;local:bucket/destination,
+        """
+        settings = {"kinto_signer.remote": "https://notmyidea.org/v1"}
+        resources = hook.parse_resources(raw_resources, settings)
+        assert len(resources) == 2

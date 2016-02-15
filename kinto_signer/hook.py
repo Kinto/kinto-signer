@@ -85,7 +85,7 @@ def parse_resources(raw_resources, settings):
                 'collection': remote_collection
             }
         }
-        return resources
+    return resources
 
 
 def includeme(config):

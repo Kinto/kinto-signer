@@ -1,4 +1,4 @@
-from urlparse import urlparse
+from urlparse import urlparse, urlunparse
 from pyramid.settings import aslist
 from cliquet.events import ResourceChanged
 
@@ -12,14 +12,18 @@ def get_server_settings(connection_string, auth=None, **kwargs):
         parsed = urlparse(connection_string)
         if parsed.username and parsed.password and not auth:
             auth = (parsed.username, parsed.password)
-
         path_parts = parsed.path.split('/')
+        # If auth was specified, be sure to remove it from the connection
+        # string.
+        parsed = list(parsed[:])
+        if '@' in parsed[1]:
+            parsed[1] = parsed[1].split('@', 1)[1]
 
         if len(path_parts) != 2:
             raise ValueError("Please specify scheme://server/version in the "
                              "server URL, got %s" % connection_string)
         _, version = path_parts
-        server_url = '%s://%s/%s' % (parsed.scheme, parsed.hostname, version)
+        server_url = urlunparse(parsed)
     else:
         server_url = "local"
 

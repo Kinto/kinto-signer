@@ -11,7 +11,6 @@ class GetServerSettingsTest(unittest.TestCase):
         self.connection_string = "https://alex:pass@kinto.notmyidea.org/v1"
 
     def test_auth_is_parsed(self):
-
         settings = hook.get_server_settings(self.connection_string)
         assert settings['auth'] == ('alex', 'pass')
 
@@ -42,6 +41,12 @@ class GetServerSettingsTest(unittest.TestCase):
             foo=mock.sentinel.bar
         )
         assert settings['foo'] == mock.sentinel.bar
+
+    def test_port_is_conserved(self):
+        conn_str = "https://kinto.notmyidea.org:5000/v1"
+        settings = hook.get_server_settings(conn_str)
+        assert settings['server_url'] == 'https://kinto.notmyidea.org:5000/v1'
+
 
 
 class ParseResourcesTest(unittest.TestCase):

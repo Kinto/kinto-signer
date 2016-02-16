@@ -113,6 +113,51 @@ class FunctionalTest(unittest2.TestCase):
         local_hash = compute_hash(records)
         self.signer.verify(local_hash, signature)
 
+    def test_signature_on_local_collections(self):
+        # Replicate the remote data locally:
+        origin = Client(
+            server_url=self.signer_url,
+            auth=self.auth,
+            bucket='buck',
+            collection='destination'
+        )
+        authority = Client(
+            server_url=self.signer_url,
+            auth=self.auth,
+            bucket='buck',
+            collection='origin')
+
+        # Populate the origin with some data.
+        with origin.batch() as batch:
+            batch.create_bucket()
+            batch.create_collection()
+            for n in range(10):
+                batch.create_record(data={'foo': 'bar', 'n': n})
+
+        replicate(origin, authority)
+
+        # Check that the data has been copied.
+        records = authority.get_records()
+        assert len(records) == 10
+
+        # Send new data to the signer.
+        with authority.batch() as batch:
+            for n in range(100, 105):
+                batch.create_record(data={'newdata': n})
+
+        authority.update_collection(
+            data={'status': 'to-sign'},
+            method="put")
+
+        # Ensure the remote data is signed properly.
+        data = origin.get_collection()
+        signature = data['data']['signature']
+        assert signature is not None
+
+        records = origin.get_records()
+        assert len(records) == 15
+        local_hash = compute_hash(records)
+        self.signer.verify(local_hash, signature)
 
 if __name__ == '__main__':
     unittest2.main()

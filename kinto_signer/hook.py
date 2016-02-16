@@ -6,6 +6,66 @@ from kinto_signer import signer as signer_module
 from kinto_signer.updater import RemoteUpdater
 import kinto_client
 
+from cliquet.utils import build_request, build_response
+
+
+class LocalSession(object):
+    """A session implementation that does the requests using subrequests.
+    """
+    def __init__(self, request):
+        self.request = request
+
+    def request(self, method, endpoint, data=None, permissions=None,
+                payload=None, **kwargs):
+        from pdb import set_trace; set_trace()
+        payload = payload or {}
+        # if data is not None:
+        payload['data'] = data or {}
+        if permissions is not None:
+            if hasattr(permissions, 'as_dict'):
+                permissions = permissions.as_dict()
+            payload['permissions'] = permissions
+        if payload:
+            payload_kwarg = 'data' if 'files' in kwargs else 'json'
+            kwargs.setdefault(payload_kwarg, payload)
+        kwargs.update({
+            'method': method,
+            'body': payload
+        })
+        # XXX Headers?
+        subrequest = build_request(self.request, kwargs)
+        try:
+            # Invoke subrequest without individual transaction.
+            resp, subrequest = self.request.follow_subrequest(subrequest,
+                                                              use_tweens=False)
+        except httpexceptions.HTTPException as e:
+            if e.content_type == 'application/json':
+                resp = e
+            else:
+                # JSONify raw Pyramid errors.
+                resp = errors.http_error(e)
+        except Exception as e:
+            resp = render_view_to_response(e, subrequest)
+            if resp.status_code >= 500:
+                raise e  # Raise a specific error.
+        return resp
+
+        dict_resp = build_response(resp, subrequest)
+
+        if not (200 <= resp.status_code < 400):
+            message = '{0} - {1}'.format(resp.status_code, resp.json())
+            exception = KintoException(message)
+            exception.request = resp.request
+            exception.response = resp
+            raise exception
+
+        if resp.status_code == 304:
+            body = None
+        else:
+            body = resp.json()
+        # XXX Add the status code.
+        return body, resp.headers
+
 
 def get_server_settings(connection_string, auth=None, **kwargs):
     if connection_string != "local":
@@ -107,19 +167,26 @@ def includeme(config):
                               resources=available_resources.keys())
 
     def on_resource_changed(event):
+        print(event, event.payload, event.impacted_records)
         payload = event.payload
         requested_resource = "{bucket_id}/{collection_id}".format(**payload)
         if requested_resource not in available_resources:
             return
 
         resource = available_resources.get(requested_resource)
-
         should_sign = any([True for r in event.impacted_records
                            if r['new'].get('status') == 'to-sign'])
         if should_sign:
             registry = event.request.registry
             # XXX Add Auth.
-            remote = kinto_client.Client(**resource['remote'])
+            if resource['remote']['server_url'] == 'local':
+                session = LocalSession(event.request)
+                kwargs = {}
+                kwargs.update(resource['remote'])
+                del kwargs['server_url']
+                remote = kinto_client.Client(session=session, **kwargs)
+            else:
+                remote = kinto_client.Client(**resource['remote'])
             updater = RemoteUpdater(
                 remote=remote,
                 signer=registry.signer,

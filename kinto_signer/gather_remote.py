@@ -54,8 +54,8 @@ class GatherRemoteChanges():
     def sync(self, since=None, should_sign=False):
         if since is None:
             since = self.cache['last_modified']
-        records_diff, headers = self.origin.get_records(
-            _since=since, if_none_match=since,  with_headers=True)
+        records_diff = self.origin.get_records(
+            _since=since, if_none_match=since)
         # Apply the diff on the local cache.
         self.cache['records'].update({r['id']: r for r in records_diff})
 
@@ -65,7 +65,6 @@ class GatherRemoteChanges():
             for record_id, value in self.cache['records'].iteritems()
             if value.get('deleted', False) is not True
         }
-        self.cache['last_modified'] = headers.get('ETag')
 
         if self.cache['records']:
             # Verify the signature of the local collection.

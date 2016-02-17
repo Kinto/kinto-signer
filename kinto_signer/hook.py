@@ -4,6 +4,9 @@ from cliquet.events import ResourceChanged
 from kinto_signer import signer as signer_module
 from kinto_signer.updater import LocalUpdater
 
+from kinto_signer.signer.autograph import AutographSigner
+from kinto_signer.updater import RemoteUpdater
+
 
 def parse_resources(raw_resources):
     resources = {}
@@ -36,9 +39,7 @@ def includeme(config):
     # Process settings to remove storage wording.
     settings = config.get_settings()
 
-    priv_key = settings.get('kinto_signer.private_key')
-    config.registry.signer = signer_module.ECDSABackend(
-        {'private_key': priv_key})
+    config.registry.signer = AutographSigner(settings)
 
     raw_resources = settings.get('kinto_signer.resources')
     if raw_resources is None:

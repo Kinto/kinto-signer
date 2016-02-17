@@ -65,6 +65,23 @@ class SignerBackend(object):
         verifier.verify()
 
 
+class ECDSABackend(SignerBackend):
+    """Local ECDSA signature backend.
+    """
+
+    def get_signer_args(self):
+        return [ec.ECDSA(hashes.SHA256())]
+
+    def generate_keypair(self):
+        private_key = ec.generate_private_key(
+            ec.SECP384R1(), default_backend()
+        )
+        return (
+            self.export_private_key_as_pem(private_key),
+            self.export_public_key_as_pem(private_key.public_key())
+        )
+
+
 class RSABackend(SignerBackend):
     """Local RSA signature backend.
     """
@@ -83,23 +100,6 @@ class RSABackend(SignerBackend):
             public_exponent=65537,
             key_size=self.key_size,
             backend=default_backend())
-        return (
-            self.export_private_key_as_pem(private_key),
-            self.export_public_key_as_pem(private_key.public_key())
-        )
-
-
-class ECDSABackend(SignerBackend):
-    """Local ECDSA signature backend.
-    """
-
-    def get_signer_args(self):
-        return [ec.ECDSA(hashes.SHA256())]
-
-    def generate_keypair(self):
-        private_key = ec.generate_private_key(
-            ec.SECP384R1(), default_backend()
-        )
         return (
             self.export_private_key_as_pem(private_key),
             self.export_public_key_as_pem(private_key.public_key())

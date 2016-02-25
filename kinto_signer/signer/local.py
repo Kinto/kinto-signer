@@ -6,7 +6,7 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import padding, rsa, ec
 
 
-class SignerBackend(object):
+class BaseSigner(object):
     padding = False
 
     def __init__(self, settings=None):
@@ -65,7 +65,7 @@ class SignerBackend(object):
         verifier.verify()
 
 
-class ECDSABackend(SignerBackend):
+class ECDSASigner(BaseSigner):
     """Local ECDSA signature backend.
     """
 
@@ -82,7 +82,7 @@ class ECDSABackend(SignerBackend):
         )
 
 
-class RSABackend(SignerBackend):
+class RSASigner(BaseSigner):
     """Local RSA signature backend.
     """
     key_size = 4096

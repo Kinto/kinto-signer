@@ -1,11 +1,8 @@
 from pyramid.settings import aslist
 from cliquet.events import ResourceChanged
 
-from kinto_signer import signer as signer_module
 from kinto_signer.updater import LocalUpdater
-
-from kinto_signer.signer.autograph import AutographSigner
-from kinto_signer.updater import RemoteUpdater
+from kinto_signer.signer.remote import AutographSigner
 
 
 def parse_resources(raw_resources):

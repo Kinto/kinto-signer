@@ -1,1 +1,1 @@
-from purepython import ECDSABackend
+from local import ECDSASigner

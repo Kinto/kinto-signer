@@ -1,9 +1,9 @@
 import sys
-from kinto_signer.signer import ECDSABackend
+from kinto_signer.signer import local
 
 
 def generate_keypair(private_key_location, public_key_location):
-    backend = ECDSABackend()
+    backend = local.ECDSASigner()
     private_key, public_key = backend.generate_keypair()
 
     with open(private_key_location, 'wb+') as tmp_file:

@@ -5,9 +5,11 @@ import unittest2
 import requests
 from six.moves import configparser
 
-from kinto_signer.hasher import canonical_json
-from kinto_signer import signer
-from kinto_signer.signer.purepython import ECDSABackend
+from kinto_signer.serializer import canonical_json
+from cliquet import utils as cliquet_utils
+
+from kinto_signer.hasher import compute_hash
+from kinto_signer.signer import local
 
 from kinto_client.replication import replicate
 from kinto_client import Client
@@ -30,7 +32,7 @@ class FunctionalTest(unittest2.TestCase):
         self.signer_config.read(os.path.join(__HERE__, 'config/signer.ini'))
         priv_key = self.signer_config.get(
             'app:main', 'kinto_signer.private_key')
-        self.signer = signer.ECDSABackend({'private_key': priv_key})
+        self.signer = local.ECDSASigner({'private_key': priv_key})
 
         # Setup the kinto clients for the source and destination.
         self._auth = DEFAULT_AUTH

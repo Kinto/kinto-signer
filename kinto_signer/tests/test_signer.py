@@ -5,7 +5,7 @@ import os
 import pytest
 from cryptography.exceptions import InvalidSignature
 
-from kinto_signer import signer
+from kinto_signer.signer.local import RSASigner, ECDSASigner
 from .support import unittest
 
 
@@ -60,9 +60,9 @@ class BackendTestBase(object):
             self.get_backend().load_private_key()
 
 
-class RSABackendTest(BackendTestBase, unittest.TestCase):
-    backend_class = signer.RSABackend
+class RSASignerTest(BackendTestBase, unittest.TestCase):
+    backend_class = RSASigner
 
 
-class ECDSABackendTest(BackendTestBase, unittest.TestCase):
-    backend_class = signer.ECDSABackend
+class ECDSASignerTest(BackendTestBase, unittest.TestCase):
+    backend_class = ECDSASigner

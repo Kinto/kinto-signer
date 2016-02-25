@@ -34,17 +34,12 @@ clean:
 	find . -name '*.pyc' -delete
 	find . -name '__pycache__' -type d -exec rm -fr {} \;
 
-run-remote: install-dev
-	$(VENV)/bin/cliquet --ini kinto_signer/tests/config/remote.ini migrate
-	$(VENV)/bin/pserve kinto_signer/tests/config/remote.ini --reload
-
 run-signer: install-dev
 	$(VENV)/bin/cliquet --ini kinto_signer/tests/config/signer.ini migrate
 	$(VENV)/bin/pserve kinto_signer/tests/config/signer.ini --reload
 
 need-kinto-running:
 	@curl http://localhost:8888/v0/ 2>/dev/null 1>&2 || (echo "Run 'make run-signer' before starting tests." && exit 1)
-	@curl http://localhost:7777/v0/ 2>/dev/null 1>&2 || (echo "Run 'make run-remote' before starting tests." && exit 1)
 
 functional: install-dev need-kinto-running
 	$(VENV)/bin/py.test kinto_signer/tests/functional.py

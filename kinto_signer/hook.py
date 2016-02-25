@@ -1,97 +1,8 @@
-from urlparse import urlparse, urlunparse
 from pyramid.settings import aslist
 from cliquet.events import ResourceChanged
 
 from kinto_signer import signer as signer_module
-from kinto_signer.updater import RemoteUpdater
-import kinto_client
-
-from cliquet.utils import build_request, build_response
-
-
-class LocalSession(object):
-    """A session implementation that does the requests using subrequests.
-    """
-    def __init__(self, request):
-        self.request = request
-
-    def request(self, method, endpoint, data=None, permissions=None,
-                payload=None, **kwargs):
-        from pdb import set_trace; set_trace()
-        payload = payload or {}
-        # if data is not None:
-        payload['data'] = data or {}
-        if permissions is not None:
-            if hasattr(permissions, 'as_dict'):
-                permissions = permissions.as_dict()
-            payload['permissions'] = permissions
-        if payload:
-            payload_kwarg = 'data' if 'files' in kwargs else 'json'
-            kwargs.setdefault(payload_kwarg, payload)
-        kwargs.update({
-            'method': method,
-            'body': payload
-        })
-        # XXX Headers?
-        subrequest = build_request(self.request, kwargs)
-        try:
-            # Invoke subrequest without individual transaction.
-            resp, subrequest = self.request.follow_subrequest(subrequest,
-                                                              use_tweens=False)
-        except httpexceptions.HTTPException as e:
-            if e.content_type == 'application/json':
-                resp = e
-            else:
-                # JSONify raw Pyramid errors.
-                resp = errors.http_error(e)
-        except Exception as e:
-            resp = render_view_to_response(e, subrequest)
-            if resp.status_code >= 500:
-                raise e  # Raise a specific error.
-        return resp
-
-        dict_resp = build_response(resp, subrequest)
-
-        if not (200 <= resp.status_code < 400):
-            message = '{0} - {1}'.format(resp.status_code, resp.json())
-            exception = KintoException(message)
-            exception.request = resp.request
-            exception.response = resp
-            raise exception
-
-        if resp.status_code == 304:
-            body = None
-        else:
-            body = resp.json()
-        # XXX Add the status code.
-        return body, resp.headers
-
-
-def get_server_settings(connection_string, auth=None, **kwargs):
-    if connection_string != "local":
-        parsed = urlparse(connection_string)
-        if parsed.username and parsed.password and not auth:
-            auth = (parsed.username, parsed.password)
-        path_parts = parsed.path.split('/')
-        # If auth was specified, be sure to remove it from the connection
-        # string.
-        parsed = list(parsed[:])
-        if '@' in parsed[1]:
-            parsed[1] = parsed[1].split('@', 1)[1]
-
-        if len(path_parts) != 2:
-            raise ValueError("Please specify scheme://server/version in the "
-                             "server URL, got %s" % connection_string)
-        _, version = path_parts
-        server_url = urlunparse(parsed)
-    else:
-        server_url = "local"
-
-    kwargs.update({
-        'server_url': server_url,
-        'auth': auth
-    })
-    return kwargs
+from kinto_signer.updater import LocalUpdater
 
 
 def parse_resources(raw_resources, settings):
@@ -99,27 +10,9 @@ def parse_resources(raw_resources, settings):
     for res in aslist(raw_resources):
         if ";" not in res:
             msg = ("Resources should be defined as "
-                   "'local:bucket/coll;remote:bucket/coll'. Got %r" % res)
+                   "'bucket/coll;bucket/coll'. Got %r" % res)
             raise ValueError(msg)
-        local, remote = res.split(';')
-        if not local.startswith('local:'):
-            msg = ("Only local resources can trigger signatures. "
-                   "They should start with 'local:'. Got %r" % local)
-            raise ValueError(msg)
-
-        _, local_resource_id = local.split(':', 1)
-
-        remote_alias, remote_resource_id = remote.split(':', 1)
-
-        if remote_alias == 'local':
-            remote_server_url = 'local'
-        else:
-            remote_alias_setting = 'kinto_signer.%s' % remote_alias
-            if remote_alias_setting not in settings:
-                msg = ("The remote alias you specified is not defined. "
-                       "Check for %s" % remote_alias_setting)
-                raise ValueError(msg)
-            remote_server_url = settings[remote_alias_setting]
+        source, destination = res.split(';')
 
         def _get_resource(resource):
             parts = resource.split('/')
@@ -127,23 +20,14 @@ def parse_resources(raw_resources, settings):
                 msg = ("Resources should be defined as bucket/collection. "
                        "Got %r" % resource)
                 raise ValueError(msg)
-            return parts
-
-        local_bucket, local_collection = _get_resource(local_resource_id)
-        remote_bucket, remote_collection = _get_resource(remote_resource_id)
-
-        remote_settings = get_server_settings(
-            remote_server_url,
-            collection=remote_collection,
-            bucket=remote_bucket
-        )
-
-        resources[local_resource_id] = {
-            'remote': remote_settings,
-            'local': {
-                'bucket': remote_bucket,
-                'collection': remote_collection
+            return {
+                'bucket': parts[0],
+                'collection': parts[1]
             }
+
+        resources[source] = {
+            'source': _get_resource(source),
+            'destination': _get_resource(destination),
         }
     return resources
 
@@ -179,20 +63,11 @@ def includeme(config):
         if should_sign:
             registry = event.request.registry
             # XXX Add Auth.
-            if resource['remote']['server_url'] == 'local':
-                session = LocalSession(event.request)
-                kwargs = {}
-                kwargs.update(resource['remote'])
-                del kwargs['server_url']
-                remote = kinto_client.Client(session=session, **kwargs)
-            else:
-                remote = kinto_client.Client(**resource['remote'])
-            updater = RemoteUpdater(
-                remote=remote,
+            updater = LocalUpdater(
                 signer=registry.signer,
                 storage=registry.storage,
-                local_bucket=resource['local']['bucket'],
-                local_collection=resource['local']['collection'])
+                source=resource['source'],
+                destination=resource['destination'])
 
             updater.sign_and_update_remote()
 

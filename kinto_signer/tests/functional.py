@@ -5,9 +5,7 @@ import unittest2
 import requests
 from six.moves import configparser
 
-from cliquet import utils as cliquet_utils
-
-from kinto_signer.hasher import compute_hash
+from kinto_signer.hasher import canonical_json
 from kinto_signer import signer
 
 from kinto_client.replication import replicate
@@ -15,8 +13,7 @@ from kinto_client import Client
 
 __HERE__ = os.path.abspath(os.path.dirname(__file__))
 
-SIGNER_URL = "http://localhost:8888/v1"
-REMOTE_URL = "http://localhost:7777/v1"
+SERVER_URL = "http://localhost:8888/v1"
 DEFAULT_AUTH = ('user', 'p4ssw0rd')
 
 
@@ -24,140 +21,79 @@ class FunctionalTest(unittest2.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(FunctionalTest, self).__init__(*args, **kwargs)
-        # XXX Read the configuration from env variables.
-        self.auth = DEFAULT_AUTH
+        # Setup the private key and signer instance.
         self.private_key = os.path.join(__HERE__, 'config/test.pem')
-
-        self.signer_url = SIGNER_URL
         self.signer_config = configparser.RawConfigParser()
         self.signer_config.read(os.path.join(__HERE__, 'config/signer.ini'))
-        self.signer_client = Client(
-            server_url=self.signer_url,
-            auth=self.auth,
-            bucket="buck",
-            collection="coll")
-
-        self.remote_url = REMOTE_URL
-        self.remote_config = configparser.RawConfigParser()
-        self.remote_config.read(os.path.join(__HERE__, 'config/remote.ini'))
-        self.remote_client = Client(
-            server_url=self.remote_url,
-            auth=self.auth,
-            bucket="buck",
-            collection="coll")
-
         priv_key = self.signer_config.get(
             'app:main', 'kinto_signer.private_key')
         self.signer = signer.ECDSABackend({'private_key': priv_key})
 
+        # Setup the kinto clients for the source and destination.
+        self._auth = DEFAULT_AUTH
+        self._server_url = SERVER_URL
+        self._source_bucket = "source"
+        self._destination_bucket = "destination"
+        self._collection_id = "collection1"
+
+        self.source = Client(
+            server_url=self._server_url,
+            auth=self._auth,
+            bucket=self._source_bucket,
+            collection=self._collection_id)
+
+        self.destination = Client(
+            server_url=self._server_url,
+            auth=self._auth,
+            bucket=self._destination_bucket,
+            collection=self._collection_id)
+
     def tearDown(self):
         # Delete all the created objects
-        self.flush_server(self.signer_url)
-        self.flush_server(self.remote_url)
+        self._flush_server(self._server_url)
 
-    def flush_server(self, server_url):
+    def _flush_server(self, server_url):
         flush_url = urljoin(server_url, '/__flush__')
         resp = requests.post(flush_url)
         resp.raise_for_status()
 
-    def get_user_id(self, credentials):
-        hmac_secret = self.signer_config.get(
-            'app:main',
-            'cliquet.userid_hmac_secret')
-        credentials = '%s:%s' % credentials
-        digest = cliquet_utils.hmac_digest(hmac_secret, credentials)
-        return 'basicauth:%s' % digest
-
     def test_signature_on_new_records(self):
-        # Populate the remote server with some data.
-        with self.remote_client.batch() as batch:
+        # Populate the destination with some data.
+        with self.destination.batch() as batch:
             batch.create_bucket()
             batch.create_collection()
             for n in range(10):
                 batch.create_record(data={'foo': 'bar', 'n': n})
 
-        # Replicate the remote data locally:
-        origin = Client(
-            server_url=self.remote_url,
-            auth=self.auth,
-            bucket='buck',
-            collection='coll'
-        )
-        authority = Client(
-            server_url=self.signer_url,
-            auth=self.auth,
-            bucket='buck',
-            collection='coll')
-
-        replicate(origin, authority)
+        # Copy the data from the **destination** to the **source**.
+        # This seems to be weird, but is actually what we want here, the
+        # signer **hook** will take care of copying the new records to the
+        # destination, later on.
+        replicate(self.destination, self.source)
 
         # Check that the data has been copied.
-        records = self.signer_client.get_records()
+        records = self.source.get_records()
         assert len(records) == 10
 
         # Send new data to the signer.
-        with self.signer_client.batch() as batch:
+        with self.source.batch() as batch:
             for n in range(100, 105):
                 batch.create_record(data={'newdata': n})
-        self.signer_client.update_collection(
+
+        # Trigger a signature.
+        self.source.update_collection(
             data={'status': 'to-sign'},
             method="put")
 
         # Ensure the remote data is signed properly.
-        data = self.remote_client.get_collection()
+        data = self.destination.get_collection()
         signature = data['data']['signature']
         assert signature is not None
 
-        records = self.remote_client.get_records()
+        records = self.destination.get_records()
         assert len(records) == 15
-        local_hash = compute_hash(records)
-        self.signer.verify(local_hash, signature)
-
-    def test_signature_on_local_collections(self):
-        # Replicate the remote data locally:
-        origin = Client(
-            server_url=self.signer_url,
-            auth=self.auth,
-            bucket='buck',
-            collection='destination'
-        )
-        authority = Client(
-            server_url=self.signer_url,
-            auth=self.auth,
-            bucket='buck',
-            collection='origin')
-
-        # Populate the origin with some data.
-        with origin.batch() as batch:
-            batch.create_bucket()
-            batch.create_collection()
-            for n in range(10):
-                batch.create_record(data={'foo': 'bar', 'n': n})
-
-        replicate(origin, authority)
-
-        # Check that the data has been copied.
-        records = authority.get_records()
-        assert len(records) == 10
-
-        # Send new data to the signer.
-        with authority.batch() as batch:
-            for n in range(100, 105):
-                batch.create_record(data={'newdata': n})
-
-        authority.update_collection(
-            data={'status': 'to-sign'},
-            method="put")
-
-        # Ensure the remote data is signed properly.
-        data = origin.get_collection()
-        signature = data['data']['signature']
-        assert signature is not None
-
-        records = origin.get_records()
-        assert len(records) == 15
-        local_hash = compute_hash(records)
-        self.signer.verify(local_hash, signature)
+        serialized_records = canonical_json(records)
+        self.signer.verify(serialized_records, signature)
 
 if __name__ == '__main__':
     unittest2.main()

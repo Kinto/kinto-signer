@@ -2,11 +2,18 @@ import tempfile
 import re
 import os
 
+import mock
 import pytest
 from cryptography.exceptions import InvalidSignature
 
 from kinto_signer.signer.local import RSASigner, ECDSASigner
+from kinto_signer.signer.remote import AutographSigner
 from .support import unittest
+
+
+SIGNATURE = ("MS8ZXMzr9YVttwuHgZ_SxlPogZKm_mYO6SsEiqupBeu01ELO_xP6huN4bXBn-ZH"
+             "1ZJkbgBeVQ_QKd8wW9_ggJxDaPpQ3COFcpW_SdHaiEOLBcKt_SrKmLVIWHE3wc3"
+             "lV")
 
 
 class BackendTestBase(object):
@@ -66,3 +73,25 @@ class RSASignerTest(BackendTestBase, unittest.TestCase):
 
 class ECDSASignerTest(BackendTestBase, unittest.TestCase):
     backend_class = ECDSASigner
+
+
+class AutographSignerTest(unittest.TestCase):
+
+    def setUp(self):
+        settings = {
+            'kinto_signer.autograph.hawk_id': 'alice',
+            'kinto_signer.autograph.hawk_secret':
+                'fs5wgcer9qj819kfptdlp8gm227ewxnzvsuj9ztycsx08hfhzu',
+            'kinto_signer.autograph.server_url': 'http://localhost:8000'
+        }
+        self.signer = AutographSigner(settings)
+
+    @mock.patch('kinto_signer.signer.remote.requests')
+    def test_request_is_being_crafted_with_payload_as_input(self, requests):
+        response = mock.MagicMock()
+        response.json.return_value = [{"signature": SIGNATURE}]
+        requests.post.return_value = response
+        signed = self.signer.sign("test data")
+        assert signed == ("MS8ZXMzr9YVttwuHgZ/SxlPogZKm/mYO6SsEiqupBeu01ELO"
+                          "/xP6huN4bXBn+ZH1ZJkbgBeVQ/QKd8wW9/ggJxDaPpQ3COFc"
+                          "pW/SdHaiEOLBcKt/SrKmLVIWHE3wc3lV")

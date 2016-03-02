@@ -11,9 +11,14 @@ script:
 matrix:
   include:
     - go: 1.5
-      env:
-        - TOX_ENV=functional
+      language: go
+      script:
+        - .venv/bin/tox -e functional
       install:
-        - pip install tox
+        - eval "$(gimme 1.5)"
+        - go version
+        - python --version
+        - make install-dev install-autograph
+        - .venv/bin/pip install tox
         - make run-autograph &
         - make run-signer &

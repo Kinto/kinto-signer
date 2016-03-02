@@ -38,6 +38,8 @@ run-signer: install-dev
 	$(VENV)/bin/cliquet --ini kinto_signer/tests/config/signer.ini migrate
 	$(VENV)/bin/pserve kinto_signer/tests/config/signer.ini --reload
 
+install-autograph: $(VENV)/bin/autograph
+
 $(VENV)/bin/autograph:
 	export GOPATH=$(VENV); export PATH="$$GOPATH/bin;$$PATH"; go get github.com/mozilla-services/autograph
 

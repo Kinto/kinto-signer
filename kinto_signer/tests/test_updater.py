@@ -1,8 +1,6 @@
 import mock
-import pytest
 from cliquet.storage import Filter
 from cliquet.utils import COMPARISON
-from kinto_client import Client
 
 from kinto_signer import LocalUpdater
 from .support import unittest
@@ -64,11 +62,11 @@ class LocalUpdaterTest(unittest.TestCase):
         self.updater.push_records_to_destination()
         assert self.storage.update.call_count == 3
 
-    @pytest.mark.skip(reason="not currently implemented")
+    @unittest.skip("not currently implemented")
     def test_push_records_removes_deleted_records(self):
         pass
 
-    def test_push_records_to_destination(self):
+    def test_push_records_to_destination_with_no_destination_changes(self):
         self.updater.get_destination_last_modified = mock.MagicMock(
             return_value=(1324, 0))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]

@@ -1,4 +1,3 @@
-import mock
 import pytest
 from .support import unittest
 

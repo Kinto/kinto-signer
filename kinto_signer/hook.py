@@ -62,7 +62,6 @@ def includeme(config):
                            if r['new'].get('status') == 'to-sign'])
         if should_sign:
             registry = event.request.registry
-            # XXX Add Auth.
             updater = LocalUpdater(
                 signer=registry.signer,
                 storage=registry.storage,

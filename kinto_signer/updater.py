@@ -28,13 +28,14 @@ class LocalUpdater(object):
 
     def __init__(self, source, destination, signer, storage):
 
-        def _ensure_bucket_and_collection(resource):
+        def _ensure_resource(resource):
             if not set(resource.keys()).issuperset({'bucket', 'collection'}):
                 msg = "Resources should contain both bucket and collection"
                 raise ValueError(msg)
+            return resource
 
-        self.source = source
-        self.destination = destination
+        self.source = _ensure_resource(source)
+        self.destination = _ensure_resource(destination)
         self.signer = signer
         self.storage = storage
 

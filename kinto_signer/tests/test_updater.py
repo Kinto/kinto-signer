@@ -1,4 +1,5 @@
 import mock
+import pytest
 from cliquet.storage import Filter
 from cliquet.utils import COMPARISON
 
@@ -20,6 +21,16 @@ class LocalUpdaterTest(unittest.TestCase):
                 'collection': 'destcollection'},
             signer=self.signer_instance,
             storage=self.storage)
+
+    def test_updater_raises_if_resources_are_not_set_properly(self):
+        with pytest.raises(ValueError) as excinfo:
+            LocalUpdater(
+                source={'bucket': 'local'},
+                destination={},
+                signer=self.signer_instance,
+                storage=self.storage)
+        assert excinfo.value.message == ("Resources should contain both "
+                                         "bucket and collection")
 
     def test_get_local_records_asks_storage_for_records(self):
         records = mock.sentinel.records

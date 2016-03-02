@@ -50,7 +50,6 @@ def includeme(config):
                               resources=resources)
 
     def on_resource_changed(event):
-        print(event, event.payload, event.impacted_records)
         payload = event.payload
         requested_resource = "{bucket_id}/{collection_id}".format(**payload)
         if requested_resource not in available_resources:

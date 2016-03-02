@@ -16,7 +16,8 @@ class AutographSigner(object):
         b64_payload = base64.b64encode(payload.encode('utf-8'))
         url = urlparse.urljoin(self.server_url, '/signature')
         resp = requests.post(url, auth=self.auth, json=[{
-            "input": b64_payload
+            "input": b64_payload,
+            "hashwith": "sha384"
         }])
         resp.raise_for_status()
         signature = resp.json()[0]['signature']

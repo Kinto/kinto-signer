@@ -1,55 +1,57 @@
 import base64
 import six
 
-from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import serialization, hashes
-from cryptography.hazmat.primitives.asymmetric import padding, rsa, ec
+import ecdsa
+from ecdsa import NIST384p, SigningKey, VerifyingKey
+import hashlib
+
+from .exceptions import BadSignatureError
 
 
-class BaseSigner(object):
-    padding = False
+class ECDSASigner(object):
 
     def __init__(self, settings=None):
         self.settings = settings or {}
 
-    def export_private_key_as_pem(self, key):
-        pem = key.private_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption())
-        return pem
-
-    def export_public_key_as_pem(self, key):
-        return key.public_bytes(
-            encoding=serialization.Encoding.PEM,
-            format=serialization.PublicFormat.SubjectPublicKeyInfo
-        )
+    def generate_keypair(self):
+        sk = SigningKey.generate(curve=NIST384p)
+        vk = sk.get_verifying_key()
+        return sk.to_pem(), vk.to_pem()
 
     def load_private_key(self):
         # Check settings validity
         if 'private_key' not in self.settings:
             msg = 'Please, specify the private_key location in the settings.'
             raise ValueError(msg)
+
         with open(self.settings['private_key'], 'rb') as key_file:
-            return serialization.load_pem_private_key(
-                key_file.read(),
-                password=None,
-                backend=default_backend())
+            return SigningKey.from_pem(key_file.read())
+
+    def load_public_key(self):
+        # Check settings validity
+        if 'private_key' in self.settings:
+            private_key = self.load_private_key()
+            return private_key.get_verifying_key()
+        elif 'public_key' in self.settings:
+            with open(self.settings['public_key'], 'rb') as key_file:
+                return VerifyingKey.from_pem(key_file.read())
+        else:
+            msg = ("Please, specify the private_key or public_key location in "
+                   "the settings")
+            raise ValueError(msg)
 
     def sign(self, payload):
-        private_key = self.load_private_key()
-
-        signer = private_key.signer(*self.get_signer_args())
-
         if isinstance(payload, six.text_type):  # pragma: nocover
             payload = payload.encode('utf-8')
 
-        signer.update(payload)
-        signature = signer.finalize()
+        private_key = self.load_private_key()
+        signature = private_key.sign(
+            payload,
+            hashfunc=hashlib.sha384,
+            sigencode=ecdsa.util.sigencode_string)
         return base64.b64encode(signature)
 
     def verify(self, payload, signature):
-
         if isinstance(payload, six.text_type):  # pragma: nocover
             payload = payload.encode('utf-8')
 
@@ -57,50 +59,13 @@ class BaseSigner(object):
             signature = signature.encode('utf-8')
 
         signature_bytes = base64.b64decode(signature)
-        public_key = self.load_private_key().public_key()
-        verifier = public_key.verifier(
-            signature_bytes,
-            *self.get_signer_args())
-        verifier.update(payload)
-        verifier.verify()
 
-
-class ECDSASigner(BaseSigner):
-    """Local ECDSA signature backend.
-    """
-
-    def get_signer_args(self):
-        return [ec.ECDSA(hashes.SHA256())]
-
-    def generate_keypair(self):
-        private_key = ec.generate_private_key(
-            ec.SECP384R1(), default_backend()
-        )
-        return (
-            self.export_private_key_as_pem(private_key),
-            self.export_public_key_as_pem(private_key.public_key())
-        )
-
-
-class RSASigner(BaseSigner):
-    """Local RSA signature backend.
-    """
-    key_size = 4096
-
-    def _get_padding(self):
-        return padding.PSS(
-            mgf=padding.MGF1(hashes.SHA256()),
-            salt_length=padding.PSS.MAX_LENGTH)
-
-    def get_signer_args(self):
-        return [self._get_padding(), hashes.SHA256()]
-
-    def generate_keypair(self):
-        private_key = rsa.generate_private_key(
-            public_exponent=65537,
-            key_size=self.key_size,
-            backend=default_backend())
-        return (
-            self.export_private_key_as_pem(private_key),
-            self.export_public_key_as_pem(private_key.public_key())
-        )
+        public_key = self.load_public_key()
+        try:
+            public_key.verify(
+                signature_bytes,
+                payload,
+                hashfunc=hashlib.sha384,
+                sigdecode=ecdsa.util.sigdecode_string)
+        except Exception as e:
+            raise BadSignatureError(e)

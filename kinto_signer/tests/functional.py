@@ -6,9 +6,7 @@ import requests
 from six.moves import configparser
 
 from kinto_signer.serializer import canonical_json
-from cliquet import utils as cliquet_utils
 
-from kinto_signer.hasher import compute_hash
 from kinto_signer.signer import local
 
 from kinto_client.replication import replicate
@@ -27,7 +25,6 @@ class FunctionalTest(unittest2.TestCase):
         self.auth = DEFAULT_AUTH
         self.private_key = os.path.join(__HERE__, 'config/ecdsa.private.pem')
 
-        self.signer_url = SIGNER_URL
         self.signer_config = configparser.RawConfigParser()
         self.signer_config.read(os.path.join(__HERE__, 'config/signer.ini'))
         priv_key = self.signer_config.get(

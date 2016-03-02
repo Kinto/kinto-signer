@@ -4,39 +4,44 @@ import os
 
 import mock
 import pytest
-from cryptography.exceptions import InvalidSignature
 
-from kinto_signer.signer.local import RSASigner, ECDSASigner
-from kinto_signer.signer.remote import AutographSigner
+from kinto_signer.signer import ECDSASigner, AutographSigner, BadSignatureError
 from .support import unittest
 
 
-SIGNATURE = ("MS8ZXMzr9YVttwuHgZ_SxlPogZKm_mYO6SsEiqupBeu01ELO_xP6huN4bXBn-ZH"
-             "1ZJkbgBeVQ_QKd8wW9_ggJxDaPpQ3COFcpW_SdHaiEOLBcKt_SrKmLVIWHE3wc3"
-             "lV")
+SIGNATURE = (
+    "ikfq6qOV85vR7QaNCTldVvvtcNpPIICqqMp3tfyiT7fHCgFNq410SFnIfjAPgSa"
+    "jEtxxyGtZFMoI/BzO/1y5oShLtX0LH4wx/Wft7wz17T7fFqpDQ9hFZzTOPBwZUIbx")
 
 
-class BackendTestBase(object):
+def save_key(key, key_name):
+    tmp = tempfile.mktemp(key_name)
+    with open(tmp, 'wb+') as tmp_file:
+        tmp_file.write(key)
+    return tmp
+
+
+class ECDSASignerTest(unittest.TestCase):
 
     @classmethod
     def get_backend(cls, options=None):
-        return cls.backend_class(options)
+        return ECDSASigner(options)
 
     @classmethod
     def setUpClass(cls):
         backend = cls.get_backend()
-        key, _ = backend.generate_keypair()
-        tmp = tempfile.mktemp('key')
-        with open(tmp, 'wb+') as tmp_file:
-            tmp_file.write(key)
-        cls.key_location = tmp
-        cls.signer = cls.get_backend(
-            {'private_key': cls.key_location}
-        )
+        sk, vk = backend.generate_keypair()
+        cls.sk_location = save_key(sk, 'signing-key')
+        cls.vk_location = save_key(vk, 'verifying-key')
+
+        cls.signer = cls.get_backend({
+            'private_key': cls.sk_location,
+        })
 
     @classmethod
     def tearDownClass(cls):
-        os.remove(cls.key_location)
+        os.remove(cls.sk_location)
+        os.remove(cls.vk_location)
 
     def test_keyloading_fails_if_no_settings(self):
         backend = self.get_backend()
@@ -52,8 +57,8 @@ class BackendTestBase(object):
         self.signer.verify("this is some text", signature)
 
     def test_wrong_signature_raises_an_error(self):
-        with pytest.raises(InvalidSignature):
-            self.signer.verify("this is some text", "wrong sig")
+        with pytest.raises(BadSignatureError):
+            self.signer.verify("Text not matching with the sig.", SIGNATURE)
 
     def test_signer_returns_a_base64_string(self):
         signature = self.signer.sign("this is some text")
@@ -66,13 +71,21 @@ class BackendTestBase(object):
         with pytest.raises(ValueError):
             self.get_backend().load_private_key()
 
+    def test_public_key_can_be_loaded_from_public_key_pem(self):
+        signer = self.get_backend({'public_key': self.vk_location})
+        signer.load_public_key()
 
-class RSASignerTest(BackendTestBase, unittest.TestCase):
-    backend_class = RSASigner
+    def test_public_key_can_be_loaded_from_private_key_pem(self):
+        signer = self.get_backend({'private_key': self.sk_location})
+        signer.load_public_key()
 
-
-class ECDSASignerTest(BackendTestBase, unittest.TestCase):
-    backend_class = ECDSASigner
+    def test_load_public_key_raises_an_error_if_missing_settings(self):
+        signer = self.get_backend()
+        with pytest.raises(ValueError) as excinfo:
+            signer.load_public_key()
+        msg = ("Please, specify the private_key or public_key location in the "
+               "settings")
+        assert str(excinfo.value) == msg
 
 
 class AutographSignerTest(unittest.TestCase):
@@ -92,6 +105,4 @@ class AutographSignerTest(unittest.TestCase):
         response.json.return_value = [{"signature": SIGNATURE}]
         requests.post.return_value = response
         signed = self.signer.sign("test data")
-        assert signed == ("MS8ZXMzr9YVttwuHgZ/SxlPogZKm/mYO6SsEiqupBeu01ELO"
-                          "/xP6huN4bXBn+ZH1ZJkbgBeVQ/QKd8wW9/ggJxDaPpQ3COFc"
-                          "pW/SdHaiEOLBcKt/SrKmLVIWHE3wc3lV")
+        assert signed == SIGNATURE

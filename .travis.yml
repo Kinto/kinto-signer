@@ -14,5 +14,6 @@ matrix:
       env:
         - TOX_ENV=functional
       install:
+        - pip install tox
         - make run-autograph &
         - make run-signer &

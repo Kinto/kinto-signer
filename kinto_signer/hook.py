@@ -5,7 +5,7 @@ from kinto_signer import signer as signer_module
 from kinto_signer.updater import LocalUpdater
 
 
-def parse_resources(raw_resources, settings):
+def parse_resources(raw_resources):
     resources = {}
     for res in aslist(raw_resources):
         if ";" not in res:
@@ -43,7 +43,7 @@ def includeme(config):
     raw_resources = settings.get('kinto_signer.resources')
     if raw_resources is None:
         raise ValueError("Please specify the kinto_signer.resources value.")
-    available_resources = parse_resources(raw_resources, settings)
+    available_resources = parse_resources(raw_resources)
 
     message = "Provide signing capabilities to the server."
     docs = "https://github.com/mozilla-services/kinto-signer#kinto-signer"

@@ -1,5 +1,5 @@
 from cliquet.utils import COMPARISON
-from kinto_signer.hasher import canonical_json
+from kinto_signer.serializer import canonical_json
 from cliquet.storage import Filter
 
 
@@ -102,6 +102,8 @@ class LocalUpdater(object):
                 collection_id='record',
                 object_id=record['id'],
                 record=record)
+
+        # XXX delete records as well.
 
     def set_destination_signature(self, signature):
         # Push the new signature to the destination collection.

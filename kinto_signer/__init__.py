@@ -1,1 +1,1 @@
-from kinto_signer.updater import RemoteUpdater  # noqa
+from kinto_signer.updater import LocalUpdater  # noqa

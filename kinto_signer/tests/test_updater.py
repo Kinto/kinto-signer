@@ -1,100 +1,103 @@
+import mock
+import pytest
 from cliquet.storage import Filter
 from cliquet.utils import COMPARISON
 
+from kinto_signer import LocalUpdater
 from .support import unittest
 
-from kinto_client import Client
-from kinto_signer import RemoteUpdater
-import mock
 
-SERVER_URL = "http://kinto-storage.org"
-
-
-class BaseUpdaterTest(object):
-    def _build_response(self, data, headers=None):
-        if headers is None:
-            headers = {}
-        resp = {
-            'data': data
-        }
-        return resp, headers
-
-
-class RemoteUpdaterTest(unittest.TestCase):
+class LocalUpdaterTest(unittest.TestCase):
 
     def setUp(self):
-        self.session = mock.MagicMock()
-        self.remote = Client(
-            bucket="buck",
-            collection="coll",
-            session=self.session)
         self.storage = mock.MagicMock()
         self.signer_instance = mock.MagicMock()
-        self.updater = RemoteUpdater(
-            remote=self.remote,
+        self.updater = LocalUpdater(
+            source={
+                'bucket': 'localbucket',
+                'collection': 'localcollection'},
+            destination={
+                'bucket': 'destbucket',
+                'collection': 'destcollection'},
             signer=self.signer_instance,
-            storage=self.storage,
-            bucket_id='bucket',
-            collection_id='collection')
+            storage=self.storage)
 
-    def test_collection_records_asks_storage_for_records(self):
+    def test_updater_raises_if_resources_are_not_set_properly(self):
+        with pytest.raises(ValueError) as excinfo:
+            LocalUpdater(
+                source={'bucket': 'local'},
+                destination={},
+                signer=self.signer_instance,
+                storage=self.storage)
+        assert str(excinfo.value) == ("Resources should contain both "
+                                      "bucket and collection")
+
+    def test_get_local_records_asks_storage_for_records(self):
         records = mock.sentinel.records
         count = mock.sentinel.count
         self.storage.get_all.return_value = (records, count)
 
-        self.updater.get_collection_records()
+        self.updater.get_local_records()
         self.storage.get_all.assert_called_with(
             collection_id='record',
-            parent_id='/buckets/bucket/collections/collection')
+            parent_id='/buckets/localbucket/collections/localcollection')
 
-    def test_collection_records_asks_storage_for_last_modified_records(self):
+    def test_get_local_records_asks_storage_for_last_modified_records(self):
         records = mock.sentinel.records
         count = mock.sentinel.count
         self.storage.get_all.return_value = (records, count)
 
-        self.updater.get_collection_records(1234)
+        self.updater.get_local_records(1234)
         self.storage.get_all.assert_called_with(
             collection_id='record',
-            parent_id='/buckets/bucket/collections/collection',
+            parent_id='/buckets/localbucket/collections/localcollection',
             filters=[Filter('last_modified', 1234, COMPARISON.GT)])
 
-    def test_get_remote_last_modified(self):
-        headers = {'ETag': '"1234"', 'Total-Records': '10'}
-        self.remote.session.request.return_value = (None, headers)
-        collection_timestamp, count = self.updater.get_remote_last_modified()
-        self.remote.session.request.assert_called_with(
-            'get', '/buckets/buck/collections/coll/records')
-        assert collection_timestamp == 1234
-        assert count == 10
+    def test_get_destination_last_modified(self):
+        records = mock.sentinel.records
+        count = mock.sentinel.count
+        self.storage.get_all.return_value = (records, count)
+        self.updater.get_destination_last_modified()
+        self.storage.collection_timestamp.assert_called_with(
+            collection_id='record',
+            parent_id='/buckets/destbucket/collections/destcollection')
+        self.storage.get_all.assert_called_with(
+            collection_id='record',
+            parent_id='/buckets/destbucket/collections/destcollection')
 
-    def test_update_remote(self):
-        records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 3)]
-        self.updater.get_remote_last_modified = mock.MagicMock(
-            return_value=(1234, 2))
-        self.updater.get_collection_records = mock.MagicMock(
-            return_value=records)
+    def test_push_records_to_destination(self):
+        self.updater.get_destination_last_modified = mock.MagicMock(
+            return_value=(1324, 10))
+        records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
+        self.updater.get_local_records = mock.MagicMock(return_value=records)
+        self.updater.push_records_to_destination()
+        assert self.storage.update.call_count == 3
 
-        batch = mock.MagicMock()
-        self.remote.batch = mock.MagicMock(return_value=batch)
-        self.updater.update_remote("hash", "signature")
+    @unittest.skip("not currently implemented")
+    def test_push_records_removes_deleted_records(self):
+        pass
 
-        batch.__enter__().update_record.assert_any_call(
-            data={'foo': 'bar 2', 'id': 2}, id=2, safe=False)
-        batch.__enter__().update_record.assert_any_call(
-            data={'foo': 'bar 1', 'id': 1}, id=1, safe=False)
-        batch.__enter__().patch_collection.assert_called_with(
-            data={'signature': 'signature'})
+    def test_push_records_to_destination_with_no_destination_changes(self):
+        self.updater.get_destination_last_modified = mock.MagicMock(
+            return_value=(1324, 0))
+        records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
+        self.updater.get_local_records = mock.MagicMock(return_value=records)
+        self.updater.push_records_to_destination()
+        self.updater.get_local_records.assert_called_with(None)
+        assert self.storage.update.call_count == 3
 
-    def test_update_remote_on_empty_remote(self):
-        records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 3)]
-        self.updater.get_remote_last_modified = mock.MagicMock(
-            return_value=(1234, 0))
-        self.updater.get_collection_records = mock.MagicMock(
-            return_value=records)
+    def test_set_destination_signature_modifies_the_local_collection(self):
+        self.storage.get.return_value = {'id': 1234}
+        self.updater.set_destination_signature(mock.sentinel.signature)
 
-        self.updater.update_remote("hash", "signature")
-
-        self.updater.get_collection_records.assert_called_with(None)
+        self.storage.update.assert_called_with(
+            collection_id='collection',
+            object_id='destcollection',
+            parent_id='/buckets/destbucket',
+            record={
+                'id': 1234,
+                'signature': mock.sentinel.signature
+            })
 
     def test_sign_and_update_remote(self):
         records = [{'id': idx, 'foo': 'bar %s' % idx}
@@ -102,4 +105,11 @@ class RemoteUpdaterTest(unittest.TestCase):
         self.storage.get_all.return_value = (records, 2)
         self.updater.update_remote = mock.MagicMock()
 
+        self.updater.get_local_records = mock.MagicMock()
+        self.updater.push_records_to_destination = mock.MagicMock()
+        self.updater.set_destination_signature = mock.MagicMock()
         self.updater.sign_and_update_remote()
+
+        assert self.updater.get_local_records.call_count == 1
+        assert self.updater.push_records_to_destination.call_count == 1
+        assert self.updater.set_destination_signature.call_count == 1

@@ -56,18 +56,9 @@ to be set.
 +---------------------------------+--------------------------------------------------------------------------+
 | Setting name                    | What does it do?                                                         |
 +=================================+==========================================================================+
-| kinto_signer.remote_server_url  | The complete location of the remote server URL (the origin)              |
-|                                 | For instance ``https://localhost:8000/v1/``                              |
-+---------------------------------+--------------------------------------------------------------------------+
-| kinto_signer.bucket             | The name of the bucket on which signatures will be applied.              |
-|                                 | *Current limitation: the bucket should be the same locally and remotely* |
-+---------------------------------+--------------------------------------------------------------------------+
-| kinto_signer.collection         | The name of the collection on which signatures will be applied           |
-|                                 | *Current limitation: the collection should be the same locally and       |
-|                                 | remotely*                                                                |
-+---------------------------------+--------------------------------------------------------------------------+
-| kinto_signer.remote_server_auth | The authentication to use on the remote server. Should be specified as   |
-|                                 | "user:password".                                                         |
+| kinto_signer.resources          | The name of the buckets and collections on which signatures can be       |
+|                                 | triggered and the destination where the data and the signatures will     |
+|                                 | end-up.                                                                  |
 +---------------------------------+--------------------------------------------------------------------------+
 | kinto_signer.private_key        | The absolute path to the location of the ECDSA private key to use to     |
 |                                 | apply the signatures                                                     |
@@ -79,18 +70,10 @@ Here is an example of what a configuration could look like:
 
   kinto.includes = kinto_signer.hook
 
-  kinto_signer.bucket = buck
-  kinto_signer.collection = coll
-  kinto_signer.remote_server_url = http://localhost:7777/v1
-  kinto_signer.remote_server_auth = user:p4ssw0rd
+  kinto_signer.resources =
+      source/collection1;destination/collection1
+      source/collection2;destination/collection2
   kinto_signer.private_key = kinto_signer/tests/config/ecdsa.private.pem
-
-Starting the authority for the first time
-=========================================
-
-Each time the authority starts, it will reach the origin and get all the data
-contained in configured bucket/collection of the origin.
-
 
 Generating a keypair
 ====================
@@ -105,8 +88,7 @@ To run the unit tests::
 
   $ make tests
 
-To the functional tests::
+For the functional tests::
 
-  $ make run-remote
   $ make run-signer
   $ make functional

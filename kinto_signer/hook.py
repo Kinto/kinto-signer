@@ -1,60 +1,73 @@
+from pyramid.settings import aslist
 from cliquet.events import ResourceChanged
 
 from kinto_signer import signer as signer_module
-from kinto_signer.updater import RemoteUpdater
-import kinto_client
+from kinto_signer.updater import LocalUpdater
+
+
+def parse_resources(raw_resources):
+    resources = {}
+    for res in aslist(raw_resources):
+        if ";" not in res:
+            msg = ("Resources should be defined as "
+                   "'bucket/coll;bucket/coll'. Got %r" % res)
+            raise ValueError(msg)
+        source, destination = res.split(';')
+
+        def _get_resource(resource):
+            parts = resource.split('/')
+            if len(parts) != 2:
+                msg = ("Resources should be defined as bucket/collection. "
+                       "Got %r" % resource)
+                raise ValueError(msg)
+            return {
+                'bucket': parts[0],
+                'collection': parts[1]
+            }
+
+        resources[source] = {
+            'source': _get_resource(source),
+            'destination': _get_resource(destination),
+        }
+    return resources
 
 
 def includeme(config):
     # Process settings to remove storage wording.
     settings = config.get_settings()
 
-    expected_bucket = settings.get('kinto_signer.bucket')
-    expected_collection = settings.get('kinto_signer.collection')
-
-    message = (
-        "Provide signing capabilities to the "
-        "/buckets/{bucket}/collections/{collection} collection."
-    ).format(bucket=expected_bucket,
-             collection=expected_collection)
-    docs = "https://github.com/mozilla-services/kinto-signer#kinto-signer"
-    config.add_api_capability("signer", message, docs,
-                              bucket=expected_bucket,
-                              collection=expected_collection)
-
     priv_key = settings.get('kinto_signer.private_key')
     config.registry.signer = signer_module.ECDSABackend(
         {'private_key': priv_key})
 
-    remote_url = settings['kinto_signer.remote_server_url']
+    raw_resources = settings.get('kinto_signer.resources')
+    if raw_resources is None:
+        raise ValueError("Please specify the kinto_signer.resources value.")
+    available_resources = parse_resources(raw_resources)
 
-    auth = settings.get('kinto_signer.remote_server_auth', None)
-    if auth is not None:
-        auth = tuple(auth.split(':'))
-    remote = kinto_client.Client(server_url=remote_url, bucket=expected_bucket,
-                                 collection=expected_collection,
-                                 auth=auth)
+    message = "Provide signing capabilities to the server."
+    docs = "https://github.com/mozilla-services/kinto-signer#kinto-signer"
+    resources = sorted(available_resources.keys())
+    config.add_api_capability("signer", message, docs,
+                              resources=resources)
 
     def on_resource_changed(event):
+        print(event, event.payload, event.impacted_records)
         payload = event.payload
-
-        # XXX Add a concept of local and remote buckets/collections
-        correct_bucket = payload.get('bucket_id') == expected_bucket
-        correct_coll = payload.get('collection_id') == expected_collection
-
-        if not (correct_coll and correct_bucket):
+        requested_resource = "{bucket_id}/{collection_id}".format(**payload)
+        if requested_resource not in available_resources:
             return
 
+        resource = available_resources.get(requested_resource)
         should_sign = any([True for r in event.impacted_records
                            if r['new'].get('status') == 'to-sign'])
         if should_sign:
             registry = event.request.registry
-            updater = RemoteUpdater(
-                remote=remote,
+            updater = LocalUpdater(
                 signer=registry.signer,
                 storage=registry.storage,
-                bucket_id=event.payload['bucket_id'],
-                collection_id=event.payload['collection_id'])
+                source=resource['source'],
+                destination=resource['destination'])
 
             updater.sign_and_update_remote()
 

@@ -8,3 +8,10 @@ install:
     - pip install tox
 script:
     - tox -e $TOX_ENV
+matrix:
+  include:
+    - go: 1.5
+      env:
+        - TOX_ENV=functional
+      before_install:
+        - make run-autograph &

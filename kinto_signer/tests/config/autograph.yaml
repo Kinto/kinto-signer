@@ -1,0 +1,21 @@
+server:
+    listen: "localhost:8000"
+    # cache 500k nonces to protect from authorization replay attacks
+    noncecachesize: 524288
+
+signers:
+    - id: appkey1
+      privatekey: "MIGkAgEBBDAzX2TrGOr0WE92AbAl+nqnpqh25pKCLYNMTV2hJHztrkVPWOp8w0mhscIodK8RMpagBwYFK4EEACKhZANiAATiTcWYbt0Wg63dO7OXvpptNG0ryxv+v+JsJJ5Upr3pFus5fZyKxzP9NPzB+oFhL/xw3jMx7X5/vBGaQ2sJSiNlHVkqZgzYF6JQ4yUyiqTY7v67CyfUPA1BJg/nxOS9m3o="
+    - id: appkey2
+      privatekey: "MIGkAgEBBDC32Lv42JlmEnaPHe+UG6wtrG39vHZAQtvUPTPgJP8Bflfsy0T30Q/5AMXvh0EgFbigBwYFK4EEACKhZANiAAS74cJMSG3ZjlTcjBZl5pHnimoCxAM+XL3fjLy0FvStcQqyWkMacmAY3MqM4YxvyBNv5J+JJPAkskYVomQzk3/8La+D2UQuj6XuReTKJie8EppVvrXwMAjhSy5zsuq7/gI="
+      x5u: https://bucket.example.net/appkey2.pem
+
+authorizations:
+    - id: alice
+      key: fs5wgcer9qj819kfptdlp8gm227ewxnzvsuj9ztycsx08hfhzu
+      signers:
+          - appkey1
+    - id: bob
+      key: 9vh6bhlc10y63ow2k4zke7k0c3l9hpr8mo96p92jmbfqngs9e7d
+      signers:
+          - appkey2

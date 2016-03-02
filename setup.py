@@ -9,7 +9,8 @@ with codecs.open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 REQUIREMENTS = [
     'kinto-client',
-    'ecdsa'
+    'ecdsa',
+    'requests-hawk',
 ]
 
 setup(name='kinto-signer',

@@ -29,8 +29,8 @@ class LocalUpdaterTest(unittest.TestCase):
                 destination={},
                 signer=self.signer_instance,
                 storage=self.storage)
-        assert excinfo.value.message == ("Resources should contain both "
-                                         "bucket and collection")
+        assert str(excinfo.value) == ("Resources should contain both "
+                                      "bucket and collection")
 
     def test_get_local_records_asks_storage_for_records(self):
         records = mock.sentinel.records

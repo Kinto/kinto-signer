@@ -14,7 +14,7 @@ class ParseResourcesTest(unittest.TestCase):
         with pytest.raises(ValueError) as excinfo:
             hook.parse_resources(raw_resources)
         msg = "'bucket/coll;bucket/coll'"
-        assert msg in excinfo.value.message
+        assert msg in str(excinfo.value)
 
     def test_non_local_first_argument_raises_an_exception(self):
         raw_resources = """
@@ -24,7 +24,7 @@ class ParseResourcesTest(unittest.TestCase):
         with pytest.raises(ValueError) as excinfo:
             hook.parse_resources(raw_resources)
         msg = "Resources should be defined as bucket/collection."
-        assert msg in excinfo.value.message
+        assert msg in str(excinfo.value)
 
     def test_returned_resources_match_the_expected_format(self):
         raw_resources = """

@@ -65,7 +65,7 @@ class ECDSASignerTest(unittest.TestCase):
         hexa_regexp = (
             r'^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}'
             '==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$')
-        assert re.match(hexa_regexp, signature.decode('utf-8')) is not None
+        assert re.match(hexa_regexp, signature) is not None
 
     def test_load_private_key_raises_if_no_key_specified(self):
         with pytest.raises(ValueError):

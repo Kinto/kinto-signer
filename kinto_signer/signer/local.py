@@ -49,7 +49,7 @@ class ECDSASigner(object):
             payload,
             hashfunc=hashlib.sha384,
             sigencode=ecdsa.util.sigencode_string)
-        return base64.b64encode(signature)
+        return base64.b64encode(signature).decode('utf-8')
 
     def verify(self, payload, signature):
         if isinstance(payload, six.text_type):  # pragma: nocover

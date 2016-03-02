@@ -13,5 +13,6 @@ matrix:
     - go: 1.5
       env:
         - TOX_ENV=functional
-      before_install:
+      install:
         - make run-autograph &
+        - make run-signer &

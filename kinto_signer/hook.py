@@ -63,6 +63,7 @@ def includeme(config):
             updater = LocalUpdater(
                 signer=registry.signer,
                 storage=registry.storage,
+                permission=registry.permission,
                 source=resource['source'],
                 destination=resource['destination'])
 

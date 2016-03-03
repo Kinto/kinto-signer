@@ -1,5 +1,5 @@
 VIRTUALENV = virtualenv
-VENV := $(shell echo $${VIRTUAL_ENV-.venv})
+VENV := $(shell echo $${VIRTUAL_ENV-$$PWD/.venv})
 PYTHON = $(VENV)/bin/python
 DEV_STAMP = $(VENV)/.dev_env_installed.stamp
 INSTALL_STAMP = $(VENV)/.install.stamp
@@ -34,9 +34,20 @@ clean:
 	find . -name '*.pyc' -delete
 	find . -name '__pycache__' -type d -exec rm -fr {} \;
 
-run-signer: install-dev
-	$(VENV)/bin/cliquet --ini kinto_signer/tests/config/signer.ini migrate
-	$(VENV)/bin/pserve kinto_signer/tests/config/signer.ini --reload
+$(VENV)/bin/kinto: install
+	$(VENV)/bin/pip install kinto
+
+run-signer: $(VENV)/bin/kinto
+	$(VENV)/bin/kinto --ini kinto_signer/tests/config/signer.ini migrate
+	$(VENV)/bin/kinto --ini kinto_signer/tests/config/signer.ini start
+
+install-autograph: $(VENV)/bin/autograph
+
+$(VENV)/bin/autograph:
+	export GOPATH=$(VENV); export PATH="$$GOPATH/bin;$$PATH"; go get github.com/mozilla-services/autograph
+
+run-autograph: $(VENV)/bin/autograph
+	$(VENV)/bin/autograph -c kinto_signer/tests/config/autograph.yaml
 
 need-kinto-running:
 	@curl http://localhost:8888/v0/ 2>/dev/null 1>&2 || (echo "Run 'make run-signer' before starting tests." && exit 1)

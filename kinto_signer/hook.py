@@ -1,8 +1,8 @@
 from pyramid.settings import aslist
 from cliquet.events import ResourceChanged
 
-from kinto_signer import signer as signer_module
 from kinto_signer.updater import LocalUpdater
+from kinto_signer.signer.remote import AutographSigner
 
 
 def parse_resources(raw_resources):
@@ -36,9 +36,7 @@ def includeme(config):
     # Process settings to remove storage wording.
     settings = config.get_settings()
 
-    priv_key = settings.get('kinto_signer.private_key')
-    config.registry.signer = signer_module.ECDSABackend(
-        {'private_key': priv_key})
+    config.registry.signer = AutographSigner(settings)
 
     raw_resources = settings.get('kinto_signer.resources')
     if raw_resources is None:
@@ -52,7 +50,6 @@ def includeme(config):
                               resources=resources)
 
     def on_resource_changed(event):
-        print(event, event.payload, event.impacted_records)
         payload = event.payload
         requested_resource = "{bucket_id}/{collection_id}".format(**payload)
         if requested_resource not in available_resources:

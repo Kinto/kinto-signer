@@ -8,3 +8,14 @@ install:
     - pip install tox
 script:
     - tox -e $TOX_ENV
+matrix:
+  include:
+    - go: 1.5
+      language: go
+      env:
+        - TOX_ENV=functional
+      install:
+        - pip install --user virtualenv tox
+        - make install-autograph
+        - make run-autograph &
+        - make run-signer &

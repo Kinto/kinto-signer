@@ -1,6 +1,7 @@
 from cliquet.utils import COMPARISON
 from kinto_signer.serializer import canonical_json
 from cliquet.storage import Filter
+from cliquet.storage.exceptions import UnicityError
 
 
 class LocalUpdater(object):
@@ -26,7 +27,7 @@ class LocalUpdater(object):
         from the source and add new items to the destination.
     """
 
-    def __init__(self, source, destination, signer, storage):
+    def __init__(self, source, destination, signer, storage, permission):
 
         def _ensure_resource(resource):
             if not set(resource.keys()).issuperset({'bucket', 'collection'}):
@@ -38,25 +39,63 @@ class LocalUpdater(object):
         self.destination = _ensure_resource(destination)
         self.signer = signer
         self.storage = storage
+        self.permission = permission
+
+        # Define resource IDs.
+
+        self.destination_bucket_id = '/buckets/%s' % self.destination['bucket']
+        self.destination_collection_id = '/buckets/%s/collections/%s' % (
+            self.destination['bucket'],
+            self.destination['collection'])
+
+        self.source_bucket_id = '/buckets/%s' % self.source['bucket']
+        self.source_collection_id = '/buckets/%s/collections/%s' % (
+            self.source['bucket'],
+            self.source['collection'])
 
     def sign_and_update_remote(self):
         """Sign the specified collection.
 
-        1. Get all the records of the collection;
-        2. Compute a hash of these records;
-        3. Ask the signer for a signature;
+        0. Create the destination bucket / collection
+        1. Get all the records of the collection
+        2. Compute a hash of these records
+        3. Ask the signer for a signature
         4. Send all records since the last_modified field of the Authoritative
-           server;
+           server
         5. Send the signature to the Authoritative server.
         """
+        self.create_destination()
         records = self.get_local_records()
         serialized_records = canonical_json(records)
         signature = self.signer.sign(serialized_records)
 
-        # XXX Handle creation of the destination?
-        # XXX Handle permissions on the destination.
         self.push_records_to_destination()
         self.set_destination_signature(signature)
+
+    def _ensure_resource_exists(self, resource_type, parent_id, record_id):
+        try:
+            self.storage.create(
+                collection_id=resource_type,
+                parent_id=parent_id,
+                record={'id': record_id})
+        except UnicityError:
+            pass
+
+    def create_destination(self):
+        # Create the destination bucket/collection if they don't already exist.
+        bucket_name = self.destination['bucket']
+        collection_name = self.destination['collection']
+
+        self._ensure_resource_exists('bucket', '', bucket_name)
+        self._ensure_resource_exists(
+            'collection',
+            self.destination_bucket_id,
+            collection_name)
+
+        # Set the permissions on the destination collection.
+        permissions = {'read': ("system.Everyone",)}
+        self.permission.replace_object_permissions(
+            self.destination_collection_id, permissions)
 
     def get_local_records(self, last_modified=None):
         # If last_modified was specified, only retrieve items since then.
@@ -95,11 +134,9 @@ class LocalUpdater(object):
         new_records = self.get_local_records(last_modified)
 
         # Update the destination collection.
-        parent_id = "/buckets/%s/collections/%s" % (
-            self.destination['bucket'], self.destination['collection'])
         for record in new_records:
             self.storage.update(
-                parent_id=parent_id,
+                parent_id=self.destination_collection_id,
                 collection_id='record',
                 object_id=record['id'],
                 record=record)

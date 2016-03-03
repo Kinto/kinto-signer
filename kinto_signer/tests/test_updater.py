@@ -1,6 +1,7 @@
 import mock
 import pytest
 from cliquet.storage import Filter
+from cliquet.storage.exceptions import UnicityError
 from cliquet.utils import COMPARISON
 
 from kinto_signer import LocalUpdater
@@ -11,6 +12,7 @@ class LocalUpdaterTest(unittest.TestCase):
 
     def setUp(self):
         self.storage = mock.MagicMock()
+        self.permission = mock.MagicMock()
         self.signer_instance = mock.MagicMock()
         self.updater = LocalUpdater(
             source={
@@ -20,7 +22,8 @@ class LocalUpdaterTest(unittest.TestCase):
                 'bucket': 'destbucket',
                 'collection': 'destcollection'},
             signer=self.signer_instance,
-            storage=self.storage)
+            storage=self.storage,
+            permission=self.permission)
 
     def test_updater_raises_if_resources_are_not_set_properly(self):
         with pytest.raises(ValueError) as excinfo:
@@ -28,7 +31,8 @@ class LocalUpdaterTest(unittest.TestCase):
                 source={'bucket': 'local'},
                 destination={},
                 signer=self.signer_instance,
-                storage=self.storage)
+                storage=self.storage,
+                permission=self.permission)
         assert str(excinfo.value) == ("Resources should contain both "
                                       "bucket and collection")
 
@@ -98,6 +102,32 @@ class LocalUpdaterTest(unittest.TestCase):
                 'id': 1234,
                 'signature': mock.sentinel.signature
             })
+
+    def test_create_destination_updates_collection_permissions(self):
+        collection_id = '/buckets/destbucket/collections/destcollection'
+        self.updater.create_destination()
+        self.permission.replace_object_permissions.assert_called_with(
+            collection_id,
+            {"read": ("system.Everyone",)})
+
+    def test_create_destination_creates_bucket(self):
+        self.updater.create_destination()
+        self.storage.create.assert_any_call(
+            collection_id='bucket',
+            parent_id='',
+            record={"id": 'destbucket'})
+
+    def test_create_destination_creates_collection(self):
+        bucket_id = '/buckets/destbucket'
+        self.updater.create_destination()
+        self.storage.create.assert_any_call(
+            collection_id='collection',
+            parent_id=bucket_id,
+            record={"id": 'destcollection'})
+
+    def test_ensure_resource_exists_handles_uniticy_errors(self):
+        self.storage.create.side_effect = UnicityError('id', 'record')
+        self.updater._ensure_resource_exists('bucket', '', 'abcd')
 
     def test_sign_and_update_remote(self):
         records = [{'id': idx, 'foo': 'bar %s' % idx}

@@ -6,10 +6,8 @@ import requests
 from six.moves import configparser
 
 from kinto_signer.serializer import canonical_json
-
 from kinto_signer.signer import local
 
-from kinto_client.replication import replicate
 from kinto_client import Client
 
 __HERE__ = os.path.abspath(os.path.dirname(__file__))
@@ -51,7 +49,7 @@ class FunctionalTest(unittest2.TestCase):
             collection=self._collection_id)
 
     def tearDown(self):
-        # Delete all the created objects
+        # Delete all the created objects.
         self._flush_server(self._server_url)
 
     def _flush_server(self, server_url):
@@ -59,28 +57,17 @@ class FunctionalTest(unittest2.TestCase):
         resp = requests.post(flush_url)
         resp.raise_for_status()
 
-    def test_signature_on_new_records(self):
-        # Populate the destination with some data.
-        with self.destination.batch() as batch:
-            batch.create_bucket()
-            batch.create_collection()
-            for n in range(10):
-                batch.create_record(data={'foo': 'bar', 'n': n})
-
-        # Copy the data from the **destination** to the **source**.
-        # This seems to be weird, but is actually what we want here, the
-        # signer **hook** will take care of copying the new records to the
-        # destination, later on.
-        replicate(self.destination, self.source)
-
-        # Check that the data has been copied.
-        records = self.source.get_records()
-        assert len(records) == 10
+    def test_destination_creation_and_new_records_signature(self):
+        self.source.create_bucket()
+        self.source.create_collection()
 
         # Send new data to the signer.
         with self.source.batch() as batch:
-            for n in range(100, 105):
+            for n in range(0, 10):
                 batch.create_record(data={'newdata': n})
+
+        source_records = self.source.get_records()
+        assert len(source_records) == 10
 
         # Trigger a signature.
         self.source.update_collection(
@@ -93,7 +80,7 @@ class FunctionalTest(unittest2.TestCase):
         assert signature is not None
 
         records = self.destination.get_records()
-        assert len(records) == 15
+        assert len(records) == 10
         serialized_records = canonical_json(records)
         self.signer.verify(serialized_records, signature)
 

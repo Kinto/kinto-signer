@@ -15,10 +15,11 @@ matrix:
       script:
         - .venv/bin/tox -e functional
       install:
-        - eval "$(gimme 1.5)"
-        - go version
-        - python --version
-        - make install-dev install-autograph
+        - pip install --user virtualenv
+        - virtualenv .venv
+        - make install-autograph
+        - ls .venv/bin/
+        - .venv/bin/pip install kinto
         - .venv/bin/pip install tox
         - make run-autograph &
         - make run-signer &

@@ -34,7 +34,7 @@ clean:
 	find . -name '*.pyc' -delete
 	find . -name '__pycache__' -type d -exec rm -fr {} \;
 
-$(VENV)/bin/kinto:
+$(VENV)/bin/kinto: install
 	$(VENV)/bin/pip install kinto
 
 run-signer: $(VENV)/bin/kinto

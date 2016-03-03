@@ -12,14 +12,10 @@ matrix:
   include:
     - go: 1.5
       language: go
-      script:
-        - .venv/bin/tox -e functional
+      env:
+        - TOX_ENV=functional
       install:
-        - pip install --user virtualenv
-        - virtualenv .venv
+        - pip install --user virtualenv tox
         - make install-autograph
-        - ls .venv/bin/
-        - .venv/bin/pip install kinto
-        - .venv/bin/pip install tox
         - make run-autograph &
         - make run-signer &

@@ -34,9 +34,12 @@ clean:
 	find . -name '*.pyc' -delete
 	find . -name '__pycache__' -type d -exec rm -fr {} \;
 
-run-signer: install-dev
-	$(VENV)/bin/cliquet --ini kinto_signer/tests/config/signer.ini migrate
-	$(VENV)/bin/pserve kinto_signer/tests/config/signer.ini --reload
+$(VENV)/bin/kinto:
+	$(VENV)/bin/pip install kinto
+
+run-signer: $(VENV)/bin/kinto
+	$(VENV)/bin/kinto --ini kinto_signer/tests/config/signer.ini migrate
+	$(VENV)/bin/kinto --ini kinto_signer/tests/config/signer.ini start
 
 install-autograph: $(VENV)/bin/autograph
 

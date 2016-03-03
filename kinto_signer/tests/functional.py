@@ -84,5 +84,9 @@ class FunctionalTest(unittest2.TestCase):
         serialized_records = canonical_json(records)
         self.signer.verify(serialized_records, signature)
 
+        # the status of the source collection should be "signed".
+        source_collection = self.source.get_collection()['data']
+        assert source_collection['status'] == 'signed'
+
 if __name__ == '__main__':
     unittest2.main()

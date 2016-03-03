@@ -103,6 +103,19 @@ class LocalUpdaterTest(unittest.TestCase):
                 'signature': mock.sentinel.signature
             })
 
+    def test_update_source_status_modifies_the_local_collection(self):
+        self.storage.get.return_value = {'id': 1234, 'status': 'to-sign'}
+        self.updater.update_source_status("signed")
+
+        self.storage.update.assert_called_with(
+            collection_id='collection',
+            object_id='localcollection',
+            parent_id='/buckets/localbucket',
+            record={
+                'id': 1234,
+                'status': "signed"
+            })
+
     def test_create_destination_updates_collection_permissions(self):
         collection_id = '/buckets/destbucket/collections/destcollection'
         self.updater.create_destination()

@@ -71,6 +71,7 @@ class LocalUpdater(object):
 
         self.push_records_to_destination()
         self.set_destination_signature(signature)
+        self.update_source_status("signed")
 
     def _ensure_resource_exists(self, resource_type, parent_id, record_id):
         try:
@@ -159,4 +160,21 @@ class LocalUpdater(object):
             parent_id=parent_id,
             collection_id=collection_id,
             object_id=self.destination['collection'],
+            record=collection_record)
+
+    def update_source_status(self, status):
+        parent_id = '/buckets/%s' % self.source['bucket']
+        collection_id = 'collection'
+
+        collection_record = self.storage.get(
+            parent_id=parent_id,
+            collection_id=collection_id,
+            object_id=self.source['collection'])
+
+        collection_record['status'] = status
+
+        self.storage.update(
+            parent_id=parent_id,
+            collection_id=collection_id,
+            object_id=self.source['collection'],
             record=collection_record)

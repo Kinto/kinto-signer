@@ -104,7 +104,8 @@ class FunctionalTest(unittest2.TestCase):
         # Trigger a signature.
         self.source.update_collection(data={'status': 'to-sign'}, method="put")
 
-        # Wait just a bit before doing the deletion.
+        # Wait so the new last_modified timestamp will be greater than the
+        # one from the previous records.
         time.sleep(0.01)
         # Now delete one record on the source and trigger another signature.
         self.source.delete_record(source_records[0]['id'])
@@ -118,6 +119,7 @@ class FunctionalTest(unittest2.TestCase):
         assert signature is not None
 
         serialized_records = canonical_json(records)
+        # This raises when the signature is invalid.
         self.signer.verify(serialized_records, signature)
 
 

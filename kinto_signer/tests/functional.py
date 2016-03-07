@@ -27,7 +27,7 @@ class FunctionalTest(unittest2.TestCase):
         self.signer_config = configparser.RawConfigParser()
         self.signer_config.read(os.path.join(__HERE__, 'config/signer.ini'))
         priv_key = self.signer_config.get(
-            'app:main', 'kinto_signer.ecdsa.private_key')
+            'app:main', 'kinto.signer.ecdsa.private_key')
         self.signer = ECDSASigner(private_key=priv_key)
 
         # Setup the kinto clients for the source and destination.

@@ -57,20 +57,20 @@ Here is an example of what a configuration could look like:
 
 .. code-block:: ini
 
-  kinto.includes = kinto_signer.hook
+  kinto.includes = kinto_signer
 
-  kinto_signer.resources =
+  kinto.signer.resources =
       source/collection1;destination/collection1
       source/collection2;destination/collection2
 
 +---------------------------------+--------------------------------------------------------------------------+
 | Setting name                    | What does it do?                                                         |
 +=================================+==========================================================================+
-| kinto_signer.resources          | The name of the buckets and collections on which signatures can be       |
+| kinto.signer.resources          | The name of the buckets and collections on which signatures can be       |
 |                                 | triggered and the destination where the data and the signatures will     |
 |                                 | end-up.                                                                  |
 +---------------------------------+--------------------------------------------------------------------------+
-| kinto_signer.signer             | The python dotted location to the signer to use. By default, a local     |
+| kinto.signer.signer_backend     | The python dotted location to the signer to use. By default, a local     |
 |                                 | ECDSA signer will be used. Choices are either                            |
 |                                 | ``kinto_signer.signer.local_ecdsa`` or ``kinto_signer.signer.autograph`` |
 |                                 | Have a look at the sections below for more information.                  |
@@ -82,9 +82,9 @@ Configuration for the (default) ECDSA local signer
 +---------------------------------+--------------------------------------------------------------------------+
 | Setting name                    | What does it do?                                                         |
 +=================================+==========================================================================+
-| kinto_signer.ecdsa.private_key  | Absolute path to the ECDSA private key to use to apply the signatures    |
+| kinto.signer.ecdsa.private_key  | Absolute path to the ECDSA private key to use to apply the signatures    |
 +---------------------------------+--------------------------------------------------------------------------+
-| kinto_signer.ecdsa.public_key   | Absolute path to the ECDSA private key to use to verify the signature    |
+| kinto.signer.ecdsa.public_key   | Absolute path to the ECDSA private key to use to verify the signature    |
 |                                 | (useful if you just want to use the signer as a verifier)                |
 +---------------------------------+--------------------------------------------------------------------------+
 
@@ -99,11 +99,11 @@ use the following settings:
 +------------------------------------+--------------------------------------------------------------------------+
 | Setting name                       | What does it do?                                                         |
 +====================================+==========================================================================+
-| kinto_signer.autograph.server_url  | The autograph server URL                                                 |
+| kinto.signer.autograph.server_url  | The autograph server URL                                                 |
 +------------------------------------+--------------------------------------------------------------------------+
-| kinto_signer.autograph.hawk_id     | The hawk identifier used to issue the requests.                          |
+| kinto.signer.autograph.hawk_id     | The hawk identifier used to issue the requests.                          |
 +------------------------------------+--------------------------------------------------------------------------+
-| kinto_signer.autograph.hawk_secret | The hawk secret used to issue the requests.                              |
+| kinto.signer.autograph.hawk_secret | The hawk secret used to issue the requests.                              |
 +------------------------------------+--------------------------------------------------------------------------+
 
 

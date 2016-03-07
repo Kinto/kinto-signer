@@ -13,6 +13,10 @@ SIGNATURE = (
     "ikfq6qOV85vR7QaNCTldVvvtcNpPIICqqMp3tfyiT7fHCgFNq410SFnIfjAPgSa"
     "jEtxxyGtZFMoI/BzO/1y5oShLtX0LH4wx/Wft7wz17T7fFqpDQ9hFZzTOPBwZUIbx")
 
+UNPAD_SIGNATURE = (
+    "ikfq6qOV85vR7QaNCTldVvvtcNpPIICqqMp3tfyiT7fHCgFNq410SFnIfjAPgSa"
+    "jEtxxyGtZFMoI/BzO/1y5oShLtX0LH4wx/Wft7wz17T7fFqpDQ9hFZzTOPBwZUIb")
+
 
 def save_key(key, key_name):
     tmp = tempfile.mktemp(key_name)
@@ -106,3 +110,11 @@ class AutographSignerTest(unittest.TestCase):
         requests.post.return_value = response
         signed = self.signer.sign("test data")
         assert signed == SIGNATURE
+
+    @mock.patch('kinto_signer.signer.remote.requests')
+    def test_sign_is_fixing_base64_padding(self, requests):
+        response = mock.MagicMock()
+        response.json.return_value = [{"signature": UNPAD_SIGNATURE}]
+        requests.post.return_value = response
+        signed = self.signer.sign("test data")
+        assert len(signed) % 4 == 0

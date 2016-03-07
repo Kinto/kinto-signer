@@ -26,6 +26,6 @@ class AutographSigner(object):
 
 def load_from_settings(settings):
     return AutographSigner(
-        server_url=settings['kinto.signer.autograph.server_url'],
-        hawk_id=settings['kinto.signer.autograph.hawk_id'],
-        hawk_secret=settings['kinto.signer.autograph.hawk_secret'])
+        server_url=settings['signer.autograph.server_url'],
+        hawk_id=settings['signer.autograph.hawk_id'],
+        hawk_secret=settings['signer.autograph.hawk_secret'])

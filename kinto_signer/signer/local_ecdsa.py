@@ -90,8 +90,8 @@ class ECDSASigner(object):
 
 
 def load_from_settings(settings):
-    private_key = settings.get('kinto.signer.ecdsa.private_key')
-    public_key = settings.get('kinto.signer.ecdsa.public_key')
+    private_key = settings.get('signer.ecdsa.private_key')
+    public_key = settings.get('signer.ecdsa.public_key')
     try:
         return ECDSASigner(private_key=private_key, public_key=public_key)
     except ValueError:

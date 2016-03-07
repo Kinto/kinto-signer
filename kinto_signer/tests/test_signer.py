@@ -129,8 +129,8 @@ class ECDSASignerTest(unittest.TestCase):
     @mock.patch('kinto_signer.signer.local_ecdsa.ECDSASigner')
     def test_load_from_settings(self, mocked_signer):
         local_ecdsa.load_from_settings({
-            'kinto.signer.ecdsa.private_key': mock.sentinel.private_key,
-            'kinto.signer.ecdsa.public_key': mock.sentinel.public_key,
+            'signer.ecdsa.private_key': mock.sentinel.private_key,
+            'signer.ecdsa.public_key': mock.sentinel.public_key,
         })
 
         mocked_signer.assert_called_with(
@@ -164,9 +164,9 @@ class AutographSignerTest(unittest.TestCase):
     @mock.patch('kinto_signer.signer.autograph.AutographSigner')
     def test_load_from_settings(self, mocked_signer):
         autograph.load_from_settings({
-            'kinto.signer.autograph.server_url': mock.sentinel.server_url,
-            'kinto.signer.autograph.hawk_id': mock.sentinel.hawk_id,
-            'kinto.signer.autograph.hawk_secret': mock.sentinel.hawk_secret,
+            'signer.autograph.server_url': mock.sentinel.server_url,
+            'signer.autograph.hawk_id': mock.sentinel.hawk_id,
+            'signer.autograph.hawk_secret': mock.sentinel.hawk_secret,
         })
 
         mocked_signer.assert_called_with(

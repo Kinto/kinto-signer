@@ -82,12 +82,10 @@ Configuration for the (default) ECDSA local signer
 +---------------------------------+--------------------------------------------------------------------------+
 | Setting name                    | What does it do?                                                         |
 +=================================+==========================================================================+
-| kinto_signer.ecdsa.private_key  | The absolute path to the location of the ECDSA private key to use to     |
-|                                 | apply the signatures                                                     |
+| kinto_signer.ecdsa.private_key  | Absolute path to the ECDSA private key to use to apply the signatures    |
 +---------------------------------+--------------------------------------------------------------------------+
-| kinto_signer.ecdsa.public_key   | The absolute path to the location of the ECDSA private key to use to     |
-|                                 | verify the signatures (useful if you just want to use the signer as a    |
-|                                 | verifier)                                                                |
+| kinto_signer.ecdsa.public_key   | Absolute path to the ECDSA private key to use to verify the signature    |
+|                                 | (useful if you just want to use the signer as a verifier)                |
 +---------------------------------+--------------------------------------------------------------------------+
 
 
@@ -101,11 +99,11 @@ use the following settings:
 +------------------------------------+--------------------------------------------------------------------------+
 | Setting name                       | What does it do?                                                         |
 +====================================+==========================================================================+
+| kinto_signer.autograph.server_url  | The autograph server URL                                                 |
++------------------------------------+--------------------------------------------------------------------------+
 | kinto_signer.autograph.hawk_id     | The hawk identifier used to issue the requests.                          |
 +------------------------------------+--------------------------------------------------------------------------+
 | kinto_signer.autograph.hawk_secret | The hawk secret used to issue the requests.                              |
-+------------------------------------+--------------------------------------------------------------------------+
-| kinto_signer.autograph.server_url  | The URL on which the autograph server is listening for incoming requests |
 +------------------------------------+--------------------------------------------------------------------------+
 
 

@@ -53,17 +53,6 @@ Configuring kinto-signer
 To install this plugin in a Kinto server, a few configuration variables need
 to be set.
 
-+---------------------------------+--------------------------------------------------------------------------+
-| Setting name                    | What does it do?                                                         |
-+=================================+==========================================================================+
-| kinto_signer.resources          | The name of the buckets and collections on which signatures can be       |
-|                                 | triggered and the destination where the data and the signatures will     |
-|                                 | end-up.                                                                  |
-+---------------------------------+--------------------------------------------------------------------------+
-| kinto_signer.private_key        | The absolute path to the location of the ECDSA private key to use to     |
-|                                 | apply the signatures                                                     |
-+---------------------------------+--------------------------------------------------------------------------+
-
 Here is an example of what a configuration could look like:
 
 .. code-block:: ini
@@ -73,7 +62,50 @@ Here is an example of what a configuration could look like:
   kinto_signer.resources =
       source/collection1;destination/collection1
       source/collection2;destination/collection2
-  kinto_signer.private_key = kinto_signer/tests/config/ecdsa.private.pem
+
++---------------------------------+--------------------------------------------------------------------------+
+| Setting name                    | What does it do?                                                         |
++=================================+==========================================================================+
+| kinto_signer.resources          | The name of the buckets and collections on which signatures can be       |
+|                                 | triggered and the destination where the data and the signatures will     |
+|                                 | end-up.                                                                  |
++---------------------------------+--------------------------------------------------------------------------+
+| kinto_signer.signer             | The python dotted location to the signer to use. By default, a local     |
+|                                 | ECDSA signer will be used. Choices are either                            |
+|                                 | ``kinto_signer.signer.local_ecdsa`` or ``kinto_signer.signer.autograph`` |
+|                                 | Have a look at the sections below for more information.                  |
++---------------------------------+--------------------------------------------------------------------------+
+
+Configuration for the (default) ECDSA local signer
+--------------------------------------------------
+
++---------------------------------+--------------------------------------------------------------------------+
+| Setting name                    | What does it do?                                                         |
++=================================+==========================================================================+
+| kinto_signer.ecdsa.private_key  | Absolute path to the ECDSA private key to use to apply the signatures    |
++---------------------------------+--------------------------------------------------------------------------+
+| kinto_signer.ecdsa.public_key   | Absolute path to the ECDSA private key to use to verify the signature    |
+|                                 | (useful if you just want to use the signer as a verifier)                |
++---------------------------------+--------------------------------------------------------------------------+
+
+
+Configuration for the Autograph signer
+--------------------------------------
+
+Kinto signer can integrate with the
+`Autograph <https://github.com/mozilla-services/autograph>`_ server. To do so,
+use the following settings:
+
++------------------------------------+--------------------------------------------------------------------------+
+| Setting name                       | What does it do?                                                         |
++====================================+==========================================================================+
+| kinto_signer.autograph.server_url  | The autograph server URL                                                 |
++------------------------------------+--------------------------------------------------------------------------+
+| kinto_signer.autograph.hawk_id     | The hawk identifier used to issue the requests.                          |
++------------------------------------+--------------------------------------------------------------------------+
+| kinto_signer.autograph.hawk_secret | The hawk secret used to issue the requests.                              |
++------------------------------------+--------------------------------------------------------------------------+
+
 
 Generating a keypair
 ====================

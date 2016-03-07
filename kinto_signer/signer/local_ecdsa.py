@@ -10,35 +10,36 @@ from .exceptions import BadSignatureError
 
 class ECDSASigner(object):
 
-    def __init__(self, settings=None):
-        self.settings = settings or {}
+    def __init__(self, private_key=None, public_key=None):
+        if private_key is None and public_key is None:
+            msg = ("Please, specify either a private_key or public_key "
+                   "location.")
+            raise ValueError(msg)
+        self.private_key = private_key
+        self.public_key = public_key
 
-    def generate_keypair(self):
+    @classmethod
+    def generate_keypair(cls):
         sk = SigningKey.generate(curve=NIST384p)
         vk = sk.get_verifying_key()
         return sk.to_pem(), vk.to_pem()
 
     def load_private_key(self):
-        # Check settings validity
-        if 'private_key' not in self.settings:
-            msg = 'Please, specify the private_key location in the settings.'
+        if self.private_key is None:
+            msg = 'Please, specify the private_key location.'
             raise ValueError(msg)
 
-        with open(self.settings['private_key'], 'rb') as key_file:
+        with open(self.private_key, 'rb') as key_file:
             return SigningKey.from_pem(key_file.read())
 
     def load_public_key(self):
         # Check settings validity
-        if 'private_key' in self.settings:
+        if self.private_key:
             private_key = self.load_private_key()
             return private_key.get_verifying_key()
-        elif 'public_key' in self.settings:
-            with open(self.settings['public_key'], 'rb') as key_file:
+        elif self.public_key:
+            with open(self.public_key, 'rb') as key_file:
                 return VerifyingKey.from_pem(key_file.read())
-        else:
-            msg = ("Please, specify the private_key or public_key location in "
-                   "the settings")
-            raise ValueError(msg)
 
     def sign(self, payload):
         if isinstance(payload, six.text_type):  # pragma: nocover
@@ -69,3 +70,14 @@ class ECDSASigner(object):
                 sigdecode=ecdsa.util.sigdecode_string)
         except Exception as e:
             raise BadSignatureError(e)
+
+
+def load_from_settings(settings):
+    private_key = settings.get('kinto_signer.ecdsa.private_key')
+    public_key = settings.get('kinto_signer.ecdsa.public_key')
+    try:
+        return ECDSASigner(private_key=private_key, public_key=public_key)
+    except ValueError:
+        msg = ("Please specify either kinto_signer.ecdsa.private_key or "
+               "kinto_signer.ecdsa.public_key in the settings.")
+        raise ValueError(msg)

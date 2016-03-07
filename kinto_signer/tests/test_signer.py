@@ -6,6 +6,8 @@ import mock
 import pytest
 
 from kinto_signer.signer import ECDSASigner, AutographSigner, BadSignatureError
+from kinto_signer.signer import autograph
+from kinto_signer.signer import local_ecdsa
 from .support import unittest
 
 
@@ -24,19 +26,15 @@ def save_key(key, key_name):
 class ECDSASignerTest(unittest.TestCase):
 
     @classmethod
-    def get_backend(cls, options=None):
-        return ECDSASigner(options)
+    def get_backend(cls, **options):
+        return ECDSASigner(**options)
 
     @classmethod
     def setUpClass(cls):
-        backend = cls.get_backend()
-        sk, vk = backend.generate_keypair()
+        sk, vk = ECDSASigner.generate_keypair()
         cls.sk_location = save_key(sk, 'signing-key')
         cls.vk_location = save_key(vk, 'verifying-key')
-
-        cls.signer = cls.get_backend({
-            'private_key': cls.sk_location,
-        })
+        cls.signer = cls.get_backend(private_key=cls.sk_location)
 
     @classmethod
     def tearDownClass(cls):
@@ -44,7 +42,7 @@ class ECDSASignerTest(unittest.TestCase):
         os.remove(cls.vk_location)
 
     def test_keyloading_fails_if_no_settings(self):
-        backend = self.get_backend()
+        backend = self.get_backend(public_key=self.vk_location)
         with pytest.raises(ValueError):
             backend.load_private_key()
 
@@ -72,37 +70,63 @@ class ECDSASignerTest(unittest.TestCase):
             self.get_backend().load_private_key()
 
     def test_public_key_can_be_loaded_from_public_key_pem(self):
-        signer = self.get_backend({'public_key': self.vk_location})
+        signer = self.get_backend(public_key=self.vk_location)
         signer.load_public_key()
 
     def test_public_key_can_be_loaded_from_private_key_pem(self):
-        signer = self.get_backend({'private_key': self.sk_location})
+        signer = self.get_backend(private_key=self.sk_location)
         signer.load_public_key()
 
     def test_load_public_key_raises_an_error_if_missing_settings(self):
-        signer = self.get_backend()
         with pytest.raises(ValueError) as excinfo:
-            signer.load_public_key()
-        msg = ("Please, specify the private_key or public_key location in the "
-               "settings")
+            self.get_backend()
+        msg = "Please, specify either a private_key or public_key location."
+        assert str(excinfo.value) == msg
+
+    @mock.patch('kinto_signer.signer.local_ecdsa.ECDSASigner')
+    def test_load_from_settings(self, mocked_signer):
+        local_ecdsa.load_from_settings({
+            'kinto_signer.ecdsa.private_key': mock.sentinel.private_key,
+            'kinto_signer.ecdsa.public_key': mock.sentinel.public_key,
+        })
+
+        mocked_signer.assert_called_with(
+            private_key=mock.sentinel.private_key,
+            public_key=mock.sentinel.public_key)
+
+    def test_load_from_settings_fails_if_no_public_or_private_key(self):
+        with pytest.raises(ValueError) as excinfo:
+            local_ecdsa.load_from_settings({})
+        msg = ("Please specify either kinto_signer.ecdsa.private_key or "
+               "kinto_signer.ecdsa.public_key in the settings.")
         assert str(excinfo.value) == msg
 
 
 class AutographSignerTest(unittest.TestCase):
 
     def setUp(self):
-        settings = {
-            'kinto_signer.autograph.hawk_id': 'alice',
-            'kinto_signer.autograph.hawk_secret':
-                'fs5wgcer9qj819kfptdlp8gm227ewxnzvsuj9ztycsx08hfhzu',
-            'kinto_signer.autograph.server_url': 'http://localhost:8000'
-        }
-        self.signer = AutographSigner(settings)
+        self.signer = AutographSigner(
+            hawk_id='alice',
+            hawk_secret='fs5wgcer9qj819kfptdlp8gm227ewxnzvsuj9ztycsx08hfhzu',
+            server_url='http://localhost:8000')
 
-    @mock.patch('kinto_signer.signer.remote.requests')
+    @mock.patch('kinto_signer.signer.autograph.requests')
     def test_request_is_being_crafted_with_payload_as_input(self, requests):
         response = mock.MagicMock()
         response.json.return_value = [{"signature": SIGNATURE}]
         requests.post.return_value = response
         signed = self.signer.sign("test data")
         assert signed == SIGNATURE
+
+    @mock.patch('kinto_signer.signer.autograph.AutographSigner')
+    def test_load_from_settings(self, mocked_signer):
+        autograph.load_from_settings({
+            'kinto_signer.autograph.server_url': mock.sentinel.server_url,
+            'kinto_signer.autograph.hawk_id': mock.sentinel.hawk_id,
+            'kinto_signer.autograph.hawk_secret': mock.sentinel.hawk_secret,
+        })
+
+        mocked_signer.assert_called_with(
+            server_url=mock.sentinel.server_url,
+            hawk_id=mock.sentinel.hawk_id,
+            hawk_secret=mock.sentinel.hawk_secret)

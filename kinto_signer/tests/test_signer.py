@@ -129,8 +129,8 @@ class ECDSASignerTest(unittest.TestCase):
     @mock.patch('kinto_signer.signer.local_ecdsa.ECDSASigner')
     def test_load_from_settings(self, mocked_signer):
         local_ecdsa.load_from_settings({
-            'kinto_signer.ecdsa.private_key': mock.sentinel.private_key,
-            'kinto_signer.ecdsa.public_key': mock.sentinel.public_key,
+            'signer.ecdsa.private_key': mock.sentinel.private_key,
+            'signer.ecdsa.public_key': mock.sentinel.public_key,
         })
 
         mocked_signer.assert_called_with(
@@ -140,8 +140,8 @@ class ECDSASignerTest(unittest.TestCase):
     def test_load_from_settings_fails_if_no_public_or_private_key(self):
         with pytest.raises(ValueError) as excinfo:
             local_ecdsa.load_from_settings({})
-        msg = ("Please specify either kinto_signer.ecdsa.private_key or "
-               "kinto_signer.ecdsa.public_key in the settings.")
+        msg = ("Please specify either kinto.signer.ecdsa.private_key or "
+               "kinto.signer.ecdsa.public_key in the settings.")
         assert str(excinfo.value) == msg
 
 
@@ -164,9 +164,9 @@ class AutographSignerTest(unittest.TestCase):
     @mock.patch('kinto_signer.signer.autograph.AutographSigner')
     def test_load_from_settings(self, mocked_signer):
         autograph.load_from_settings({
-            'kinto_signer.autograph.server_url': mock.sentinel.server_url,
-            'kinto_signer.autograph.hawk_id': mock.sentinel.hawk_id,
-            'kinto_signer.autograph.hawk_secret': mock.sentinel.hawk_secret,
+            'signer.autograph.server_url': mock.sentinel.server_url,
+            'signer.autograph.hawk_id': mock.sentinel.hawk_id,
+            'signer.autograph.hawk_secret': mock.sentinel.hawk_secret,
         })
 
         mocked_signer.assert_called_with(

@@ -90,11 +90,11 @@ class ECDSASigner(object):
 
 
 def load_from_settings(settings):
-    private_key = settings.get('kinto_signer.ecdsa.private_key')
-    public_key = settings.get('kinto_signer.ecdsa.public_key')
+    private_key = settings.get('signer.ecdsa.private_key')
+    public_key = settings.get('signer.ecdsa.public_key')
     try:
         return ECDSASigner(private_key=private_key, public_key=public_key)
     except ValueError:
-        msg = ("Please specify either kinto_signer.ecdsa.private_key or "
-               "kinto_signer.ecdsa.public_key in the settings.")
+        msg = ("Please specify either kinto.signer.ecdsa.private_key or "
+               "kinto.signer.ecdsa.public_key in the settings.")
         raise ValueError(msg)

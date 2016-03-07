@@ -11,12 +11,12 @@ def includeme(config):
     # signer.
     default_signer_module = "kinto_signer.signer.local_ecdsa"
     signer_dotted_location = settings.get(
-        'kinto_signer.signer', default_signer_module)
+        'signer.signer_backend', default_signer_module)
     signer_module = config.maybe_dotted(signer_dotted_location)
     config.registry.signer = signer_module.load_from_settings(settings)
 
     # Check source and destination resources are configured.
-    raw_resources = settings.get('kinto_signer.resources')
+    raw_resources = settings.get('signer.resources')
     if raw_resources is None:
         raise ValueError("Please specify the kinto_signer.resources value.")
     available_resources = utils.parse_resources(raw_resources)

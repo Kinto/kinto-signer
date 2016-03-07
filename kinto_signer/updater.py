@@ -98,7 +98,7 @@ class LocalUpdater(object):
         self.permission.replace_object_permissions(
             self.destination_collection_id, permissions)
 
-    def get_local_records(self, last_modified=None):
+    def get_local_records(self, last_modified=None, include_deleted=False):
         # If last_modified was specified, only retrieve items since then.
         storage_kwargs = {}
         if last_modified is not None:
@@ -111,7 +111,9 @@ class LocalUpdater(object):
 
         records, _ = self.storage.get_all(
             parent_id=parent_id,
-            collection_id='record', **storage_kwargs)
+            collection_id='record',
+            include_deleted=include_deleted,
+            **storage_kwargs)
         return records
 
     def get_destination_last_modified(self):
@@ -132,17 +134,24 @@ class LocalUpdater(object):
         last_modified, records_count = self.get_destination_last_modified()
         if records_count == 0:
             last_modified = None
-        new_records = self.get_local_records(last_modified)
+        new_records = self.get_local_records(
+            last_modified,
+            include_deleted=True)
 
         # Update the destination collection.
         for record in new_records:
-            self.storage.update(
-                parent_id=self.destination_collection_id,
-                collection_id='record',
-                object_id=record['id'],
-                record=record)
-
-        # XXX delete records as well.
+            if record.get('deleted', False):
+                self.storage.delete(
+                    parent_id=self.destination_collection_id,
+                    collection_id='record',
+                    object_id=record['id'],
+                )
+            else:
+                self.storage.update(
+                    parent_id=self.destination_collection_id,
+                    collection_id='record',
+                    object_id=record['id'],
+                    record=record)
 
     def set_destination_signature(self, signature):
         # Push the new signature to the destination collection.

@@ -19,10 +19,9 @@ class AutographSigner(object):
             "hashwith": "sha384"
         }])
         resp.raise_for_status()
-        signature = resp.json()[0]['signature']
-        decoded_signature = base64.urlsafe_b64decode(
-            signature.encode('utf-8'))
-        return base64.b64encode(decoded_signature).decode('utf-8')
+        signature_bundle = resp.json()[0]
+        signature_bundle.setdefault('signature_encoding', 'rs_base64url')
+        return signature_bundle
 
 
 def load_from_settings(settings):

@@ -50,16 +50,33 @@ class ECDSASigner(object):
             payload,
             hashfunc=hashlib.sha384,
             sigencode=ecdsa.util.sigencode_string)
-        return base64.b64encode(signature).decode('utf-8')
+        return {
+            'signature': base64.b64encode(signature).decode('utf-8'),
+            'hash_algorithm': 'sha384',
+            'signature_encoding': 'rs_base64'
+        }
 
-    def verify(self, payload, signature):
+    def verify(self, payload, signature_bundle):
+        signature = signature_bundle['signature']
+        hash_algorithm = signature_bundle['hash_algorithm']
+        signature_encoding = signature_bundle['signature_encoding']
+
         if isinstance(payload, six.text_type):  # pragma: nocover
             payload = payload.encode('utf-8')
 
         if isinstance(signature, six.text_type):  # pragma: nocover
             signature = signature.encode('utf-8')
 
-        signature_bytes = base64.b64decode(signature)
+        if hash_algorithm != 'sha384':
+            msg = 'Unsupported hash_algorithm: %s' % hash_algorithm
+            raise ValueError(msg)
+        if signature_encoding not in ('rs_base64', 'rs_base64url'):
+            msg = 'Unsupported signature_encoding: %s' % signature_encoding
+            raise ValueError(msg)
+        if signature_encoding == 'rs_base64url':
+            signature_bytes = base64.urlsafe_b64decode(signature)
+        elif signature_encoding == 'rs_base64':
+            signature_bytes = base64.b64decode(signature)
 
         public_key = self.load_public_key()
         try:

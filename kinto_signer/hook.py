@@ -10,7 +10,8 @@ def includeme(config):
     # Load the signer from its dotted location. Fallback to the local ECDSA
     # signer.
     default_signer_module = "kinto_signer.signer.local_ecdsa"
-    signer_dotted_location = settings.get('signer', default_signer_module)
+    signer_dotted_location = settings.get(
+        'kinto_signer.signer', default_signer_module)
     signer_module = config.maybe_dotted(signer_dotted_location)
     config.registry.signer = signer_module.load_from_settings(settings)
 

@@ -1,7 +1,7 @@
 import pytest
 from .support import unittest
 
-from kinto_signer import hook
+from kinto_signer import utils
 
 
 class ParseResourcesTest(unittest.TestCase):
@@ -12,7 +12,7 @@ class ParseResourcesTest(unittest.TestCase):
         bar
         """
         with pytest.raises(ValueError) as excinfo:
-            hook.parse_resources(raw_resources)
+            utils.parse_resources(raw_resources)
         msg = "'bucket/coll;bucket/coll'"
         assert msg in str(excinfo.value)
 
@@ -22,7 +22,7 @@ class ParseResourcesTest(unittest.TestCase):
         bar;baz
         """
         with pytest.raises(ValueError) as excinfo:
-            hook.parse_resources(raw_resources)
+            utils.parse_resources(raw_resources)
         msg = "Resources should be defined as bucket/collection."
         assert msg in str(excinfo.value)
 
@@ -30,7 +30,7 @@ class ParseResourcesTest(unittest.TestCase):
         raw_resources = """
         sourcebucket/sourcecoll;destinationbucket/destinationcoll
         """
-        resources = hook.parse_resources(raw_resources)
+        resources = utils.parse_resources(raw_resources)
         assert resources == {
             'sourcebucket/sourcecoll': {
                 'source': {
@@ -49,5 +49,5 @@ class ParseResourcesTest(unittest.TestCase):
         origin/coll1;dest/coll1
         origin/coll2;dest/coll2
         """
-        resources = hook.parse_resources(raw_resources)
+        resources = utils.parse_resources(raw_resources)
         assert len(resources) == 2

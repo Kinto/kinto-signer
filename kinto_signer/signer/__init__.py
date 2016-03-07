@@ -1,5 +1,5 @@
-from .local import ECDSASigner
-from .remote import AutographSigner
+from .local_ecdsa import ECDSASigner
+from .autograph import AutographSigner
 from .exceptions import BadSignatureError
 
 

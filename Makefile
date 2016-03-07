@@ -3,6 +3,7 @@ VENV := $(shell echo $${VIRTUAL_ENV-$$PWD/.venv})
 PYTHON = $(VENV)/bin/python
 DEV_STAMP = $(VENV)/.dev_env_installed.stamp
 INSTALL_STAMP = $(VENV)/.install.stamp
+TEMPDIR := $(shell mktemp -d)
 
 .IGNORE: clean
 .PHONY: all install virtualenv tests install-dev tests-once
@@ -23,6 +24,12 @@ $(DEV_STAMP): $(PYTHON) dev-requirements.txt
 virtualenv: $(PYTHON)
 $(PYTHON):
 	virtualenv $(VENV)
+
+build-requirements:
+	$(VIRTUALENV) $(TEMPDIR)
+	$(TEMPDIR)/bin/pip install -U pip
+	$(TEMPDIR)/bin/pip install -Ue .
+	$(TEMPDIR)/bin/pip freeze > requirements.txt
 
 tests-once: install-dev
 	$(VENV)/bin/py.test --cov-report term-missing --cov-fail-under 100 --cov kinto_signer

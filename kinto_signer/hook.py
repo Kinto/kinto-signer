@@ -1,35 +1,8 @@
-from pyramid.settings import aslist
 from cliquet.events import ResourceChanged
 
+from kinto_signer import utils
 from kinto_signer.updater import LocalUpdater
 from kinto_signer.signer.remote import AutographSigner
-
-
-def parse_resources(raw_resources):
-    resources = {}
-    for res in aslist(raw_resources):
-        if ";" not in res:
-            msg = ("Resources should be defined as "
-                   "'bucket/coll;bucket/coll'. Got %r" % res)
-            raise ValueError(msg)
-        source, destination = res.split(';')
-
-        def _get_resource(resource):
-            parts = resource.split('/')
-            if len(parts) != 2:
-                msg = ("Resources should be defined as bucket/collection. "
-                       "Got %r" % resource)
-                raise ValueError(msg)
-            return {
-                'bucket': parts[0],
-                'collection': parts[1]
-            }
-
-        resources[source] = {
-            'source': _get_resource(source),
-            'destination': _get_resource(destination),
-        }
-    return resources
 
 
 def includeme(config):
@@ -41,7 +14,7 @@ def includeme(config):
     raw_resources = settings.get('kinto_signer.resources')
     if raw_resources is None:
         raise ValueError("Please specify the kinto_signer.resources value.")
-    available_resources = parse_resources(raw_resources)
+    available_resources = utils.parse_resources(raw_resources)
 
     message = "Provide signing capabilities to the server."
     docs = "https://github.com/mozilla-services/kinto-signer#kinto-signer"

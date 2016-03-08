@@ -28,7 +28,7 @@ matrix:
       install:
         - pip install --user virtualenv tox
         - make install-autograph install
-        - venv/bin/pip install https://github.com/Kinto/kinto/zipball/master
+        - .venv/bin/pip install -U https://github.com/Kinto/kinto/zipball/master
         - make run-autograph &
         - make run-signer &
     - python: 3.5

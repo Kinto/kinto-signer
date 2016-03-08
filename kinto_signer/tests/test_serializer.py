@@ -63,3 +63,26 @@ def test_canonical_json_orders_object_keys():
 def test_canonical_json_orders_nested_keys():
     records = [{'a': {'b': 'b', 'a': 'a'}, 'id': '1'}]
     assert canonical_json(records) == '[{"a":{"a":"a","b":"b"},"id":"1"}]'
+
+
+def test_canonical_json_with_deeply_nested_dicts():
+    records = [{
+        'a': {
+            'b': 'b',
+            'a': 'a',
+            'c': {
+                'b': 'b',
+                'a': 'a',
+                'c': ['b', 'a', 'c'],
+                'd': {'b': 'b', 'a': 'a'},
+                'id': '1',
+                'e': 1,
+                'f': [2, 3, 1],
+                'g': {2: 2, 3: 3, 1: {
+                    'b': 'b', 'a': 'a', 'c': 'c'}}}},
+        'id': '1'}]
+    expected = (
+        '[{"a":{"a":"a","b":"b","c":{"a":"a","b":"b","c":["b","a","c"],'
+        '"d":{"a":"a","b":"b"},"e":1,"f":[2,3,1],"g":{'
+        '"1":{"a":"a","b":"b","c":"c"},"2":2,"3":3},"id":"1"}},"id":"1"}]')
+    assert canonical_json(records) == expected

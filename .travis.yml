@@ -3,6 +3,7 @@ python: 2.7
 env:
     - TOX_ENV=py27
     - TOX_ENV=py34
+    #- TOX_ENV=py35
     - TOX_ENV=flake8
 install:
     - pip install tox
@@ -19,3 +20,6 @@ matrix:
         - make install-autograph
         - make run-autograph &
         - make run-signer &
+    - python: 3.5
+      env:
+        - TOX_ENV=py35

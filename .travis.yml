@@ -14,11 +14,13 @@ matrix:
     - go: 1.5
       language: go
       env:
-        - TOX_ENV=functional
+        - SERVER=stable TOX_ENV=functional
+        - SERVER=development TOX_ENV=functional
       install:
         - pip install --user virtualenv tox
-        - make install-autograph
+        - make install-autograph install
         - make run-autograph &
+        - if [[ $SERVER && $SERVER == development ]]; then .venv/bin/pip install https://github.com/Kinto/kinto/zipball/master; fi
         - make run-signer &
     - python: 3.5
       env:

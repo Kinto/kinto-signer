@@ -5,7 +5,6 @@ pytest-cache
 pytest-capturelog
 pytest-cover
 pytest-sugar
-kinto>=1.11.1
 tox
 unittest2
 webtest

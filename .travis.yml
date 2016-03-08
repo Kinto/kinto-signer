@@ -3,7 +3,7 @@ python: 2.7
 env:
     - TOX_ENV=py27
     - TOX_ENV=py34
-    #- TOX_ENV=py35
+    - TOX_ENV=kinto-master
     - TOX_ENV=flake8
 install:
     - pip install tox
@@ -14,13 +14,22 @@ matrix:
     - go: 1.5
       language: go
       env:
-        - SERVER=stable TOX_ENV=functional
-        - SERVER=development TOX_ENV=functional
+        - TOX_ENV=functional
+      install:
+        - pip install --user virtualenv tox
+        - make install-autograph
+        - make run-autograph &
+        - make run-signer &
+    - go: 1.5
+      language: go
+      env:
+        - TOX_ENV=functional
+          WITH=kinto-master
       install:
         - pip install --user virtualenv tox
         - make install-autograph install
+        - .venv/bin/pip install -U https://github.com/Kinto/kinto/zipball/master
         - make run-autograph &
-        - if [[ $SERVER && $SERVER == development ]]; then .venv/bin/pip install https://github.com/Kinto/kinto/zipball/master; fi
         - make run-signer &
     - python: 3.5
       env:

@@ -3,8 +3,8 @@ Kinto signer
 
 |travis|
 
-.. |travis| image:: https://travis-ci.org/mozilla-services/kinto-signer.svg?branch=master
-    :target: https://travis-ci.org/mozilla-services/kinto-signer
+.. |travis| image:: https://travis-ci.org/Kinto/kinto-signer.svg?branch=master
+    :target: https://travis-ci.org/Kinto/kinto-signer
 
 
 What does this do?

@@ -23,7 +23,7 @@ def includeme(config):
 
     # Expose the capabilities in the root endpoint.
     message = "Provide signing capabilities to the server."
-    docs = "https://github.com/mozilla-services/kinto-signer#kinto-signer"
+    docs = "https://github.com/Kinto/kinto-signer#kinto-signer"
     resources = sorted(available_resources.keys())
     config.add_api_capability("signer", message, docs,
                               resources=resources)

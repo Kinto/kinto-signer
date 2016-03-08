@@ -35,7 +35,7 @@ tests-once: install-dev
 	$(VENV)/bin/py.test --cov-report term-missing --cov-fail-under 100 --cov kinto_signer
 
 tests: install-dev
-	$(VENV)/bin/py.test kinto_signer/tests --cov-report term-missing --cov-fail-under 100 --cov kinto_signer
+	$(VENV)/bin/tox
 
 clean:
 	find . -name '*.pyc' -delete

@@ -25,6 +25,11 @@ class LocalUpdaterTest(unittest.TestCase):
             storage=self.storage,
             permission=self.permission)
 
+    def patch(self, obj, *args, **kwargs):
+        patcher = mock.patch.object(obj, *args, **kwargs)
+        self.addCleanup(patcher.stop)
+        return patcher.start()
+
     def test_updater_raises_if_resources_are_not_set_properly(self):
         with pytest.raises(ValueError) as excinfo:
             LocalUpdater(
@@ -72,19 +77,19 @@ class LocalUpdaterTest(unittest.TestCase):
             parent_id='/buckets/destbucket/collections/destcollection')
 
     def test_push_records_to_destination(self):
-        self.updater.get_destination_last_modified = mock.MagicMock(
-            return_value=(1324, 10))
+        self.patch(self.updater, 'get_destination_last_modified',
+                   return_value=(1324, 10))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
-        self.updater.get_local_records = mock.MagicMock(return_value=records)
+        self.patch(self.updater, 'get_local_records',  return_value=records)
         self.updater.push_records_to_destination()
         assert self.storage.update.call_count == 3
 
     def test_push_records_removes_deleted_records(self):
-        self.updater.get_destination_last_modified = mock.MagicMock(
-            return_value=(1324, 10))
+        self.patch(self.updater, 'get_destination_last_modified',
+                   return_value=(1324, 10))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(0, 2)]
         records.extend([{'id': idx, 'deleted': True} for idx in range(3, 5)])
-        self.updater.get_local_records = mock.MagicMock(return_value=records)
+        self.patch(self.updater, 'get_local_records', return_value=records)
         self.updater.push_records_to_destination()
         self.updater.get_local_records.assert_called_with(
             1324, include_deleted=True)
@@ -92,10 +97,10 @@ class LocalUpdaterTest(unittest.TestCase):
         assert self.storage.delete.call_count == 2
 
     def test_push_records_to_destination_with_no_destination_changes(self):
-        self.updater.get_destination_last_modified = mock.MagicMock(
-            return_value=(1324, 0))
+        self.patch(self.updater, 'get_destination_last_modified',
+                   return_value=(1324, 0))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
-        self.updater.get_local_records = mock.MagicMock(return_value=records)
+        self.patch(self.updater, 'get_local_records', return_value=records)
         self.updater.push_records_to_destination()
         self.updater.get_local_records.assert_called_with(
             None, include_deleted=True)
@@ -157,11 +162,11 @@ class LocalUpdaterTest(unittest.TestCase):
         records = [{'id': idx, 'foo': 'bar %s' % idx}
                    for idx in range(1, 3)]
         self.storage.get_all.return_value = (records, 2)
-        self.updater.update_remote = mock.MagicMock()
 
-        self.updater.get_local_records = mock.MagicMock()
-        self.updater.push_records_to_destination = mock.MagicMock()
-        self.updater.set_destination_signature = mock.MagicMock()
+        self.patch(self.storage, 'update_remote')
+        self.patch(self.updater, 'get_local_records')
+        self.patch(self.updater, 'push_records_to_destination')
+        self.patch(self.updater, 'set_destination_signature')
         self.updater.sign_and_update_remote()
 
         assert self.updater.get_local_records.call_count == 1

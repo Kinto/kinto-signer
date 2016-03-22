@@ -4,10 +4,10 @@ Changelog
 This document describes changes between each past release.
 
 
-0.1.1 (unreleased)
+0.2.0 (2016-03-22)
 ------------------
 
-- Nothing changed yet.
+- Update autograph to version 1.1.0
 
 
 0.1.0 (2016-03-07)

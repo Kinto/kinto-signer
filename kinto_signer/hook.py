@@ -4,16 +4,29 @@ from kinto_signer import utils
 from kinto_signer.updater import LocalUpdater
 
 
+def load_signer(config, bucket, collection):
+    """Loads a signer instance for the specified bucket and collection.
+
+    :param bucket:
+        The source bucket for which the signer should be loaded.
+
+    :param collection:
+        The source collection for which the signer should be loaded.
+
+    :param settings:
+        A python dict where to look for configuration keys.
+    """
+    settings = config.get_settings()
+    default_signer_module = "kinto_signer.signer.local_ecdsa"
+    signer_location = utils.get_setting(
+        settings, 'signer_backend', bucket, collection,
+        default=default_signer_module)
+    signer_module = config.maybe_dotted(signer_location)
+    return signer_module.load_from_settings(settings)
+
+
 def includeme(config):
     settings = config.get_settings()
-
-    # Load the signer from its dotted location. Fallback to the local ECDSA
-    # signer.
-    default_signer_module = "kinto_signer.signer.local_ecdsa"
-    signer_dotted_location = settings.get(
-        'signer.signer_backend', default_signer_module)
-    signer_module = config.maybe_dotted(signer_dotted_location)
-    config.registry.signer = signer_module.load_from_settings(settings)
 
     # Check source and destination resources are configured.
     raw_resources = settings.get('signer.resources')
@@ -42,9 +55,14 @@ def includeme(config):
         if not should_sign:
             return  # Only sign when the new collection status is "to-sign".
 
+        signer = load_signer(
+            config=config,
+            bucket=resource['source']['bucket'],
+            collection=resource['source']['collection'])
+
         registry = event.request.registry
         updater = LocalUpdater(
-            signer=registry.signer,
+            signer=signer,
             storage=registry.storage,
             permission=registry.permission,
             source=resource['source'],

@@ -5,6 +5,7 @@ import ecdsa
 from ecdsa import NIST384p, SigningKey, VerifyingKey
 import hashlib
 
+from kinto_signer import utils
 from .exceptions import BadSignatureError
 
 
@@ -89,9 +90,12 @@ class ECDSASigner(object):
             raise BadSignatureError(e)
 
 
-def load_from_settings(settings):
-    private_key = settings.get('signer.ecdsa.private_key')
-    public_key = settings.get('signer.ecdsa.public_key')
+def load_from_settings(settings, bucket=None, collection=None):
+    def _get_setting(key):
+        return utils.get_setting(settings, key, bucket, collection)
+
+    private_key = _get_setting('ecdsa.private_key')
+    public_key = _get_setting('ecdsa.public_key')
     try:
         return ECDSASigner(private_key=private_key, public_key=public_key)
     except ValueError:

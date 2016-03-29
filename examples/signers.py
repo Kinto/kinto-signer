@@ -10,7 +10,7 @@ autograph_signer = AutographSigner({
         'fs5wgcer9qj819kfptdlp8gm227ewxnzvsuj9ztycsx08hfhzu',
     'kinto_signer.autograph.server_url': 'http://localhost:8000'
 })
-settings = {'private_key': '/home/alexis/dev/kinto-signer/kinto_signer/tests/config/ecdsa.private.pem'}
+settings = {'private_key': '/home/alexis/dev/kinto-signer/kinto_signer/tests/config/ecdsa.private.pem'}  # NOQA
 python_signer = ECDSASigner(settings)
 
 

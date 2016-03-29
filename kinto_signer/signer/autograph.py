@@ -2,6 +2,7 @@ import requests
 from requests_hawk import HawkAuth
 import base64
 
+from kinto_signer import utils
 from six.moves.urllib.parse import urljoin
 
 
@@ -24,8 +25,11 @@ class AutographSigner(object):
         return signature_bundle
 
 
-def load_from_settings(settings):
+def load_from_settings(settings, bucket=None, collection=None):
+    def _get_setting(key):
+        return utils.get_setting(settings, key, bucket, collection)
+
     return AutographSigner(
-        server_url=settings['signer.autograph.server_url'],
-        hawk_id=settings['signer.autograph.hawk_id'],
-        hawk_secret=settings['signer.autograph.hawk_secret'])
+        server_url=_get_setting('autograph.server_url'),
+        hawk_id=_get_setting('autograph.hawk_id'),
+        hawk_secret=_get_setting('autograph.hawk_secret'))

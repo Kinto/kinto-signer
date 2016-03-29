@@ -51,7 +51,7 @@ run-signer: $(VENV)/bin/kinto
 install-autograph: $(VENV)/bin/autograph
 
 $(VENV)/bin/autograph:
-	export GOPATH=$(VENV); export PATH="$$GOPATH/bin;$$PATH"; go get github.com/mozilla-services/autograph
+	export GOPATH=$(VENV); export PATH="$$GOPATH/bin;$$PATH"; go get -u github.com/mozilla-services/autograph
 
 run-autograph: $(VENV)/bin/autograph
 	$(VENV)/bin/autograph -c kinto_signer/tests/config/autograph.yaml

@@ -13,6 +13,6 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
         expected = {
             "description": "Provide signing capabilities to the server.",
             "url": ("https://github.com/Kinto/kinto-signer#kinto-signer"),
-            "resources": ["source/collection1", "source/collection2"]
+            "resources": ["alice/source", "bob/source"]
         }
         self.assertEqual(expected, capabilities['signer'])

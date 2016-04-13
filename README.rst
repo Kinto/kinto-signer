@@ -99,38 +99,40 @@ Usage
 
 Suppose we defined the following resources in the configuration:
 
-::
+.. code-block:: ini
 
     kinto.signer.resources = source/collection1;destination/collection1
 
 First, if necessary, we create the appropriate Kinto objects, for example, with ``httpie``:
 
-::
+.. code-block:: bash
 
-   http PUT http://0.0.0.0:8888/v1/buckets/source --auth user:pass
-   http PUT http://0.0.0.0:8888/v1/buckets/source/collections/collection1 --auth user:pass
-   http PUT http://0.0.0.0:8888/v1/buckets/destination --auth user:pass
-   http PUT http://0.0.0.0:8888/v1/buckets/destination/collections/collection1 --auth user:pass
+    $ http PUT http://0.0.0.0:8888/v1/buckets/source --auth user:pass
+    $ http PUT http://0.0.0.0:8888/v1/buckets/source/collections/collection1 --auth user:pass
+    $ http PUT http://0.0.0.0:8888/v1/buckets/destination --auth user:pass
+    $ http PUT http://0.0.0.0:8888/v1/buckets/destination/collections/collection1 --auth user:pass
 
 Create some records in the *source* collection.
 
-::
+.. code-block:: bash
 
-    echo '{"data": {"article": "title 1"}}' | http POST http://0.0.0.0:8888/v1/buckets/source/collections/collection1/records --auth user:pass
-    echo '{"data": {"article": "title 2"}}' | http POST http://0.0.0.0:8888/v1/buckets/source/collections/collection1/records --auth user:pass
+    $ echo '{"data": {"article": "title 1"}}' | http POST http://0.0.0.0:8888/v1/buckets/source/collections/collection1/records --auth user:pass
+    $ echo '{"data": {"article": "title 2"}}' | http POST http://0.0.0.0:8888/v1/buckets/source/collections/collection1/records --auth user:pass
 
 
 Trigger a signature operation, set the ``status`` field on the *source* collection metadata to ``"to-sign"``.
 
-::
+.. code-block:: bash
 
     echo '{"data": {"status": "to-sign"}}' | http PATCH http://0.0.0.0:8888/v1/buckets/source/collections/collection1 --auth user:pass
 
 The *destination* collection should now contain the new records:
 
-::
+.. code-block:: bash
 
-    http GET http://0.0.0.0:8888/v1/buckets/destination/collections/collection1/records --auth user:pass
+    $ http GET http://0.0.0.0:8888/v1/buckets/destination/collections/collection1/records --auth user:pass
+
+.. code-block:: javascript
 
     {
         "data": [
@@ -149,9 +151,11 @@ The *destination* collection should now contain the new records:
 
 The *destination* collection metadata now contains the signature:
 
-::
+.. code-block:: bash
 
-   http GET http://0.0.0.0:8888/v1/buckets/destination/collections/collection1 --auth user:pass
+   $ http GET http://0.0.0.0:8888/v1/buckets/destination/collections/collection1 --auth user:pass
+
+.. code-block:: javascript
 
    {
        "data": {

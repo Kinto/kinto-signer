@@ -41,10 +41,7 @@ clean:
 	find . -name '*.pyc' -delete
 	find . -name '__pycache__' -type d -exec rm -fr {} \;
 
-$(VENV)/bin/kinto: install
-	$(VENV)/bin/pip install kinto
-
-run-signer: $(VENV)/bin/kinto
+run-signer:
 	$(VENV)/bin/kinto --ini kinto_signer/tests/config/signer.ini migrate
 	$(VENV)/bin/kinto --ini kinto_signer/tests/config/signer.ini start
 
@@ -53,7 +50,7 @@ install-autograph: $(VENV)/bin/autograph
 $(VENV)/bin/autograph:
 	export GOPATH=$(VENV); export PATH="$$GOPATH/bin;$$PATH"; go get github.com/mozilla-services/autograph
 
-run-autograph: $(VENV)/bin/autograph
+run-autograph: install-autograph
 	$(VENV)/bin/autograph -c kinto_signer/tests/config/autograph.yaml
 
 need-kinto-running:

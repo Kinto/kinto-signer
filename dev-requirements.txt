@@ -1,3 +1,4 @@
+kinto-client
 pytest
 mock
 pytest-watch

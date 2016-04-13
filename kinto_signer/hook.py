@@ -19,12 +19,12 @@ def includeme(config):
     raw_resources = settings.get('signer.resources')
     if raw_resources is None:
         raise ValueError("Please specify the kinto_signer.resources value.")
-    available_resources = utils.parse_resources(raw_resources)
+    configured_resources = utils.parse_resources(raw_resources)
 
     # Expose the capabilities in the root endpoint.
     message = "Provide signing capabilities to the server."
     docs = "https://github.com/Kinto/kinto-signer#kinto-signer"
-    resources = sorted(available_resources.keys())
+    resources = sorted(configured_resources.keys())
     config.add_api_capability("signer", message, docs,
                               resources=resources)
 
@@ -33,14 +33,16 @@ def includeme(config):
     def on_resource_changed(event):
         payload = event.payload
         requested_resource = "{bucket_id}/{collection_id}".format(**payload)
-        if requested_resource not in available_resources:
-            return  # Only sign the configured resources.
+        resource = configured_resources.get(requested_resource)
+        # Only sign the configured resources.
+        if resource is None:
+            return
 
-        resource = available_resources.get(requested_resource)
+        # Only sign when the new collection status is "to-sign".
         should_sign = any([True for r in event.impacted_records
                            if r['new'].get('status') == 'to-sign'])
         if not should_sign:
-            return  # Only sign when the new collection status is "to-sign".
+            return
 
         registry = event.request.registry
         updater = LocalUpdater(

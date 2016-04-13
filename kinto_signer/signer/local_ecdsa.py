@@ -1,14 +1,15 @@
 import base64
-import six
 
 import ecdsa
-from ecdsa import NIST384p, SigningKey, VerifyingKey
 import hashlib
+import six
+from ecdsa import NIST384p, SigningKey, VerifyingKey
 
+from .base import SignerBase
 from .exceptions import BadSignatureError
 
 
-class ECDSASigner(object):
+class ECDSASigner(SignerBase):
 
     def __init__(self, private_key=None, public_key=None):
         if private_key is None and public_key is None:

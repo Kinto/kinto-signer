@@ -2,9 +2,13 @@ from cliquet.events import ResourceChanged
 
 from kinto_signer import utils
 from kinto_signer.updater import LocalUpdater
+from kinto_signer.signer import heartbeat
 
 
 def includeme(config):
+    # Register heartbeat to check signer integration.
+    config.registry.heartbeats['signer'] = heartbeat
+
     settings = config.get_settings()
 
     # Load the signer from its dotted location. Fallback to the local ECDSA

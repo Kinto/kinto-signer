@@ -1,11 +1,13 @@
-import requests
-from requests_hawk import HawkAuth
 import base64
 
+import requests
+from requests_hawk import HawkAuth
 from six.moves.urllib.parse import urljoin
 
+from .base import SignerBase
 
-class AutographSigner(object):
+
+class AutographSigner(SignerBase):
 
     def __init__(self, server_url, hawk_id, hawk_secret):
         self.server_url = server_url

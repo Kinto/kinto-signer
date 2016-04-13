@@ -3,6 +3,10 @@ Changelog
 
 This document describes changes between each past release.
 
+0.3.0 (unreleased)
+------------------
+
+- Add signer entry in heartbeat view (fixes #50)
 
 0.2.0 (2016-03-22)
 ------------------

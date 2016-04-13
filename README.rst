@@ -1,5 +1,5 @@
 Kinto signer
-#############
+############
 
 |travis|
 
@@ -11,11 +11,8 @@ What does this do?
 ==================
 
 **Kinto signer** is a `Kinto <https://kinto.readthedocs.org>`_ plugin that
-makes it possible to sign the updates of Kinto collections. In other words,
-it's a way to verify that the data the client has got is the data the original
-authors intended to distribute.
-
-This works with two Kinto instances:
+makes it possible to sign the content of a Kinto collection. In other words,
+it's a way to verify that the data obtained is the one authors intended to distribute.
 
 - **A, the authority** (also known as "the signer"). It is where the original
   data are sent. The authority is configured to sign the data for a specific
@@ -27,28 +24,8 @@ This works with two Kinto instances:
    schema.png
 
 
-Triggering a signature on the authority
-=======================================
-
-Once started, the authority is behaving like a normal Kinto server, until you
-ask for a signature of the collection. To trigger this signature operation,
-you need to add a specific field on the **collection**: ``status: "to-sign"``.
-
-Here is how to do it with ``httpie``:
-
-.. code-block::
-
-  echo '{"data": {"status": "to-sign"}}' | http PATCH http://0.0.0.0:8888/v1/buckets/default/collections/tasks --auth user:pass
-
-From there, the authority will:
-
-1. Retrieve all records on the collection, compute a hash of the records, and
-   generate a signature out of it.
-2. Send all local changes to the Origin server, **with a signature**.
-3. Update the collection metadata with ``status:signed``.
-
-Configuring kinto-signer
-========================
+Setup
+=====
 
 To install this plugin in a Kinto server, a few configuration variables need
 to be set.
@@ -107,6 +84,26 @@ use the following settings:
 +------------------------------------+--------------------------------------------------------------------------+
 
 
+Usage
+=====
+
+To trigger this signature operation, you need to set a specific field on the
+**collection**: ``status: "to-sign"``.
+
+Here is how to do it with ``httpie``:
+
+.. code-block::
+
+  echo '{"data": {"status": "to-sign"}}' | http PATCH http://0.0.0.0:8888/v1/buckets/default/collections/tasks --auth user:pass
+
+From there, the *Authority* will:
+
+1. Retrieve all records on the collection, compute a hash of the records, and
+   generate a signature out of it.
+2. Send all local changes to the *Origin*.
+3. Update the collection metadata with the new ``signature: {...}`` and ``status: signed``.
+
+
 Generating a keypair
 ====================
 
@@ -114,13 +111,24 @@ To generate a new keypair, you can use the following command::
 
   $ python -m kinto_signer.generate_keypair private.pem public.pem
 
+
 Running the tests
 =================
+
 To run the unit tests::
 
   $ make tests
 
-For the functional tests::
+For the functional tests, run these two services in separate terminals:
+
+::
 
   $ make run-signer
+
+::
+
+  $ make run-autograph
+
+And start the test suite::
+
   $ make functional

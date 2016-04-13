@@ -6,19 +6,29 @@ Kinto signer
 .. |travis| image:: https://travis-ci.org/Kinto/kinto-signer.svg?branch=master
     :target: https://travis-ci.org/Kinto/kinto-signer
 
+**Kinto signer** is a Kinto `Kinto <https://kinto.readthedocs.org>`_ plugin
+that introduces [digital signatures](https://en.wikipedia.org/wiki/Digital_signature)
+in order to guarantee integrity and authenticity of collections of records.
 
-What does this do?
-==================
 
-**Kinto signer** is a `Kinto <https://kinto.readthedocs.org>`_ plugin that
-makes it possible to sign the content of a Kinto collection. In other words,
-it's a way to verify that the data obtained is the one authors intended to distribute.
+How does it work?
+=================
 
-- **A, the authority** (also known as "the signer"). It is where the original
-  data are sent. The authority is configured to sign the data for a specific
-  "origin".
-- **O, the origin**, which will end up distributing the data and the signatures.
-  It is where the client retrieve the data.
+**Kinto signer** uses two collections:
+
+* The *source*, where the authors create/update/delete records.
+* The *destination*, where the clients obtain the records and their signature.
+
+When the *source* collection metadata ``status`` is set to ``to-sign``,
+**Kinto-signer** will:
+
+1. grab the whole list of records in this *source* collection
+1. serialize it in a Canonical JSON form (*see below*)
+1. compute a signature using the configured backend
+1. update the *destination* collection records with the recent changes
+1. update the *destination* collection metadata ``signature`` with the information
+   obtain form the signature backend
+1. set the *source* metadata ``status`` to ``signed``.
 
 .. image::
    schema.png
@@ -87,21 +97,80 @@ use the following settings:
 Usage
 =====
 
-To trigger this signature operation, you need to set a specific field on the
-**collection**: ``status: "to-sign"``.
+Suppose we defined the following resources in the configuration:
 
-Here is how to do it with ``httpie``:
+::
 
-.. code-block::
+    kinto.signer.resources = source/collection1;destination/collection1
 
-  echo '{"data": {"status": "to-sign"}}' | http PATCH http://0.0.0.0:8888/v1/buckets/default/collections/tasks --auth user:pass
+First, if necessary, we create the appropriate Kinto objects, for example, with ``httpie``:
 
-From there, the *Authority* will:
+::
 
-1. Retrieve all records on the collection, compute a hash of the records, and
-   generate a signature out of it.
-2. Send all local changes to the *Origin*.
-3. Update the collection metadata with the new ``signature: {...}`` and ``status: signed``.
+   http PUT http://0.0.0.0:8888/v1/buckets/source --auth user:pass
+   http PUT http://0.0.0.0:8888/v1/buckets/source/collections/collection1 --auth user:pass
+   http PUT http://0.0.0.0:8888/v1/buckets/destination --auth user:pass
+   http PUT http://0.0.0.0:8888/v1/buckets/destination/collections/collection1 --auth user:pass
+
+Create some records in the *source* collection.
+
+::
+
+    echo '{"data": {"article": "title 1"}}' | http POST http://0.0.0.0:8888/v1/buckets/source/collections/collection1/records --auth user:pass
+    echo '{"data": {"article": "title 2"}}' | http POST http://0.0.0.0:8888/v1/buckets/source/collections/collection1/records --auth user:pass
+
+
+Trigger a signature operation, set the ``status`` field on the *source* collection metadata to ``"to-sign"``.
+
+::
+
+    echo '{"data": {"status": "to-sign"}}' | http PATCH http://0.0.0.0:8888/v1/buckets/source/collections/collection1 --auth user:pass
+
+The *destination* collection should now contain the new records:
+
+::
+
+    http GET http://0.0.0.0:8888/v1/buckets/destination/collections/collection1/records --auth user:pass
+
+    {
+        "data": [
+            {
+                "article": "title 2",
+                "id": "a45c74a4-18c9-4bc2-bf0c-29d96badb9e6",
+                "last_modified": 1460558489816
+            },
+            {
+                "article": "title 1",
+                "id": "f056f42b-3792-49f3-841d-0f637c7c6683",
+                "last_modified": 1460558483981
+            }
+        ]
+    }
+
+The *destination* collection metadata now contains the signature:
+
+::
+
+   http GET http://0.0.0.0:8888/v1/buckets/destination/collections/collection1 --auth user:pass
+
+   {
+       "data": {
+           "id": "collection1",
+           "last_modified": 1460558496510,
+           "signature": {
+               "hash_algorithm": "sha384",
+               "public_key": "MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE4k3FmG7dFoOt3Tuzl76abTRtK8sb/r/ibCSeVKa96RbrOX2ciscz/TT8wfqBYS/8cN4zMe1+f7wRmkNrCUojZR1ZKmYM2BeiUOMlMoqk2O7+uwsn1DwNQSYP58TkvZt6",
+               "ref": "939wa3q3s3vn20rddhq8lb5ie",
+               "signature": "oGkEfZOegNeYxHjDkc_TnUixX4BzESOzxd2OMn63rKBZL9FR3gjrRj7tmu8BWpnuWSLdH_aIjBsKsq4Dmg7XdDczeg86owSl5L-UYtKW3g4B4Yrh-yJZZFhchRbmZea6",
+               "signature_encoding": "rs_base64url"
+           }
+       },
+       "permissions": {
+           "read": [
+               "system.Everyone"
+           ]
+       }
+   }
 
 
 Generating a keypair

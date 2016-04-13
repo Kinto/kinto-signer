@@ -17,6 +17,7 @@ matrix:
         - TOX_ENV=functional
       install:
         - pip install --user virtualenv tox
+        - make install
         - make run-autograph &
         - make run-kinto &
     - go: 1.5
@@ -26,7 +27,7 @@ matrix:
           WITH=kinto-master
       install:
         - pip install --user virtualenv tox
-        - make install-autograph install
+        - make install
         - .venv/bin/pip install -U https://github.com/Kinto/kinto/zipball/master
         - make run-autograph &
         - make run-kinto &

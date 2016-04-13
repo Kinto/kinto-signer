@@ -36,8 +36,9 @@ When the *source* collection metadata ``status`` is set to ``"to-sign"``, it wil
 Notes on canonical JSON
 -----------------------
 
-* Object keys are sorted alphabetically
 * Records are sorted by ascending ``id``
+* Records with ``deleted: true`` are omitted
+* Object keys are sorted alphabetically
 * No extra spaces in serialized content
 * Double quotes are used
 * Hexadecimal character escape sequences are used
@@ -47,12 +48,14 @@ Notes on canonical JSON
 .. code-block:: python
 
     >>> canonical_json([{'id': '4', 'a': '"quoted"', 'b': 'Ich ♥ Bücher'},
+                        {'id': '1', 'deleted': true},
                         {'id': '26', 'a': ''}])
 
     '[{"a":"","id":"26"},{"a":"\\"quoted\\"","b":"Ich \\u2665 B\\u00fccher","id":"4"}]'
 
 
-* See `jsesc <https://github.com/mathiasbynens/jsesc>`_ to obtain similar results in JavaScript.
+* See `jsesc <https://github.com/mathiasbynens/jsesc>`_ to obtain similar output
+  for escape sequences in JavaScript.
 
 
 Setup

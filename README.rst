@@ -6,8 +6,8 @@ Kinto signer
 .. |travis| image:: https://travis-ci.org/Kinto/kinto-signer.svg?branch=master
     :target: https://travis-ci.org/Kinto/kinto-signer
 
-**Kinto signer** is a Kinto `Kinto <https://kinto.readthedocs.org>`_ plugin
-that introduces [digital signatures](https://en.wikipedia.org/wiki/Digital_signature)
+**Kinto signer** is a `Kinto <https://kinto.readthedocs.org>`_ plugin
+that introduces `digital signatures <https://en.wikipedia.org/wiki/Digital_signature>`_
 in order to guarantee integrity and authenticity of collections of records.
 
 
@@ -19,19 +19,40 @@ How does it work?
 * The *source*, where the authors create/update/delete records.
 * The *destination*, where the clients obtain the records and their signature.
 
-When the *source* collection metadata ``status`` is set to ``to-sign``,
-**Kinto-signer** will:
+When the *source* collection metadata ``status`` is set to ``"to-sign"``, it will:
 
-1. grab the whole list of records in this *source* collection
-1. serialize it in a Canonical JSON form (*see below*)
-1. compute a signature using the configured backend
-1. update the *destination* collection records with the recent changes
-1. update the *destination* collection metadata ``signature`` with the information
+#. grab the whole list of records in this *source* collection
+#. serialize it in a Canonical JSON form (*see below*)
+#. compute a signature using the configured backend
+#. update the *destination* collection records with the recent changes
+#. update the *destination* collection metadata ``signature`` with the information
    obtain form the signature backend
-1. set the *source* metadata ``status`` to ``signed``.
+#. set the *source* metadata ``status`` to ``"signed"``.
 
 .. image::
    schema.png
+
+
+Notes on canonical JSON
+-----------------------
+
+* Object keys are sorted alphabetically
+* Records are sorted by ascending ``id``
+* No extra spaces in serialized content
+* Double quotes are used
+* Hexadecimal character escape sequences are used
+* The alphabetical hexadecimal digits are lowercase
+* Undefined values are stripped
+
+.. code-block:: python
+
+    >>> canonical_json([{'id': '4', 'a': '"quoted"', 'b': 'Ich ♥ Bücher'},
+                        {'id': '26', 'a': ''}])
+
+    '[{"a":"","id":"26"},{"a":"\\"quoted\\"","b":"Ich \\u2665 B\\u00fccher","id":"4"}]'
+
+
+* See `jsesc <https://github.com/mathiasbynens/jsesc>`_ to obtain similar results in JavaScript.
 
 
 Setup

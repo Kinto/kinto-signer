@@ -41,7 +41,7 @@ clean:
 	find . -name '*.pyc' -delete
 	find . -name '__pycache__' -type d -exec rm -fr {} \;
 
-run-signer:
+run-kinto:
 	$(VENV)/bin/kinto --ini kinto_signer/tests/config/signer.ini migrate
 	$(VENV)/bin/kinto --ini kinto_signer/tests/config/signer.ini start
 
@@ -54,7 +54,7 @@ run-autograph: install-autograph
 	$(VENV)/bin/autograph -c kinto_signer/tests/config/autograph.yaml
 
 need-kinto-running:
-	@curl http://localhost:8888/v0/ 2>/dev/null 1>&2 || (echo "Run 'make run-signer' before starting tests." && exit 1)
+	@curl http://localhost:8888/v0/ 2>/dev/null 1>&2 || (echo "Run 'make run-kinto' before starting tests." && exit 1)
 
 functional: install-dev need-kinto-running
 	$(VENV)/bin/py.test kinto_signer/tests/functional.py

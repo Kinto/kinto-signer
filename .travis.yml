@@ -18,7 +18,7 @@ matrix:
       install:
         - pip install --user virtualenv tox
         - make run-autograph &
-        - make run-signer &
+        - make run-kinto &
     - go: 1.5
       language: go
       env:
@@ -29,7 +29,7 @@ matrix:
         - make install-autograph install
         - .venv/bin/pip install -U https://github.com/Kinto/kinto/zipball/master
         - make run-autograph &
-        - make run-signer &
+        - make run-kinto &
     - python: 3.5
       env:
         - TOX_ENV=py35

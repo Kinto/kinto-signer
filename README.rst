@@ -123,7 +123,7 @@ For the functional tests, run these two services in separate terminals:
 
 ::
 
-  $ make run-signer
+  $ make run-kinto
 
 ::
 

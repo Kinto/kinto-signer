@@ -18,14 +18,17 @@ def on_collection_changed(resources, event):
     """
     payload = event.payload
     requested_resource = "{bucket_id}/{collection_id}".format(**payload)
-    if requested_resource not in resources:
-        return  # Only sign the configured resources.
-
     resource = resources.get(requested_resource)
+
+    # Only sign the configured resources.
+    if resource is None:
+        return
+
+    # Only sign when the new collection status is "to-sign".
     should_sign = any([True for r in event.impacted_records
                        if r['new'].get('status') == 'to-sign'])
     if not should_sign:
-        return  # Only sign when the new collection status is "to-sign".
+        return
 
     registry = event.request.registry
     updater = LocalUpdater(
@@ -41,23 +44,23 @@ def on_collection_changed(resources, event):
 def includeme(config):
     settings = config.get_settings()
 
-    # Load the signer from its dotted location. Fallback to the local ECDSA
-    # signer.
+    # Load the signer from its dotted location.
+    # Fallback to the local ECDSA signer.
     default_signer_module = "kinto_signer.signer.local_ecdsa"
-    signer_dotted_location = settings.get(
-        'signer.signer_backend', default_signer_module)
+    signer_dotted_location = settings.get('signer.signer_backend',
+                                          default_signer_module)
     signer_module = config.maybe_dotted(signer_dotted_location)
     config.registry.signer = signer_module.load_from_settings(settings)
 
     # Check source and destination resources are configured.
     raw_resources = settings.get('signer.resources')
     if raw_resources is None:
-        error_msg = "Please specify the kinto_signer.resources value."
+        error_msg = "Please specify the kinto.signer.resources setting."
         raise ConfigurationError(error_msg)
     resources = utils.parse_resources(raw_resources)
 
     # Expose the capabilities in the root endpoint.
-    message = "Provide signing capabilities to the server."
+    message = "Digital signatures for integrity and authenticity of records."
     docs = "https://github.com/Kinto/kinto-signer#kinto-signer"
     config.add_api_capability("signer", message, docs,
                               resources=sorted(resources.keys()))

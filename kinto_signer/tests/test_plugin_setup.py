@@ -21,7 +21,7 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
         capabilities = resp.json['capabilities']
         self.assertIn('signer', capabilities)
         expected = {
-            "description": "Provide signing capabilities to the server.",
+            "description": "Digital signatures for integrity and authenticity of records.",  # NOQA
             "url": ("https://github.com/Kinto/kinto-signer#kinto-signer"),
             "resources": ["source/collection1", "source/collection2"]
         }

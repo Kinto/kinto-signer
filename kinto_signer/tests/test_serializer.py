@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import json
 
 from kinto_signer.serializer import canonical_json
@@ -88,11 +86,3 @@ def test_canonical_json_with_deeply_nested_dicts():
         '"d":{"a":"a","b":"b"},"e":1,"f":[2,3,1],"g":{'
         '"1":{"a":"a","b":"b","c":"c"},"2":2,"3":3},"id":"1"}},"id":"1"}]')
     assert canonical_json(records) == expected
-
-
-def test_canonical_json_uses_upercase_unicode():
-    records = [{'id': '4', 'a': '"quoted"', 'b': 'Ich ♥ Bücher'},
-               {'id': '26', 'd': None, 'a': ''}]
-    assert canonical_json(records) == (
-        '[{"a":"","d":null,"id":"26"},'
-        '{"a":"\\"quoted\\"","b":"Ich \\u2665 B\\u00fccher","id":"4"}]')

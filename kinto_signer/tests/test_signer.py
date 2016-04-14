@@ -6,7 +6,8 @@ import os
 import mock
 import pytest
 
-from kinto_signer.signer import ECDSASigner, AutographSigner, BadSignatureError
+from kinto_signer.signer import BadSignatureError
+from kinto_signer.signer import base
 from kinto_signer.signer import autograph
 from kinto_signer.signer import local_ecdsa
 from .support import unittest
@@ -24,15 +25,22 @@ def save_key(key, key_name):
     return tmp
 
 
+class BaseSignerTest(unittest.TestCase):
+    def test_base_method_raises_unimplemented(self):
+        signer = base.SignerBase()
+        with pytest.raises(NotImplementedError):
+            signer.sign("TEST")
+
+
 class ECDSASignerTest(unittest.TestCase):
 
     @classmethod
     def get_backend(cls, **options):
-        return ECDSASigner(**options)
+        return local_ecdsa.ECDSASigner(**options)
 
     @classmethod
     def setUpClass(cls):
-        sk, vk = ECDSASigner.generate_keypair()
+        sk, vk = local_ecdsa.ECDSASigner.generate_keypair()
         cls.sk_location = save_key(sk, 'signing-key')
         cls.vk_location = save_key(vk, 'verifying-key')
         cls.signer = cls.get_backend(private_key=cls.sk_location)
@@ -148,7 +156,7 @@ class ECDSASignerTest(unittest.TestCase):
 class AutographSignerTest(unittest.TestCase):
 
     def setUp(self):
-        self.signer = AutographSigner(
+        self.signer = autograph.AutographSigner(
             hawk_id='alice',
             hawk_secret='fs5wgcer9qj819kfptdlp8gm227ewxnzvsuj9ztycsx08hfhzu',
             server_url='http://localhost:8000')

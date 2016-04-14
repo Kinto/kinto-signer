@@ -2,7 +2,7 @@ import tempfile
 
 from .support import unittest
 
-from kinto_signer.signer import ECDSASigner
+from kinto_signer.signer.local_ecdsa import ECDSASigner
 from kinto_signer.generate_keypair import generate_keypair
 
 

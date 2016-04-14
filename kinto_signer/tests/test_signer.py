@@ -6,8 +6,8 @@ import os
 import mock
 import pytest
 
-from kinto_signer.signer import BadSignatureError
 from kinto_signer.signer import base
+from kinto_signer.signer import exceptions
 from kinto_signer.signer import autograph
 from kinto_signer.signer import local_ecdsa
 from .support import unittest
@@ -80,7 +80,7 @@ class ECDSASignerTest(unittest.TestCase):
             'hash_algorithm': 'sha384',
             'signature_encoding': 'rs_base64'}
 
-        with pytest.raises(BadSignatureError):
+        with pytest.raises(exceptions.BadSignatureError):
             self.signer.verify(
                 "Text not matching with the sig.",
                 signature_bundle)

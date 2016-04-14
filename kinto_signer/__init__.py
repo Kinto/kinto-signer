@@ -1,7 +1,41 @@
-from cliquet.events import ResourceChanged
+import functools
+
+from cliquet.events import ACTIONS, ResourceChanged
+from pyramid.exceptions import ConfigurationError
 
 from kinto_signer import utils
 from kinto_signer.updater import LocalUpdater
+
+
+def on_collection_changed(resources, event):
+    """
+    Listen to resource change events, to check if a new signature is
+    requested.
+
+    When a source collection specified in settings is modified, and its
+    new metadata ``status`` is set to ``"to-sign"``, then sign the data
+    and update the destination.
+    """
+    payload = event.payload
+    requested_resource = "{bucket_id}/{collection_id}".format(**payload)
+    if requested_resource not in resources:
+        return  # Only sign the configured resources.
+
+    resource = resources.get(requested_resource)
+    should_sign = any([True for r in event.impacted_records
+                       if r['new'].get('status') == 'to-sign'])
+    if not should_sign:
+        return  # Only sign when the new collection status is "to-sign".
+
+    registry = event.request.registry
+    updater = LocalUpdater(
+        signer=registry.signer,
+        storage=registry.storage,
+        permission=registry.permission,
+        source=resource['source'],
+        destination=resource['destination'])
+
+    updater.sign_and_update_remote()
 
 
 def includeme(config):
@@ -18,43 +52,19 @@ def includeme(config):
     # Check source and destination resources are configured.
     raw_resources = settings.get('signer.resources')
     if raw_resources is None:
-        raise ValueError("Please specify the kinto_signer.resources value.")
-    available_resources = utils.parse_resources(raw_resources)
+        error_msg = "Please specify the kinto_signer.resources value."
+        raise ConfigurationError(error_msg)
+    resources = utils.parse_resources(raw_resources)
 
     # Expose the capabilities in the root endpoint.
     message = "Provide signing capabilities to the server."
     docs = "https://github.com/Kinto/kinto-signer#kinto-signer"
-    resources = sorted(available_resources.keys())
     config.add_api_capability("signer", message, docs,
-                              resources=resources)
-
-    # Listen to resource change events, to check if a new signature is
-    # requested.
-    def on_resource_changed(event):
-        payload = event.payload
-        requested_resource = "{bucket_id}/{collection_id}".format(**payload)
-        if requested_resource not in available_resources:
-            return  # Only sign the configured resources.
-
-        resource = available_resources.get(requested_resource)
-        should_sign = any([True for r in event.impacted_records
-                           if r['new'].get('status') == 'to-sign'])
-        if not should_sign:
-            return  # Only sign when the new collection status is "to-sign".
-
-        registry = event.request.registry
-        updater = LocalUpdater(
-            signer=registry.signer,
-            storage=registry.storage,
-            permission=registry.permission,
-            source=resource['source'],
-            destination=resource['destination'])
-
-        updater.sign_and_update_remote()
+                              resources=sorted(resources.keys()))
 
     config.add_subscriber(
-        on_resource_changed,
+        functools.partial(on_collection_changed, resources=resources),
         ResourceChanged,
-        for_actions=('create', 'update'),
+        for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
         for_resources=('collection',)
     )

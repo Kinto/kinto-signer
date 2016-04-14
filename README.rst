@@ -36,14 +36,19 @@ When the *source* collection metadata ``status`` is set to ``"to-sign"``, it wil
 Notes on canonical JSON
 -----------------------
 
+Specific to Kinto:
+
 * Records are sorted by ascending ``id``
 * Records with ``deleted: true`` are omitted
+
+Standard canonical JSON:
+
 * Object keys are sorted alphabetically
 * No extra spaces in serialized content
 * Double quotes are used
 * Hexadecimal character escape sequences are used
 * The alphabetical hexadecimal digits are lowercase
-* Undefined values are stripped
+* Duplicate or empty properties are omitted
 
 .. code-block:: python
 
@@ -54,6 +59,7 @@ Notes on canonical JSON
     '[{"a":"","id":"26"},{"a":"\\"quoted\\"","b":"Ich \\u2665 B\\u00fccher","id":"4"}]'
 
 
+* See `Internet-Draft Predictable Serialization for JSON Tools <http://webpki.org/ietf/draft-rundgren-predictable-serialization-for-json-tools-00.html>`_
 * See `jsesc <https://github.com/mathiasbynens/jsesc>`_ to obtain similar output
   for escape sequences in JavaScript.
 

@@ -72,13 +72,13 @@ class ResourceChangedTest(unittest.TestCase):
 
     def test_nothing_happens_when_resource_is_not_configured(self):
         evt = mock.MagicMock(payload={"bucket_id": "a", "collection_id": "b"})
-        on_collection_changed(utils.parse_resources("c/d;e/f"), evt)
+        on_collection_changed(evt, resources=utils.parse_resources("c/d;e/f"))
         assert not self.updater_mocked.called
 
     def test_nothing_happens_when_status_is_not_to_sign(self):
         evt = mock.MagicMock(payload={"bucket_id": "a", "collection_id": "b"},
                              impacted_records=[{"new": {"status": "signed"}}])
-        on_collection_changed(utils.parse_resources("a/b;c/d"), evt)
+        on_collection_changed(evt, resources=utils.parse_resources("a/b;c/d"))
         assert not self.updater_mocked.called
 
     def test_updater_is_called_when_resource_and_status_matches(self):
@@ -87,7 +87,7 @@ class ResourceChangedTest(unittest.TestCase):
         evt.request.registry.storage = mock.sentinel.storage
         evt.request.registry.permission = mock.sentinel.permission
         evt.request.registry.signer = mock.sentinel.signer
-        on_collection_changed(utils.parse_resources("a/b;c/d"), evt)
+        on_collection_changed(evt, resources=utils.parse_resources("a/b;c/d"))
         self.updater_mocked.assert_called_with(
             signer=mock.sentinel.signer,
             storage=mock.sentinel.storage,

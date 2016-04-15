@@ -7,7 +7,7 @@ from kinto_signer import utils
 from kinto_signer.updater import LocalUpdater
 
 
-def on_collection_changed(resources, event):
+def on_collection_changed(event, resources):
     """
     Listen to resource change events, to check if a new signature is
     requested.

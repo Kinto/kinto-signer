@@ -1,54 +1,71 @@
 Kinto signer
-#############
+############
 
 |travis|
 
 .. |travis| image:: https://travis-ci.org/Kinto/kinto-signer.svg?branch=master
     :target: https://travis-ci.org/Kinto/kinto-signer
 
+**Kinto signer** is a `Kinto <https://kinto.readthedocs.org>`_ plugin
+that introduces `digital signatures <https://en.wikipedia.org/wiki/Digital_signature>`_
+in order to guarantee integrity and authenticity of collections of records.
 
-What does this do?
-==================
 
-**Kinto signer** is a `Kinto <https://kinto.readthedocs.org>`_ plugin that
-makes it possible to sign the updates of Kinto collections. In other words,
-it's a way to verify that the data the client has got is the data the original
-authors intended to distribute.
+How does it work?
+=================
 
-This works with two Kinto instances:
+**Kinto signer** uses two collections:
 
-- **A, the authority** (also known as "the signer"). It is where the original
-  data are sent. The authority is configured to sign the data for a specific
-  "origin".
-- **O, the origin**, which will end up distributing the data and the signatures.
-  It is where the client retrieve the data.
+* The *source*, where the authors create/update/delete records.
+* The *destination*, where the clients obtain the records and their signature.
+
+When the *source* collection metadata ``status`` is set to ``"to-sign"``, it will:
+
+#. grab the whole list of records in this *source* collection
+#. serialize it in a Canonical JSON form (*see below*)
+#. compute a signature using the configured backend
+#. update the *destination* collection records with the recent changes
+#. update the *destination* collection metadata ``signature`` with the information
+   obtain form the signature backend
+#. set the *source* metadata ``status`` to ``"signed"``.
 
 .. image::
    schema.png
 
 
-Triggering a signature on the authority
-=======================================
+Notes on canonical JSON
+-----------------------
 
-Once started, the authority is behaving like a normal Kinto server, until you
-ask for a signature of the collection. To trigger this signature operation,
-you need to add a specific field on the **collection**: ``status: "to-sign"``.
+Specific to Kinto:
 
-Here is how to do it with ``httpie``:
+* Records are sorted by ascending ``id``
+* Records with ``deleted: true`` are omitted
 
-.. code-block::
+Standard canonical JSON:
 
-  echo '{"data": {"status": "to-sign"}}' | http PATCH http://0.0.0.0:8888/v1/buckets/default/collections/tasks --auth user:pass
+* Object keys are sorted alphabetically
+* No extra spaces in serialized content
+* Double quotes are used
+* Hexadecimal character escape sequences are used
+* The alphabetical hexadecimal digits are lowercase
+* Duplicate or empty properties are omitted
 
-From there, the authority will:
+.. code-block:: python
 
-1. Retrieve all records on the collection, compute a hash of the records, and
-   generate a signature out of it.
-2. Send all local changes to the Origin server, **with a signature**.
-3. Update the collection metadata with ``status:signed``.
+    >>> canonical_json([{'id': '4', 'a': '"quoted"', 'b': 'Ich ♥ Bücher'},
+                        {'id': '1', 'deleted': true},
+                        {'id': '26', 'a': ''}])
 
-Configuring kinto-signer
-========================
+    '[{"a":"","id":"26"},{"a":"\\"quoted\\"","b":"Ich \\u2665 B\\u00fccher","id":"4"}]'
+
+
+* See `Internet-Draft Predictable Serialization for JSON Tools <http://webpki.org/ietf/draft-rundgren-predictable-serialization-for-json-tools-00.html>`_
+* See `jsesc <https://github.com/mathiasbynens/jsesc>`_ to obtain similar output
+  for escape sequences in JavaScript.
+
+
+Setup
+=====
 
 To install this plugin in a Kinto server, a few configuration variables need
 to be set.
@@ -107,6 +124,89 @@ use the following settings:
 +------------------------------------+--------------------------------------------------------------------------+
 
 
+Usage
+=====
+
+Suppose we defined the following resources in the configuration:
+
+.. code-block:: ini
+
+    kinto.signer.resources = source/collection1;destination/collection1
+
+First, if necessary, we create the appropriate Kinto objects, for example, with ``httpie``:
+
+.. code-block:: bash
+
+    $ http PUT http://0.0.0.0:8888/v1/buckets/source --auth user:pass
+    $ http PUT http://0.0.0.0:8888/v1/buckets/source/collections/collection1 --auth user:pass
+    $ http PUT http://0.0.0.0:8888/v1/buckets/destination --auth user:pass
+    $ http PUT http://0.0.0.0:8888/v1/buckets/destination/collections/collection1 --auth user:pass
+
+Create some records in the *source* collection.
+
+.. code-block:: bash
+
+    $ echo '{"data": {"article": "title 1"}}' | http POST http://0.0.0.0:8888/v1/buckets/source/collections/collection1/records --auth user:pass
+    $ echo '{"data": {"article": "title 2"}}' | http POST http://0.0.0.0:8888/v1/buckets/source/collections/collection1/records --auth user:pass
+
+
+Trigger a signature operation, set the ``status`` field on the *source* collection metadata to ``"to-sign"``.
+
+.. code-block:: bash
+
+    echo '{"data": {"status": "to-sign"}}' | http PATCH http://0.0.0.0:8888/v1/buckets/source/collections/collection1 --auth user:pass
+
+The *destination* collection should now contain the new records:
+
+.. code-block:: bash
+
+    $ http GET http://0.0.0.0:8888/v1/buckets/destination/collections/collection1/records --auth user:pass
+
+.. code-block:: javascript
+
+    {
+        "data": [
+            {
+                "article": "title 2",
+                "id": "a45c74a4-18c9-4bc2-bf0c-29d96badb9e6",
+                "last_modified": 1460558489816
+            },
+            {
+                "article": "title 1",
+                "id": "f056f42b-3792-49f3-841d-0f637c7c6683",
+                "last_modified": 1460558483981
+            }
+        ]
+    }
+
+The *destination* collection metadata now contains the signature:
+
+.. code-block:: bash
+
+   $ http GET http://0.0.0.0:8888/v1/buckets/destination/collections/collection1 --auth user:pass
+
+.. code-block:: javascript
+
+   {
+       "data": {
+           "id": "collection1",
+           "last_modified": 1460558496510,
+           "signature": {
+               "hash_algorithm": "sha384",
+               "public_key": "MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE4k3FmG7dFoOt3Tuzl76abTRtK8sb/r/ibCSeVKa96RbrOX2ciscz/TT8wfqBYS/8cN4zMe1+f7wRmkNrCUojZR1ZKmYM2BeiUOMlMoqk2O7+uwsn1DwNQSYP58TkvZt6",
+               "ref": "939wa3q3s3vn20rddhq8lb5ie",
+               "signature": "oGkEfZOegNeYxHjDkc_TnUixX4BzESOzxd2OMn63rKBZL9FR3gjrRj7tmu8BWpnuWSLdH_aIjBsKsq4Dmg7XdDczeg86owSl5L-UYtKW3g4B4Yrh-yJZZFhchRbmZea6",
+               "signature_encoding": "rs_base64url"
+           }
+       },
+       "permissions": {
+           "read": [
+               "system.Everyone"
+           ]
+       }
+   }
+
+
 Generating a keypair
 ====================
 
@@ -114,13 +214,24 @@ To generate a new keypair, you can use the following command::
 
   $ python -m kinto_signer.generate_keypair private.pem public.pem
 
+
 Running the tests
 =================
+
 To run the unit tests::
 
   $ make tests
 
-For the functional tests::
+For the functional tests, run these two services in separate terminals:
 
-  $ make run-signer
+::
+
+  $ make run-kinto
+
+::
+
+  $ make run-autograph
+
+And start the test suite::
+
   $ make functional

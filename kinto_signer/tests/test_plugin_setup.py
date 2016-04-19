@@ -1,6 +1,5 @@
 import mock
 import pytest
-from cliquet.tests.support import unittest
 from pyramid import testing
 from pyramid.exceptions import ConfigurationError
 from requests import exceptions as requests_exceptions
@@ -58,9 +57,11 @@ class HeartbeatTest(BaseWebTest, unittest.TestCase):
 
 class IncludeMeTest(unittest.TestCase):
     def test_includeme_raises_value_error_if_no_resource_defined(self):
+        config = testing.setUp(settings={'signer.ecdsa.private_key': "",
+                                         'signer.ecdsa.public_key': ""})
+        config.registry.heartbeats = {}
         with pytest.raises(ConfigurationError):
-            includeme(testing.setUp(settings={'signer.ecdsa.private_key': "",
-                                              'signer.ecdsa.public_key': ""}))
+            includeme(config)
 
 
 class ResourceChangedTest(unittest.TestCase):

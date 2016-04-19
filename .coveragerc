@@ -1,4 +1,2 @@
 [run]
 omit = kinto_signer/tests/*
-       kinto_signer/hook.py
-       kinto_signer/gather_remote.py

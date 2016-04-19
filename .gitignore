@@ -6,3 +6,4 @@ records.json
 __pycache__/
 *.egg-info/
 *.egg
+.venv

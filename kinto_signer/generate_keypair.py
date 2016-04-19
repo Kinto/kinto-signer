@@ -1,5 +1,5 @@
 import sys
-from kinto_signer.signer import ECDSASigner
+from kinto_signer.signer.local_ecdsa import ECDSASigner
 
 
 def generate_keypair(private_key_location, public_key_location):

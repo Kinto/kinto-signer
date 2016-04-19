@@ -1,12 +1,5 @@
 from kinto import logger
 
-from .local_ecdsa import ECDSASigner
-from .autograph import AutographSigner
-from .exceptions import BadSignatureError
-
-
-__all__ = ("ECDSASigner", "BadSignatureError", "AutographSigner")
-
 
 def heartbeat(request):
     """Test that signer is operationnal.

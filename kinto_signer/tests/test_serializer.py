@@ -148,23 +148,3 @@ def test_orders_with_deeply_nested_dicts():
         '"d":{"a":"a","b":"b"},"e":1,"f":[2,3,1],"g":{'
         '"1":{"a":"a","b":"b","c":"c"},"2":2,"3":3},"id":"1"}},"id":"1"}]')
     assert canonical_json(records) == expected
-
-
-#
-# Failing tests
-#
-# XXX: those will probably require to rewrite the whole suite of tests.
-#
-# def test_serializes_nan_to_null():
-#     records = [{'id': '4', 'a': float('nan')}]
-#     assert canonical_json(records) == '[{"a":null,"id":4}]'
-#
-#
-# def test_serializes_numbers_as_is():
-#     records = [{'id': '4', 'a': -0, 'b': 3.50}]
-#     assert canonical_json(records) == '[{"a":-0,"b":3.50,"id":"4"}]'
-#
-#
-# def test_serializes_infinity_to_null():
-#     records = [{'id': '4', 'a': float("inf")}]
-#     assert canonical_json(records) == '[{"a":null,"id":"4"}]'

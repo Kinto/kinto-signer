@@ -66,8 +66,10 @@ def includeme(config):
     # Expose the capabilities in the root endpoint.
     message = "Digital signatures for integrity and authenticity of records."
     docs = "https://github.com/Kinto/kinto-signer#kinto-signer"
+    sorted_resources = sorted(resources.values(),
+                              key=lambda r: r['source']['collection'])
     config.add_api_capability("signer", message, docs,
-                              resources=resources.values())
+                              resources=sorted_resources)
 
     config.add_subscriber(
         functools.partial(on_collection_changed, resources=resources),

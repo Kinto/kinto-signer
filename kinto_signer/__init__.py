@@ -67,7 +67,7 @@ def includeme(config):
     message = "Digital signatures for integrity and authenticity of records."
     docs = "https://github.com/Kinto/kinto-signer#kinto-signer"
     config.add_api_capability("signer", message, docs,
-                              resources=sorted(resources.keys()))
+                              resources=sorted(resources.values()))
 
     config.add_subscriber(
         functools.partial(on_collection_changed, resources=resources),

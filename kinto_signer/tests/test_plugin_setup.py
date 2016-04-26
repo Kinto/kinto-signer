@@ -43,7 +43,9 @@ class HeartbeatTest(BaseWebTest, unittest.TestCase):
         self.addCleanup(patch.stop)
         self.signature = {"signature": "",
                           "hash_algorithm": "",
-                          "signature_encoding": ""}
+                          "signature_encoding": "",
+                          "content-signature": "",
+                          "x5u": ""}
         self.mock.post.return_value.json.return_value = [self.signature]
 
     def test_heartbeat_is_exposed(self):

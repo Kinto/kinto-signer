@@ -19,6 +19,9 @@ class ECDSASigner(SignerBase):
         self.private_key = private_key
         self.public_key = public_key
 
+        # Autograph uses this prefix prior to signing.
+        self.prefix = "Content-Signature:\x00".encode("utf-8")
+
     @classmethod
     def generate_keypair(cls):
         sk = SigningKey.generate(curve=NIST384p)
@@ -46,15 +49,20 @@ class ECDSASigner(SignerBase):
         if isinstance(payload, six.text_type):  # pragma: nocover
             payload = payload.encode('utf-8')
 
+        payload = self.prefix + payload
+
         private_key = self.load_private_key()
-        signature = private_key.sign(
-            payload,
-            hashfunc=hashlib.sha384,
-            sigencode=ecdsa.util.sigencode_string)
+        signature = private_key.sign(payload,
+                                     hashfunc=hashlib.sha384,
+                                     sigencode=ecdsa.util.sigencode_string)
+        x5u = ''
+        enc_signature = base64.b64encode(signature).decode('utf-8')
         return {
-            'signature': base64.b64encode(signature).decode('utf-8'),
+            'signature': enc_signature,
             'hash_algorithm': 'sha384',
-            'signature_encoding': 'rs_base64'
+            'signature_encoding': 'rs_base64',
+            'x5u': x5u,
+            'content-signature': 'x5u=%s;p384ecdsa=%s' % (x5u, enc_signature)
         }
 
     def verify(self, payload, signature_bundle):
@@ -64,6 +72,8 @@ class ECDSASigner(SignerBase):
 
         if isinstance(payload, six.text_type):  # pragma: nocover
             payload = payload.encode('utf-8')
+
+        payload = self.prefix + payload
 
         if isinstance(signature, six.text_type):  # pragma: nocover
             signature = signature.encode('utf-8')
@@ -81,11 +91,10 @@ class ECDSASigner(SignerBase):
 
         public_key = self.load_public_key()
         try:
-            public_key.verify(
-                signature_bytes,
-                payload,
-                hashfunc=hashlib.sha384,
-                sigdecode=ecdsa.util.sigdecode_string)
+            public_key.verify(signature_bytes,
+                              payload,
+                              hashfunc=hashlib.sha384,
+                              sigdecode=ecdsa.util.sigdecode_string)
         except Exception as e:
             raise BadSignatureError(e)
 

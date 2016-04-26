@@ -1,4 +1,5 @@
 class SignerBase(object):
+
     def sign(self, payload):
         """
         Signs the specified `payload` and returns the signature metadata.

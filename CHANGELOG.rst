@@ -7,6 +7,8 @@ This document describes changes between each past release.
 ------------------
 
 - Add signer entry in heartbeat view (fixes #50)
+- Switch to ``Content-Signature`` spec, as by provided Autograph and expected
+  by Firefox Personal Security Manager
 
 0.2.0 (2016-03-22)
 ------------------

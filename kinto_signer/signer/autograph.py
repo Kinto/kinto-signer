@@ -1,6 +1,7 @@
 import base64
 
 import requests
+import six
 from requests_hawk import HawkAuth
 from six.moves.urllib.parse import urljoin
 
@@ -14,10 +15,14 @@ class AutographSigner(SignerBase):
         self.auth = HawkAuth(id=hawk_id, key=hawk_secret)
 
     def sign(self, payload):
-        b64_payload = base64.b64encode(payload.encode('utf-8'))
+        if isinstance(payload, six.text_type):  # pragma: nocover
+            payload = payload.encode("utf-8")
+
+        b64_payload = base64.b64encode(payload)
         url = urljoin(self.server_url, '/sign/data')
         resp = requests.post(url, auth=self.auth, json=[{
             "input": b64_payload.decode('utf-8'),
+            "template": "content-signature",
             "hashwith": "sha384"
         }])
         resp.raise_for_status()

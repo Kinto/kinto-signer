@@ -21,6 +21,5 @@ def heartbeat(request):
             raise ValueError("Invalid response content: %s" % result)
         return True
     except Exception as e:
-        print(e)
         logger.exception(e)
         return False

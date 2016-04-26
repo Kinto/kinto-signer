@@ -80,14 +80,14 @@ Here is an example of what a configuration could look like:
   kinto.includes = kinto_signer
 
   kinto.signer.resources =
-      source/collection1;destination/collection1
-      source/collection2;destination/collection2
+      /buckets/source/collections/collection1;/buckets/destination/collections/collection1
+      /buckets/source/collections/collection2;/buckets/destination/collections/collection2
 
 +---------------------------------+--------------------------------------------------------------------------+
 | Setting name                    | What does it do?                                                         |
 +=================================+==========================================================================+
-| kinto.signer.resources          | The name of the buckets and collections on which signatures can be       |
-|                                 | triggered and the destination where the data and the signatures will     |
+| kinto.signer.resources          | The source collections URIs on which signatures should be triggered      |
+|                                 | and the destination collection where the data and the signatures will    |
 |                                 | end-up.                                                                  |
 +---------------------------------+--------------------------------------------------------------------------+
 | kinto.signer.signer_backend     | The python dotted location to the signer to use. By default, a local     |
@@ -134,7 +134,7 @@ Suppose we defined the following resources in the configuration:
 
 .. code-block:: ini
 
-    kinto.signer.resources = source/collection1;destination/collection1
+    kinto.signer.resources = /buckets/source/collections/collection1;/buckets/destination/collections/collection1
 
 First, if necessary, we create the appropriate Kinto objects, for example, with ``httpie``:
 

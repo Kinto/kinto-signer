@@ -18,8 +18,8 @@ def on_collection_changed(event, resources):
     and update the destination.
     """
     payload = event.payload
-    requested_resource = "{bucket_id}/{collection_id}".format(**payload)
-    resource = resources.get(requested_resource)
+    key = "/buckets/{bucket_id}/collections/{collection_id}".format(**payload)
+    resource = resources.get(key)
 
     # Only sign the configured resources.
     if resource is None:

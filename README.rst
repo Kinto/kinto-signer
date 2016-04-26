@@ -36,6 +36,22 @@ When the *source* collection metadata ``status`` is set to ``"to-sign"``, it wil
    schema.png
 
 
+Content-Signature protocol
+--------------------------
+
+Kinto-signer produces signatures for the content of Kinto collections using
+`ECDSA <https://fr.wikipedia.org/wiki/Elliptic_curve_digital_signature_algorithm>`_
+with the P-384 strength.
+
+* The content is prepended with ``Content-Signature:\x00`` prior to signing.
+* The signature is produced using the SHA-384 hash.
+* The signature is returned as encoded using URL-safe variant of base-64.
+
+See `Internet-Draft for P-384/ECDSA <https://github.com/martinthomson/content-signature/pull/2/files>`_
+
+The content signature is validated in Firefox using the `Personal Security Manager <https://developer.mozilla.org/en/docs/Mozilla/Projects/PSM>`_.
+
+
 Notes on canonical JSON
 -----------------------
 
@@ -200,6 +216,8 @@ The *destination* collection metadata now contains the signature:
                "ref": "939wa3q3s3vn20rddhq8lb5ie",
                "signature": "oGkEfZOegNeYxHjDkc_TnUixX4BzESOzxd2OMn63rKBZL9FR3gjrRj7tmu8BWpnuWSLdH_aIjBsKsq4Dmg7XdDczeg86owSl5L-UYtKW3g4B4Yrh-yJZZFhchRbmZea6",
                "signature_encoding": "rs_base64url"
+               "content-signature": "x5u=https://bucket.example.net/appkey1.pem;p384ecdsa=Nv-EJ1D0fanElBGP4ZZmV6zu_b4DuCP3H7xawlLrcR7to3aKzqfZknVXOi94G_w8-wdKlysVWmhuDMqJqPcJV7ZudbhypJpj7kllWdPvMRZkoWXSfYLaoLMc8VQEqZcb",
+               "x5u": "https://bucket.example.net/appkey1.pem",
            }
        },
        "permissions": {

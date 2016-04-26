@@ -170,7 +170,9 @@ class AutographSignerTest(unittest.TestCase):
         requests.post.assert_called_with(
             'http://localhost:8000/sign/data',
             auth=self.signer.auth,
-            json=[{'hashwith': 'sha384', 'input': 'dGVzdCBkYXRh'}])
+            json=[{'hashwith': 'sha384',
+                   'input': 'dGVzdCBkYXRh',
+                   'template': 'content-signature'}])
         assert signature_bundle['signature'] == SIGNATURE
 
     @mock.patch('kinto_signer.signer.autograph.AutographSigner')

@@ -44,7 +44,7 @@ Kinto-signer produces signatures for the content of Kinto collections using
 with the P-384 strength.
 
 * The content is prepended with ``Content-Signature:\x00`` prior to signing.
-* The signature is produced using the SHA-384 hash.
+* The signature is produced with ECDSA on P-384 using SHA-384.
 * The signature is returned as encoded using URL-safe variant of base-64.
 
 See `Internet-Draft for P-384/ECDSA <https://github.com/martinthomson/content-signature/pull/2/files>`_

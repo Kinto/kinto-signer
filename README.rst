@@ -9,7 +9,7 @@ Kinto signer
 .. |coveralls| image:: https://coveralls.io/repos/github/Kinto/kinto-signer/badge.svg?branch=master
     :target: https://coveralls.io/github/Kinto/kinto-signer?branch=master
 
-**Kinto signer** is a `Kinto <https://kinto.readthedocs.org>`_ plugin
+**Kinto signer** is a `Kinto <https://kinto.readthedocs.io>`_ plugin
 that introduces `digital signatures <https://en.wikipedia.org/wiki/Digital_signature>`_
 in order to guarantee integrity and authenticity of collections of records.
 

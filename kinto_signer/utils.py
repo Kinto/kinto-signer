@@ -17,25 +17,32 @@ def get_setting(settings, key, bucket=None, collection=None, default=None):
 def parse_resources(raw_resources):
     resources = {}
     for res in aslist(raw_resources):
+        error_msg = ("Resources should be defined as "
+                     "'/buckets/<bid>/collections/<cid>;"
+                     "/buckets/<bid>/collections/<cid>'. Got %r" % res)
         if ";" not in res:
-            msg = ("Resources should be defined as "
-                   "'bucket/coll;bucket/coll'. Got %r" % res)
-            raise ValueError(msg)
+            raise ValueError(error_msg)
         source, destination = res.split(';')
 
         def _get_resource(resource):
             parts = resource.split('/')
-            if len(parts) != 2:
-                msg = ("Resources should be defined as bucket/collection. "
-                       "Got %r" % resource)
-                raise ValueError(msg)
+            if len(parts) == 2:
+                bucket, collection = parts
+            elif len(parts) == 5:
+                _, _, bucket, _, collection = parts
+            else:
+                raise ValueError(error_msg)
             return {
-                'bucket': parts[0],
-                'collection': parts[1]
+                'bucket': bucket,
+                'collection': collection
             }
 
-        resources[source] = {
-            'source': _get_resource(source),
-            'destination': _get_resource(destination),
+        pattern = '/buckets/{bucket}/collections/{collection}'
+        source = _get_resource(source)
+        destination = _get_resource(destination)
+        key = pattern.format(**source)
+        resources[key] = {
+            'source': source,
+            'destination': destination,
         }
     return resources

@@ -56,6 +56,11 @@ class BaseTestFunctional(object):
         resp = requests.post(flush_url)
         resp.raise_for_status()
 
+    def test_heartbeat_is_successful(self):
+        hb_url = urljoin(self._server_url, '/__heartbeat__')
+        resp = requests.get(hb_url)
+        resp.raise_for_status()
+
     def test_destination_creation_and_new_records_signature(self):
         self.source.create_bucket()
         self.source.create_collection()

@@ -1,22 +1,28 @@
-import requests
-from requests_hawk import HawkAuth
 import base64
 
-from kinto_signer import utils
+import requests
+import six
+from requests_hawk import HawkAuth
 from six.moves.urllib.parse import urljoin
 
+from .base import SignerBase
 
-class AutographSigner(object):
+
+class AutographSigner(SignerBase):
 
     def __init__(self, server_url, hawk_id, hawk_secret):
         self.server_url = server_url
         self.auth = HawkAuth(id=hawk_id, key=hawk_secret)
 
     def sign(self, payload):
-        b64_payload = base64.b64encode(payload.encode('utf-8'))
+        if isinstance(payload, six.text_type):  # pragma: nocover
+            payload = payload.encode("utf-8")
+
+        b64_payload = base64.b64encode(payload)
         url = urljoin(self.server_url, '/sign/data')
         resp = requests.post(url, auth=self.auth, json=[{
             "input": b64_payload.decode('utf-8'),
+            "template": "content-signature",
             "hashwith": "sha384"
         }])
         resp.raise_for_status()
@@ -25,11 +31,8 @@ class AutographSigner(object):
         return signature_bundle
 
 
-def load_from_settings(settings, bucket=None, collection=None):
-    def _get_setting(key):
-        return utils.get_setting(settings, key, bucket, collection)
-
+def load_from_settings(settings):
     return AutographSigner(
-        server_url=_get_setting('autograph.server_url'),
-        hawk_id=_get_setting('autograph.hawk_id'),
-        hawk_secret=_get_setting('autograph.hawk_secret'))
+        server_url=settings['signer.autograph.server_url'],
+        hawk_id=settings['signer.autograph.hawk_id'],
+        hawk_secret=settings['signer.autograph.hawk_secret'])

@@ -6,7 +6,8 @@ import os
 import mock
 import pytest
 
-from kinto_signer.signer import ECDSASigner, AutographSigner, BadSignatureError
+from kinto_signer.signer import base
+from kinto_signer.signer import exceptions
 from kinto_signer.signer import autograph
 from kinto_signer.signer import local_ecdsa
 from .support import unittest
@@ -24,15 +25,22 @@ def save_key(key, key_name):
     return tmp
 
 
+class BaseSignerTest(unittest.TestCase):
+    def test_base_method_raises_unimplemented(self):
+        signer = base.SignerBase()
+        with pytest.raises(NotImplementedError):
+            signer.sign("TEST")
+
+
 class ECDSASignerTest(unittest.TestCase):
 
     @classmethod
     def get_backend(cls, **options):
-        return ECDSASigner(**options)
+        return local_ecdsa.ECDSASigner(**options)
 
     @classmethod
     def setUpClass(cls):
-        sk, vk = ECDSASigner.generate_keypair()
+        sk, vk = local_ecdsa.ECDSASigner.generate_keypair()
         cls.sk_location = save_key(sk, 'signing-key')
         cls.vk_location = save_key(vk, 'verifying-key')
         cls.signer = cls.get_backend(private_key=cls.sk_location)
@@ -72,7 +80,7 @@ class ECDSASignerTest(unittest.TestCase):
             'hash_algorithm': 'sha384',
             'signature_encoding': 'rs_base64'}
 
-        with pytest.raises(BadSignatureError):
+        with pytest.raises(exceptions.BadSignatureError):
             self.signer.verify(
                 "Text not matching with the sig.",
                 signature_bundle)
@@ -148,7 +156,7 @@ class ECDSASignerTest(unittest.TestCase):
 class AutographSignerTest(unittest.TestCase):
 
     def setUp(self):
-        self.signer = AutographSigner(
+        self.signer = autograph.AutographSigner(
             hawk_id='alice',
             hawk_secret='fs5wgcer9qj819kfptdlp8gm227ewxnzvsuj9ztycsx08hfhzu',
             server_url='http://localhost:8000')
@@ -162,7 +170,9 @@ class AutographSignerTest(unittest.TestCase):
         requests.post.assert_called_with(
             'http://localhost:8000/sign/data',
             auth=self.signer.auth,
-            json=[{'hashwith': 'sha384', 'input': 'dGVzdCBkYXRh'}])
+            json=[{'hashwith': 'sha384',
+                   'input': 'dGVzdCBkYXRh',
+                   'template': 'content-signature'}])
         assert signature_bundle['signature'] == SIGNATURE
 
     @mock.patch('kinto_signer.signer.autograph.AutographSigner')

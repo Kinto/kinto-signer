@@ -1,15 +1,15 @@
 import base64
-import six
 
 import ecdsa
-from ecdsa import NIST384p, SigningKey, VerifyingKey
 import hashlib
+import six
+from ecdsa import NIST384p, SigningKey, VerifyingKey
 
-from kinto_signer import utils
+from .base import SignerBase
 from .exceptions import BadSignatureError
 
 
-class ECDSASigner(object):
+class ECDSASigner(SignerBase):
 
     def __init__(self, private_key=None, public_key=None):
         if private_key is None and public_key is None:
@@ -18,6 +18,9 @@ class ECDSASigner(object):
             raise ValueError(msg)
         self.private_key = private_key
         self.public_key = public_key
+
+        # Autograph uses this prefix prior to signing.
+        self.prefix = "Content-Signature:\x00".encode("utf-8")
 
     @classmethod
     def generate_keypair(cls):
@@ -46,15 +49,20 @@ class ECDSASigner(object):
         if isinstance(payload, six.text_type):  # pragma: nocover
             payload = payload.encode('utf-8')
 
+        payload = self.prefix + payload
+
         private_key = self.load_private_key()
-        signature = private_key.sign(
-            payload,
-            hashfunc=hashlib.sha384,
-            sigencode=ecdsa.util.sigencode_string)
+        signature = private_key.sign(payload,
+                                     hashfunc=hashlib.sha384,
+                                     sigencode=ecdsa.util.sigencode_string)
+        x5u = ''
+        enc_signature = base64.b64encode(signature).decode('utf-8')
         return {
-            'signature': base64.b64encode(signature).decode('utf-8'),
+            'signature': enc_signature,
             'hash_algorithm': 'sha384',
-            'signature_encoding': 'rs_base64'
+            'signature_encoding': 'rs_base64',
+            'x5u': x5u,
+            'content-signature': 'x5u=%s;p384ecdsa=%s' % (x5u, enc_signature)
         }
 
     def verify(self, payload, signature_bundle):
@@ -64,6 +72,8 @@ class ECDSASigner(object):
 
         if isinstance(payload, six.text_type):  # pragma: nocover
             payload = payload.encode('utf-8')
+
+        payload = self.prefix + payload
 
         if isinstance(signature, six.text_type):  # pragma: nocover
             signature = signature.encode('utf-8')
@@ -81,21 +91,17 @@ class ECDSASigner(object):
 
         public_key = self.load_public_key()
         try:
-            public_key.verify(
-                signature_bytes,
-                payload,
-                hashfunc=hashlib.sha384,
-                sigdecode=ecdsa.util.sigdecode_string)
+            public_key.verify(signature_bytes,
+                              payload,
+                              hashfunc=hashlib.sha384,
+                              sigdecode=ecdsa.util.sigdecode_string)
         except Exception as e:
             raise BadSignatureError(e)
 
 
-def load_from_settings(settings, bucket=None, collection=None):
-    def _get_setting(key):
-        return utils.get_setting(settings, key, bucket, collection)
-
-    private_key = _get_setting('ecdsa.private_key')
-    public_key = _get_setting('ecdsa.public_key')
+def load_from_settings(settings):
+    private_key = settings.get('signer.ecdsa.private_key')
+    public_key = settings.get('signer.ecdsa.public_key')
     try:
         return ECDSASigner(private_key=private_key, public_key=public_key)
     except ValueError:

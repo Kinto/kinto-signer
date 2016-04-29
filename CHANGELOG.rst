@@ -3,6 +3,37 @@ Changelog
 
 This document describes changes between each past release.
 
+0.4.0 (unreleased)
+------------------
+
+- Nothing changed yet.
+
+
+0.3.0 (2016-04-26)
+------------------
+
+**Breaking changes**
+
+- Change the format of exposed settings in the root URL capabilities (fixes #63)
+- The ``hook.py`` module was deleted, meaning that if ``kinto_signer.hook`` was
+  used in ``kinto.includes`` setting, it will break.
+  Use ``kinto.includes = kinto_signer`` instead.
+- Switch to ``Content-Signature`` spec, as by provided Autograph and expected
+  by Firefox Personal Security Manager.
+  Mainly means that ``Content-Signature:\x00`` has to be prepended to payload
+  prior to signing verification.
+
+**New features**
+
+- Add signer entry in heartbeat view (fixes #50)
+- Change the source/destination settings format (fixes #35). Old format is still
+  supported.
+
+**Internal changes**
+
+- Fix test coverage for resource event (#59)
+- Add more tests for canonical JSON serializers (#58)
+- Add a end-to-end smoke script to be ran on a Kinto instance (#64)
 
 0.2.0 (2016-03-22)
 ------------------

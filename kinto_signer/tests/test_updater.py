@@ -4,7 +4,7 @@ from cliquet.storage import Filter
 from cliquet.storage.exceptions import UnicityError
 from cliquet.utils import COMPARISON
 
-from kinto_signer import LocalUpdater
+from kinto_signer.updater import LocalUpdater
 from .support import unittest
 
 

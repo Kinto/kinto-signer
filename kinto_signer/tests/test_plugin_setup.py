@@ -89,7 +89,7 @@ class IncludeMeTest(unittest.TestCase):
             "signer.sb1.ecdsa.private_key": "/path/to/private",
         }
         config = self.includeme(settings)
-        signer = config.registry.signers.values()[0]
+        signer, = config.registry.signers.values()
         assert signer.public_key == "/path/to/key"
 
     def test_defines_a_signer_per_bucket_and_collection(self):

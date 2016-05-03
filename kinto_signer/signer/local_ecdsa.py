@@ -100,7 +100,6 @@ class ECDSASigner(SignerBase):
 
 
 def load_from_settings(settings, prefix):
-    print 'prefix=', prefix
     private_key = settings.get(prefix + 'ecdsa.private_key')
     public_key = settings.get(prefix + 'ecdsa.public_key')
     try:

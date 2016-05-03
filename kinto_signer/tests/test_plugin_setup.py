@@ -137,7 +137,9 @@ class ResourceChangedTest(unittest.TestCase):
                              impacted_records=[{"new": {"status": "to-sign"}}])
         evt.request.registry.storage = mock.sentinel.storage
         evt.request.registry.permission = mock.sentinel.permission
-        evt.request.registry.signer = mock.sentinel.signer
+        evt.request.registry.signers = {
+            "/buckets/a/collections/b": mock.sentinel.signer
+        }
         on_collection_changed(evt, resources=utils.parse_resources("a/b;c/d"))
         self.updater_mocked.assert_called_with(
             signer=mock.sentinel.signer,

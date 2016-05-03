@@ -26,10 +26,7 @@ class BaseTestFunctional(object):
         cls.signer_config.read(os.path.join(__HERE__, 'config/signer.ini'))
         settings = {key.replace('kinto.', ''): value
                     for key, value in cls.signer_config.items('app:main')}
-        cls.signer = local_ecdsa.load_from_settings(
-            settings,
-            bucket=cls.destination_bucket,
-            collection=cls.destination_collection)
+        cls.signer = local_ecdsa.load_from_settings(settings, prefix='signer.')
 
         # Setup the kinto clients for the source and destination.
         cls._auth = DEFAULT_AUTH

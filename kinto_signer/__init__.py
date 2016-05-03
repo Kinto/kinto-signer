@@ -23,6 +23,7 @@ def on_collection_changed(event, resources):
 
     # Only sign the configured resources.
     if resource is None:
+        print key
         return
 
     # Only sign when the new collection status is "to-sign".
@@ -33,7 +34,7 @@ def on_collection_changed(event, resources):
 
     registry = event.request.registry
     updater = LocalUpdater(
-        signer=registry.signer,
+        signer=registry.signers[key],
         storage=registry.storage,
         permission=registry.permission,
         source=resource['source'],

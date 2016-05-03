@@ -25,14 +25,14 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
             "description": "Digital signatures for integrity and authenticity of records.",  # NOQA
             "url": ("https://github.com/Kinto/kinto-signer#kinto-signer"),
             "resources": [
-                {"destination": {"bucket": "destination",
-                                 "collection": "collection1"},
-                 "source": {"bucket": "source",
-                            "collection": "collection1"}},
-                {"destination": {"bucket": "destination",
-                                 "collection": "collection2"},
-                 "source": {"bucket": "source",
-                            "collection": "collection2"}}]
+                {"destination": {"bucket": "alice",
+                                 "collection": "destination"},
+                 "source": {"bucket": "alice",
+                            "collection": "source"}},
+                {"destination": {"bucket": "bob",
+                                 "collection": "destination"},
+                 "source": {"bucket": "bob",
+                            "collection": "source"}}]
         }
         self.assertEqual(expected, capabilities['signer'])
 

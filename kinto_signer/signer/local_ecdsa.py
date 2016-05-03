@@ -99,9 +99,10 @@ class ECDSASigner(SignerBase):
             raise BadSignatureError(e)
 
 
-def load_from_settings(settings):
-    private_key = settings.get('signer.ecdsa.private_key')
-    public_key = settings.get('signer.ecdsa.public_key')
+def load_from_settings(settings, prefix):
+    print 'prefix=', prefix
+    private_key = settings.get(prefix + 'ecdsa.private_key')
+    public_key = settings.get(prefix + 'ecdsa.public_key')
     try:
         return ECDSASigner(private_key=private_key, public_key=public_key)
     except ValueError:

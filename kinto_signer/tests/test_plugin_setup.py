@@ -1,10 +1,12 @@
 import mock
 import pytest
+from kinto import main as kinto_main
 from pyramid import testing
 from pyramid.exceptions import ConfigurationError
 from requests import exceptions as requests_exceptions
 
 from kinto_signer import on_collection_changed
+from kinto_signer.signer.autograph import AutographSigner
 from kinto_signer import includeme
 from kinto_signer import utils
 
@@ -66,12 +68,50 @@ class HeartbeatTest(BaseWebTest, unittest.TestCase):
 
 
 class IncludeMeTest(unittest.TestCase):
+    def includeme(self, settings):
+        config = testing.setUp(settings=settings)
+        kinto_main(None, config=config)
+        includeme(config)
+        return config
+
     def test_includeme_raises_value_error_if_no_resource_defined(self):
-        config = testing.setUp(settings={'signer.ecdsa.private_key': "",
-                                         'signer.ecdsa.public_key': ""})
-        config.registry.heartbeats = {}
         with pytest.raises(ConfigurationError):
-            includeme(config)
+            self.includeme(settings={"signer.ecdsa.private_key": "",
+                                     "signer.ecdsa.public_key": ""})
+
+    def test_defines_a_signer_per_bucket(self):
+        settings = {
+            "signer.resources": (
+                "/buckets/sb1/collections/sc1;/buckets/db1/collections/dc1\n"
+            ),
+            "signer.sb1.signer_backend": "kinto_signer.signer.local_ecdsa",
+            "signer.sb1.ecdsa.public_key": "/path/to/key",
+            "signer.sb1.ecdsa.private_key": "/path/to/private",
+        }
+        config = self.includeme(settings)
+        signer = config.registry.signers.values()[0]
+        assert signer.public_key == "/path/to/key"
+
+    def test_defines_a_signer_per_bucket_and_collection(self):
+        settings = {
+            "signer.resources": (
+                "/buckets/sb1/collections/sc1;/buckets/db1/collections/dc1\n"
+                "/buckets/sb1/collections/sc2;/buckets/db1/collections/dc2"
+            ),
+            "signer.sb1.signer_backend": "kinto_signer.signer.local_ecdsa",
+            "signer.sb1.ecdsa.public_key": "/path/to/key",
+            "signer.sb1.ecdsa.private_key": "/path/to/private",
+            "signer.sb1_sc1.signer_backend": "kinto_signer.signer.autograph",
+            "signer.sb1_sc1.autograph.server_url": "http://localhost",
+            "signer.sb1_sc1.autograph.hawk_id": "alice",
+            "signer.sb1_sc1.autograph.hawk_secret": "a-secret",
+        }
+        config = self.includeme(settings)
+        signer1, signer2 = config.registry.signers.values()
+        if isinstance(signer1, AutographSigner):
+            signer1, signer2 = signer2, signer1
+        assert signer1.public_key == "/path/to/key"
+        assert signer2.server_url == "http://localhost"
 
 
 class ResourceChangedTest(unittest.TestCase):

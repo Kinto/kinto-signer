@@ -48,20 +48,35 @@ def includeme(config):
 
     settings = config.get_settings()
 
-    # Load the signer from its dotted location.
-    # Fallback to the local ECDSA signer.
-    default_signer_module = "kinto_signer.signer.local_ecdsa"
-    signer_dotted_location = settings.get('signer.signer_backend',
-                                          default_signer_module)
-    signer_module = config.maybe_dotted(signer_dotted_location)
-    config.registry.signer = signer_module.load_from_settings(settings)
-
     # Check source and destination resources are configured.
     raw_resources = settings.get('signer.resources')
     if raw_resources is None:
         error_msg = "Please specify the kinto.signer.resources setting."
         raise ConfigurationError(error_msg)
     resources = utils.parse_resources(raw_resources)
+
+    # Load the signers from their dotted location.
+    # If the signer_backend setting is defined for a particular bucket
+    # or a particular collection, then use a prefix for the related
+    # settings names.
+    config.registry.signers = {}
+    backend_setting = 'signer_backend'
+    for key, resource in resources.items():
+        prefix = 'signer.'
+        bucket_wide = '{bucket}.'.format(**resource['source'])
+        collection_wide = '{bucket}_{collection}.'.format(**resource['source'])
+        if (prefix + collection_wide + backend_setting) in settings:
+            prefix += collection_wide
+        elif (prefix + bucket_wide + backend_setting) in settings:
+            prefix += bucket_wide
+
+        # Fallback to the local ECDSA signer.
+        default_signer_module = "kinto_signer.signer.local_ecdsa"
+        signer_dotted_location = settings.get(prefix + backend_setting,
+                                              default_signer_module)
+        signer_module = config.maybe_dotted(signer_dotted_location)
+        backend = signer_module.load_from_settings(settings, prefix)
+        config.registry.signers[key] = backend
 
     # Expose the capabilities in the root endpoint.
     message = "Digital signatures for integrity and authenticity of records."

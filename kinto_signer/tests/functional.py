@@ -4,7 +4,6 @@ from six.moves.urllib.parse import urljoin
 
 import unittest2
 import requests
-from six.moves import configparser
 
 from kinto_signer.serializer import canonical_json
 from kinto_signer.signer import local_ecdsa
@@ -21,40 +20,31 @@ class BaseTestFunctional(object):
     @classmethod
     def setUpClass(cls):
         super(BaseTestFunctional, cls).setUpClass()
-        cls.auth = DEFAULT_AUTH
-        cls.signer_config = configparser.RawConfigParser()
-        cls.signer_config.read(os.path.join(__HERE__, 'config/signer.ini'))
-        settings = {key.replace('kinto.', ''): value
-                    for key, value in cls.signer_config.items('app:main')}
-        cls.signer = local_ecdsa.load_from_settings(settings, prefix='signer.')
-
-        # Setup the kinto clients for the source and destination.
-        cls._auth = DEFAULT_AUTH
-        cls._server_url = SERVER_URL
-
+        cls.signer = local_ecdsa.ECDSASigner(private_key=cls.private_key)
+        cls.server_url = SERVER_URL
         cls.source = Client(
-            server_url=cls._server_url,
-            auth=cls._auth,
+            server_url=cls.server_url,
+            auth=DEFAULT_AUTH,
             bucket=cls.source_bucket,
             collection=cls.source_collection)
 
         cls.destination = Client(
-            server_url=cls._server_url,
-            auth=cls._auth,
+            server_url=cls.server_url,
+            auth=DEFAULT_AUTH,
             bucket=cls.destination_bucket,
             collection=cls.destination_collection)
 
     def tearDown(self):
         # Delete all the created objects.
-        self._flush_server(self._server_url)
+        self._flush_server(self.server_url)
 
     def _flush_server(self, server_url):
-        flush_url = urljoin(server_url, '/__flush__')
+        flush_url = urljoin(self.server_url, '/__flush__')
         resp = requests.post(flush_url)
         resp.raise_for_status()
 
     def test_heartbeat_is_successful(self):
-        hb_url = urljoin(self._server_url, '/__heartbeat__')
+        hb_url = urljoin(self.server_url, '/__heartbeat__')
         resp = requests.get(hb_url)
         resp.raise_for_status()
 

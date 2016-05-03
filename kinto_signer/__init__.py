@@ -23,7 +23,6 @@ def on_collection_changed(event, resources):
 
     # Only sign the configured resources.
     if resource is None:
-        print key
         return
 
     # Only sign when the new collection status is "to-sign".

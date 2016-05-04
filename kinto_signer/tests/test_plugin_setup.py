@@ -10,7 +10,7 @@ from kinto_signer.signer.autograph import AutographSigner
 from kinto_signer import includeme
 from kinto_signer import utils
 
-from . import BaseWebTest
+from . import BaseWebTest, get_user_headers
 from .support import unittest
 
 
@@ -149,3 +149,22 @@ class ResourceChangedTest(unittest.TestCase):
             destination={"bucket": "c", "collection": "d"})
 
         assert self.updater_mocked.return_value.sign_and_update_remote.called
+
+
+class SigningErrorTest(BaseWebTest, unittest.TestCase):
+    def test_returns_503_if_autograph_cannot_be_reached(self):
+        headers = get_user_headers('me')
+        self.app.put_json("/buckets/alice", headers=headers)
+        self.app.put_json("/buckets/alice/collections/source",
+                          headers=headers)
+        self.app.post_json("/buckets/alice/collections/source/records",
+                           {"data": {"title": "hello"}},
+                           headers=headers)
+
+        rc = '/buckets/alice/collections/source'
+        self.app.app.registry.signers[rc].server_url = 'http://0.0.0.0:1234'
+
+        self.app.put_json("/buckets/alice/collections/source",
+                          {"data": {"status": "to-sign"}},
+                          headers=headers,
+                          status=503)

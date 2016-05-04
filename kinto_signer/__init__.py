@@ -42,8 +42,8 @@ def on_collection_changed(event, resources):
 
     try:
         updater.sign_and_update_remote()
-    except Exception as e:
-        logger.exception(e)
+    except Exception:
+        logger.exception("Could not sign '{0}'".format(key))
         event.request.response.status = 503
 
 

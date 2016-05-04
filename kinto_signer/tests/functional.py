@@ -4,10 +4,9 @@ from six.moves.urllib.parse import urljoin
 
 import unittest2
 import requests
-from six.moves import configparser
 
 from kinto_signer.serializer import canonical_json
-from kinto_signer.signer.local_ecdsa import ECDSASigner
+from kinto_signer.signer import local_ecdsa
 
 from kinto_client import Client
 
@@ -17,49 +16,35 @@ SERVER_URL = "http://localhost:8888/v1"
 DEFAULT_AUTH = ('user', 'p4ssw0rd')
 
 
-class FunctionalTest(unittest2.TestCase):
+class BaseTestFunctional(object):
+    @classmethod
+    def setUpClass(cls):
+        super(BaseTestFunctional, cls).setUpClass()
+        cls.signer = local_ecdsa.ECDSASigner(private_key=cls.private_key)
+        cls.server_url = SERVER_URL
+        cls.source = Client(
+            server_url=cls.server_url,
+            auth=DEFAULT_AUTH,
+            bucket=cls.source_bucket,
+            collection=cls.source_collection)
 
-    def __init__(self, *args, **kwargs):
-        super(FunctionalTest, self).__init__(*args, **kwargs)
-        self.auth = DEFAULT_AUTH
-        self.private_key = os.path.join(__HERE__, 'config/ecdsa.private.pem')
-
-        self.signer_config = configparser.RawConfigParser()
-        self.signer_config.read(os.path.join(__HERE__, 'config/signer.ini'))
-        priv_key = self.signer_config.get(
-            'app:main', 'kinto.signer.ecdsa.private_key')
-        self.signer = ECDSASigner(private_key=priv_key)
-
-        # Setup the kinto clients for the source and destination.
-        self._auth = DEFAULT_AUTH
-        self._server_url = SERVER_URL
-        self._source_bucket = "source"
-        self._destination_bucket = "destination"
-        self._collection_id = "collection1"
-
-        self.source = Client(
-            server_url=self._server_url,
-            auth=self._auth,
-            bucket=self._source_bucket,
-            collection=self._collection_id)
-
-        self.destination = Client(
-            server_url=self._server_url,
-            auth=self._auth,
-            bucket=self._destination_bucket,
-            collection=self._collection_id)
+        cls.destination = Client(
+            server_url=cls.server_url,
+            auth=DEFAULT_AUTH,
+            bucket=cls.destination_bucket,
+            collection=cls.destination_collection)
 
     def tearDown(self):
         # Delete all the created objects.
-        self._flush_server(self._server_url)
+        self._flush_server(self.server_url)
 
     def _flush_server(self, server_url):
-        flush_url = urljoin(server_url, '/__flush__')
+        flush_url = urljoin(self.server_url, '/__flush__')
         resp = requests.post(flush_url)
         resp.raise_for_status()
 
     def test_heartbeat_is_successful(self):
-        hb_url = urljoin(self._server_url, '/__heartbeat__')
+        hb_url = urljoin(self.server_url, '/__heartbeat__')
         resp = requests.get(hb_url)
         resp.raise_for_status()
 
@@ -126,6 +111,23 @@ class FunctionalTest(unittest2.TestCase):
         serialized_records = canonical_json(records)
         # This raises when the signature is invalid.
         self.signer.verify(serialized_records, signature)
+
+
+class AliceFunctionalTest(BaseTestFunctional, unittest2.TestCase):
+    private_key = os.path.join(__HERE__, 'config/ecdsa.private.pem')
+    source_bucket = "alice"
+    destination_bucket = "alice"
+    source_collection = "source"
+    destination_collection = "destination"
+
+
+# Signer is configured to use a different key for Bob and Alice.
+class BobFunctionalTest(BaseTestFunctional, unittest2.TestCase):
+    private_key = os.path.join(__HERE__, 'config/bob.ecdsa.private.pem')
+    source_bucket = "bob"
+    source_collection = "source"
+    destination_bucket = "bob"
+    destination_collection = "destination"
 
 
 if __name__ == '__main__':

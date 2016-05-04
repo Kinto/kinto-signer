@@ -31,8 +31,8 @@ class AutographSigner(SignerBase):
         return signature_bundle
 
 
-def load_from_settings(settings):
+def load_from_settings(settings, prefix=''):
     return AutographSigner(
-        server_url=settings['signer.autograph.server_url'],
-        hawk_id=settings['signer.autograph.hawk_id'],
-        hawk_secret=settings['signer.autograph.hawk_secret'])
+        server_url=settings[prefix + 'autograph.server_url'],
+        hawk_id=settings[prefix + 'autograph.hawk_id'],
+        hawk_secret=settings[prefix + 'autograph.hawk_secret'])

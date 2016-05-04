@@ -1,8 +1,9 @@
+from collections import OrderedDict
 from pyramid.settings import aslist
 
 
 def parse_resources(raw_resources):
-    resources = {}
+    resources = OrderedDict()
     for res in aslist(raw_resources):
         error_msg = ("Resources should be defined as "
                      "'/buckets/<bid>/collections/<cid>;"

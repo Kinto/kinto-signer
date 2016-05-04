@@ -143,6 +143,30 @@ use the following settings:
 +------------------------------------+--------------------------------------------------------------------------+
 
 
+Multiple certificates
+---------------------
+
+Using above settings, every collections is signed with the same key.
+But it is also possible to define multiple signers, per bucket or per collection.
+
+Settings can be prefixed with bucket id:
+
+```ini
+kinto.signer.<bucket-id>.signer_backend = kinto_signer.signer.autograph
+kinto.signer.<bucket-id>.autograph.server_url = http://172.11.20.1:8888
+kinto.signer.<bucket-id>.autograph.hawk_id = bob
+kinto.signer.<bucket-id>.autograph.hawk_secret = a-secret
+```
+
+Or prefixed with bucket and collection:
+
+```ini
+kinto.signer.<bucket-id>_<collection-id>.signer_backend = kinto_signer.signer.local_ecdsa
+kinto.signer.<bucket-id>_<collection-id>.ecdsa.private_key = /path/to/private.pem
+kinto.signer.<bucket-id>_<collection-id>.ecdsa.public_key = /path/to/public.pem
+```
+
+
 Usage
 =====
 

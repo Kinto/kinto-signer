@@ -32,9 +32,6 @@ When the *source* collection metadata ``status`` is set to ``"to-sign"``, it wil
    obtain form the signature backend
 #. set the *source* metadata ``status`` to ``"signed"``.
 
-.. image::
-   schema.png
-
 
 Content-Signature protocol
 --------------------------

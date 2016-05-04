@@ -32,6 +32,12 @@ When the *source* collection metadata ``status`` is set to ``"to-sign"``, it wil
    obtain form the signature backend
 #. set the *source* metadata ``status`` to ``"signed"``.
 
+.. warning::
+
+    The current implementation assumes the destination collection will be
+    readable anonymously and won't be writable by anyone.
+    (See [Kinto/kinto-signer#55](https://github.com/Kinto/kinto-signer/issues/55))
+
 .. image::
    schema.png
 

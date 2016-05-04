@@ -94,6 +94,9 @@ class LocalUpdater(object):
             collection_name)
 
         # Set the permissions on the destination collection.
+        # With the current implementation, the destination is not writable by
+        # anyone and readable by everyone.
+        # https://github.com/Kinto/kinto-signer/issues/55
         permissions = {'read': ("system.Everyone",)}
         self.permission.replace_object_permissions(
             self.destination_collection_id, permissions)

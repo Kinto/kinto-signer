@@ -42,6 +42,36 @@ def on_collection_changed(event, resources):
     updater.sign_and_update_remote()
 
 
+def _signer_dotted_location(settings, resource):
+    """
+    Returns the Python dotted location for the specified `resource`, along
+    the associated settings prefix.
+
+    If a ``signer_backend`` setting is defined for a particular bucket
+    or a particular collection, then use the same prefix for every other
+    settings names.
+
+    .. note::
+
+        This means that every signer settings must be duplicated for each
+        dedicated signer.
+    """
+    backend_setting = 'signer_backend'
+    prefix = 'signer.'
+    bucket_wide = '{bucket}.'.format(**resource['source'])
+    collection_wide = '{bucket}_{collection}.'.format(**resource['source'])
+    if (prefix + collection_wide + backend_setting) in settings:
+        prefix += collection_wide
+    elif (prefix + bucket_wide + backend_setting) in settings:
+        prefix += bucket_wide
+
+    # Fallback to the local ECDSA signer.
+    default_signer_module = "kinto_signer.signer.local_ecdsa"
+    signer_dotted_location = settings.get(prefix + backend_setting,
+                                          default_signer_module)
+    return signer_dotted_location, prefix
+
+
 def includeme(config):
     # Register heartbeat to check signer integration.
     config.registry.heartbeats['signer'] = heartbeat
@@ -55,26 +85,11 @@ def includeme(config):
         raise ConfigurationError(error_msg)
     resources = utils.parse_resources(raw_resources)
 
-    # Load the signers from their dotted location.
-    # If the signer_backend setting is defined for a particular bucket
-    # or a particular collection, then use a prefix for the related
-    # settings names.
+    # Load the signers associated to each resource.
     config.registry.signers = {}
-    backend_setting = 'signer_backend'
     for key, resource in resources.items():
-        prefix = 'signer.'
-        bucket_wide = '{bucket}.'.format(**resource['source'])
-        collection_wide = '{bucket}_{collection}.'.format(**resource['source'])
-        if (prefix + collection_wide + backend_setting) in settings:
-            prefix += collection_wide
-        elif (prefix + bucket_wide + backend_setting) in settings:
-            prefix += bucket_wide
-
-        # Fallback to the local ECDSA signer.
-        default_signer_module = "kinto_signer.signer.local_ecdsa"
-        signer_dotted_location = settings.get(prefix + backend_setting,
-                                              default_signer_module)
-        signer_module = config.maybe_dotted(signer_dotted_location)
+        dotted_location, prefix = _signer_dotted_location(settings, resource)
+        signer_module = config.maybe_dotted(dotted_location)
         backend = signer_module.load_from_settings(settings, prefix)
         config.registry.signers[key] = backend
 

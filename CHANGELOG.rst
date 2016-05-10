@@ -6,9 +6,17 @@ This document describes changes between each past release.
 0.4.0 (unreleased)
 ------------------
 
+**New features**
+
+- Ability to define a different signer per collection (#52)
+
 **Bug fix**
 
 - Return 503 instead of 500 when signing fails (fixes #71)
+
+**Internal changes**
+
+- Removed scary diagram with Mozilla specific stuff (#60)
 
 
 0.3.0 (2016-04-26)

@@ -6,7 +6,9 @@ This document describes changes between each past release.
 0.4.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fix**
+
+- Return 503 instead of 500 when signing fails (fixes #71)
 
 
 0.3.0 (2016-04-26)

@@ -1,6 +1,7 @@
 import functools
 
 from cliquet.events import ACTIONS, ResourceChanged
+from kinto import logger
 from pyramid.exceptions import ConfigurationError
 
 from kinto_signer import utils
@@ -39,7 +40,11 @@ def on_collection_changed(event, resources):
         source=resource['source'],
         destination=resource['destination'])
 
-    updater.sign_and_update_remote()
+    try:
+        updater.sign_and_update_remote()
+    except Exception:
+        logger.exception("Could not sign '{0}'".format(key))
+        event.request.response.status = 503
 
 
 def _signer_dotted_location(settings, resource):

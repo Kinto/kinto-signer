@@ -1,21 +1,39 @@
+function base64ToBinary(base64) {
+  var binary_string =  window.atob(base64);
+  var len = binary_string.length;
+  var bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binary_string.charCodeAt(i);
+  }
+  return bytes;
+}
+
+function binaryToBase64URL(int8Array) {
+  return window.btoa(String.fromCharCode.apply(null, int8Array))
+               .replace(/\+/g, '-').replace(/\//g, '_')  // URL friendly
+               .replace(/\=+$/, '');  // No padding.
+}
+
 /**
+
  * Load an existing key.
  *
  * @param {Object} pemChain - The key, in its PEM form.
- * @returns {Promise}       - A promise that will resolve with the CryptoKey object.
+ * @returns {Promise}     - A promise that will resolve with the CryptoKey object.
  **/
 function loadKey(pemChain) {
   const stripped = pemChain.split("\n").slice(1, -2).join("");
-  const binaryKey = base64ToBinary(stripped);
-  const key = {
+  const der = base64ToBinary(stripped);
+  var certificate = parseX509ECDSACertificate(der);  // x509ecdsa.js
+  const jwk = {
     kty: "EC",
     crv: "P-384",
-    x: "zCQ5BPHPCLZYgdpo1n-x_90P2Ij52d53YVwTh3ZdiMo",
-    y: "pDfQTUx0-OiZc5ZuKMcA7v2Q7ZPKsQwzB58bft0JTko",
+    x: binaryToBase64URL(certificate.publicKey.x),
+    y: binaryToBase64URL(certificate.publicKey.y),
     ext: true,
   }
   const usages = ["verify"]; //"verify" for public key import, "sign" for private key imports
-  return window.crypto.subtle.importKey("spki", binaryKey, {
+  return window.crypto.subtle.importKey("jwk", jwk, {
       name: "ECDSA",
       namedCurve: "P-384"
     },
@@ -32,29 +50,14 @@ function loadKey(pemChain) {
  * @param {CryptoKey} publicKey - The loaded CryptoKey object.
  **/
 function verify(signature, data, publicKey) {
+  // from base64url to base64:
+  const sigBase64 = signature.replace('-', '+').replace("_", "\/");
   return window.crypto.subtle.verify({
       name: "ECDSA",
       hash: {name: "SHA-384"}
     },
     publicKey,
-    base64ToBinary(signature).buffer,
+    base64ToBinary(sigBase64).buffer,
     new TextEncoder("utf-8").encode(data)
   );
-}
-
-/**
- * Convert a base64 String into an Array Buffer.
- *
- * @param {String} base64 - A base64 string.
- * @returns {ArrayBuffer} - The Array Buffer representation of the given
- * string.
- **/
-function base64ToBinary(base64) {
-  var binary_string =  window.atob(base64);
-  var len = binary_string.length;
-  var bytes = new Uint8Array( len );
-  for (var i = 0; i < len; i++)        {
-      bytes[i] = binary_string.charCodeAt(i);
-  }
-  return bytes;
 }

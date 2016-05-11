@@ -41,8 +41,7 @@ function main() {
           log("→ Signature verification success.")
           return payload;
         }
-        log("✘ Signature verification failed!")
-        throw new Error("Invalid signature");
+        throw new Error("Signature verification failed!");
       })
       .catch((error) => {
         console.error(error);
@@ -77,6 +76,7 @@ function main() {
     // All existing records are replaced by the version from the server.
     changes.forEach((record) => records[record.id] = record);
 
+    // Object.values()
     const values = [];
     for (let key in records) {
       values.push(records[key]);

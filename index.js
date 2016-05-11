@@ -18,25 +18,24 @@ function main() {
   collection.sync();
 
   function validateCollectionSignature(payload, collection) {
-    let certChain;
-    let collectionSignature;
-    log("Fetch current signature");
-    return fetchCollectionMetadata(collection)
-      .then(({x5u, signature}) => {
-        collectionSignature = signature;
-        log("Fetch public certificate");
-        return fetch(x5u).then((res) => res.text()).then((text) => { certChain = text; });
+    log("Load local records");
+    return Promise.all([
+        collection.list().then((result) => result.data)
+          .then((localRecords) => mergeChanges(localRecords, payload.changes))
+          .then((merged) => {
+            log(`Serialize ${merged.length} records canonically`);
+            return CanonicalJSON.stringify(merged);
+          }),
+        fetchCollectionMetadata(collection)
+         .then(({x5u, signature}) => {
+           return loadPublicKey(x5u)
+             .then((publicKey) => {return {publicKey, signature}});
+         })
+      ])
+      .then(([serialized, {publicKey, signature}]) => {
+        log("Verify signature of synchronized records");
+        return verify(signature, serialized, publicKey);
       })
-      .then(() => {
-        log("Load local records");
-        return collection.list().then((result) => result.data)
-          .then((localRecords) => mergeChanges(localRecords, payload.changes));
-      })
-      .then((merged) => {
-        log("Serialize records canonically");
-        return CanonicalJSON.stringify(merged);
-      })
-      .then((serialized) => verifyContentSignature(collectionSignature, serialized, certChain))
       .then((success) => {
         if (success) {
           log("→ Signature verification success.")
@@ -53,6 +52,7 @@ function main() {
   }
 
   function fetchCollectionMetadata(collection) {
+    log(`Fetch signature of collection ${collection.bucket}/${collection.name}`);
     return collection.api
       .bucket(collection.bucket).collection(collection.name)
       .getMetadata()
@@ -60,7 +60,7 @@ function main() {
   }
 
   function mergeChanges(localRecords, changes) {
-    log("Merge incoming changes with local records");
+    log(`Merge ${changes.length} incoming changes with ${localRecords.length} local records`);
     const records = {};
     // Kinto.js adds attributes to local records that aren"t present on server.
     // (e.g. _status)
@@ -89,12 +89,13 @@ function main() {
       .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   }
 
-  function verifyContentSignature(signature, text, certChain) {
-    log("Load the public key");
-    return loadKey(certChain)
-      .then(publicKey => {
-        log("Verify signature of synchronized records");
-        return verify(signature, text, publicKey)
+  function loadPublicKey(x5u) {
+    log(`Fetch public key from ${x5u}`);
+    return fetch(x5u)
+      .then((res) => res.text())
+      .then((certChain) => {
+        log("Import the public key");
+        return loadKey(certChain);
       });
   }
 }

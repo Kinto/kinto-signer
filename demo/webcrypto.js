@@ -1,13 +1,12 @@
 /**
  * Load an existing key.
  *
- * @param {Object} rawKey - The key, in its PEM form.
- * @returns {Promise} - A promise that will resolve in the CryptoKey object.
+ * @param {Object} pemChain - The key, in its PEM form.
+ * @returns {Promise}       - A promise that will resolve with the CryptoKey object.
  **/
-function loadKey(rawKey) {
-  const stripped = rawKey.split("\n").slice(1, -2).join("");
-  console.log(stripped);
-  const binaryKey = base64ToArrayBuffer(stripped);
+function loadKey(pemChain) {
+  const stripped = pemChain.split("\n").slice(1, -2).join("");
+  const binaryKey = base64ToBinary(stripped);
   const key = {
     kty: "EC",
     crv: "P-384",
@@ -16,13 +15,13 @@ function loadKey(rawKey) {
     ext: true,
   }
   const usages = ["verify"]; //"verify" for public key import, "sign" for private key imports
-  return window.crypto.subtle.importKey("jwt", binaryKey, {
+  return window.crypto.subtle.importKey("spki", binaryKey, {
       name: "ECDSA",
-      namedCurve: {name: "P-384"}
+      namedCurve: "P-384"
     },
     false, //whether the key is extractable (i.e. can be used in exportKey),
     usages
-  )
+  );
 }
 
 /**
@@ -38,7 +37,7 @@ function verify(signature, data, publicKey) {
       hash: {name: "SHA-384"}
     },
     publicKey,
-    base64ToArrayBuffer(signature),
+    base64ToBinary(signature).buffer,
     new TextEncoder("utf-8").encode(data)
   );
 }
@@ -50,12 +49,12 @@ function verify(signature, data, publicKey) {
  * @returns {ArrayBuffer} - The Array Buffer representation of the given
  * string.
  **/
-function base64ToArrayBuffer(base64) {
+function base64ToBinary(base64) {
   var binary_string =  window.atob(base64);
   var len = binary_string.length;
   var bytes = new Uint8Array( len );
   for (var i = 0; i < len; i++)        {
       bytes[i] = binary_string.charCodeAt(i);
   }
-  return bytes.buffer;
+  return bytes;
 }

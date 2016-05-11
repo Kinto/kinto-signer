@@ -5,7 +5,7 @@
  * @returns {Promise} - A promise that will resolve in the CryptoKey object.
  **/
 function loadKey(rawKey) {
-  const stripped = rawKey.split("\n").slice(1, -1).join("");
+  const stripped = rawKey.split("\n").slice(1, -2).join("");
   console.log(stripped);
   const binaryKey = base64ToArrayBuffer(stripped);
   const key = {

@@ -36,18 +36,18 @@ function main() {
         log("Serialize records canonically");
         return CanonicalJSON.stringify(merged);
       })
-      .then((serialized) => verifyContentSignature(serialized, collectionSignature, certChain))
+      .then((serialized) => verifyContentSignature(collectionSignature, serialized, certChain))
       .then((success) => {
         if (success) {
-          log("Signature verification success.")
+          log("→ Signature verification success.")
           return payload;
         }
-        log("Signature verification failed!")
+        log("✘ Signature verification failed!")
         throw new Error("Invalid signature");
       })
       .catch((error) => {
         console.error(error);
-        log(error.message);
+        log(`✘ ${error.message}`);
         throw error;
       });
   }
@@ -89,10 +89,13 @@ function main() {
       .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   }
 
-  function verifyContentSignature(text, signature, certChain) {
-    log("Verify signature of synchronized records");
+  function verifyContentSignature(signature, text, certChain) {
+    log("Load the public key");
     return loadKey(certChain)
-      .then(publicKey => verify(signature, text, publicKey));
+      .then(publicKey => {
+        log("Verify signature of synchronized records");
+        return verify(signature, text, publicKey)
+      });
   }
 }
 

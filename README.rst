@@ -260,103 +260,32 @@ incoming hooks that are executed when the data comes from the server.
 
 .. code-block:: javascript
 
-    const kinto = new Kinto();
-    const collection = kinto.collection('articles', { hooks : {
-      "incoming-changes": [validateCollectionSignature]
-    }});
-
+    const kinto = new Kinto({
+      remote: "https://mykinto.com/v1",
+      bucket: "a-bucket"
+    });
+    const collection = kinto.collection("a-collection", {
+      hooks: {
+        "incoming-changes": [validateCollectionSignature]
+      }});
 
 .. code-block:: javascript
 
     function validateCollectionSignature(payload, collection) {
-      let certChain;
-      let collectionSignature;
-      // Obtain current signature
-      return fetchCollectionMetadata(collection)
-        .then(({x5u, signature}) => {
-          collectionSignature = signature;
-          // Fetch public certificate from URL obtained in signature metadata.
-          return fetch(x5u).then((res) => { certChain = res.text(); })
-        })
-        .then(() => {
-          return collection.list().then((result) => result.data)
-            .then((localRecords) => mergeChanges(localRecords, payload.changes));
-        })
-        .then((merged) => canonicalJSON(merged))
-        .then((serialized) => {
-          if (verifyContentSignature(serialized, signature, certChain)) {
-            return payload;
-          }
-          throw new Error("Invalid signature");
-        });
+      // 1 - Fetch signature from collection endpoint
+      // 2 - Fetch public key certificate
+      // 3 - Merge incoming changes with local records
+      // 4 - Serialize as canonical JSON
+      // 5 - Verify the signature against the content with the public key
+      // 6 - Return `payload` if valid, throw error otherwise.
     }
 
+The content of the `demo/` folder implements the signature verification with
+kinto.js and the WebCrypto API. It is [published online](https://kinto.github.io/kinto-signer/)
+but relies on a semi-public server instance.
 
-.. code-block:: javascript
-
-  function fetchCollectionMetadata(collection) {
-    return collection.api.bucket(collection.bucket).collection(collection.name).getMetadata()
-      .then(result => {
-        return result.signature;
-      });
-  }
-
-The ``mergeChanges()`` function is in charge of merging the changes obtained from
-synchronization with the local records present in the local database. The records
-are eventually sorted by ``id``.
-
-.. code-block:: javascript
-
-    function mergeChanges(localRecords, changes) {
-      const records = {};
-      // Kinto.js adds attributes to local records that aren't present on server.
-      // (e.g. _status)
-      const stripPrivateProps = (obj) => {
-        return Object.keys(obj).reduce((current, key) => {
-          if (key.indexOf("_") !== 0) {
-            current[key] = obj[key];
-          }
-          return current;
-        }, {});
-      };
-      // Local records by id.
-      localRecords.forEach((record) => records[record.id] = stripPrivateProps(record));
-      // All existing records are replaced by the version from the server.
-      changes.forEach((record) => records[record.id] = record);
-
-      return Object.values(records)
-        // Filter out deleted records.
-        .filter((record) => record.deleted != true)
-        // Sort list by record id.
-        .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
-    }
-
-
-.. code-block:: javascript
-
-    function verifyContentSignature(serialized, signature, certChain) {
-
-    }
-
-.. code-block:: javascript
-
-    function canonicalJSON(input) {
-      // See specifications above or example implementation in Gecko:
-      // https://dxr.mozilla.org/mozilla-central/rev/0a25833062a880f369e6f9f622413a94cc671bf4/toolkit/modules/CanonicalJSON.jsm#28
-    }
-
-
-    const canonicalJSON = {
-      stringify(merged) {
-
-      }
-      }
-    function verifyContentSignature(serialized, signature, certChain) {
-
-    }
-
-
-See [complete integration within Firefox](https://bugzilla.mozilla.org/show_bug.cgi?id=1263602).
+See also [the complete integration within Firefox](https://bugzilla.mozilla.org/show_bug.cgi?id=1263602)
+using the [Network Security Services](https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS/Overview).
 
 
 Generating a keypair

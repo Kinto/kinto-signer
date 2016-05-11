@@ -77,7 +77,12 @@ function main() {
     // All existing records are replaced by the version from the server.
     changes.forEach((record) => records[record.id] = record);
 
-    return Object.values(records)
+    const values = [];
+    for (let key in records) {
+      values.push(records[key]);
+    }
+
+    return values
       // Filter out deleted records.
       .filter((record) => record.deleted != true)
       // Sort list by record id.

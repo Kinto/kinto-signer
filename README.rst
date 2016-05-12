@@ -286,7 +286,7 @@ The content of the ``demo/`` folder implements the signature verification with
 kinto.js and the WebCrypto API. It is `published online <https://kinto.github.io/kinto-signer/>`_
 but relies on a semi-public server instance.
 
-See also `the complete integration within Firefox <https://bugzilla.mozilla.org/show_bug.cgi?id=1263602>_
+See also `the complete integration within Firefox <https://bugzilla.mozilla.org/show_bug.cgi?id=1263602>`_
 using the `Network Security Services <https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS/Overview>`_.
 
 

@@ -256,7 +256,7 @@ Validating the signature
 ========================
 
 With `kinto.js <https://github.com/Kinto/kinto.js/>`_, it is possible to define
-incoming hooks that are executed when the data comes from the server.
+incoming hooks that are executed when the data is retrieved from the server.
 
 .. code-block:: javascript
 
@@ -280,12 +280,12 @@ incoming hooks that are executed when the data comes from the server.
       // 6 - Return `payload` if valid, throw error otherwise.
     }
 
-The content of the `demo/` folder implements the signature verification with
-kinto.js and the WebCrypto API. It is [published online](https://kinto.github.io/kinto-signer/)
+The content of the ``demo/`` folder implements the signature verification with
+kinto.js and the WebCrypto API. It is `published online <https://kinto.github.io/kinto-signer/>`_
 but relies on a semi-public server instance.
 
-See also [the complete integration within Firefox](https://bugzilla.mozilla.org/show_bug.cgi?id=1263602)
-using the [Network Security Services](https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS/Overview).
+See also `the complete integration within Firefox <https://bugzilla.mozilla.org/show_bug.cgi?id=1263602>_
+using the `Network Security Services <https://developer.mozilla.org/en-US/docs/Mozilla/Projects/NSS/Overview>`_.
 
 
 Generating a keypair

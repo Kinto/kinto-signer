@@ -1,3 +1,6 @@
+// import CanonicalJSON from "./canonicaljson";
+// import parseX509ECDSACertificate from "./x509ecdsa";
+
 function base64ToBinary(base64) {
   var binary_string =  window.atob(base64);
   var len = binary_string.length;
@@ -50,6 +53,7 @@ function loadKey(pemChain) {
  * @param {CryptoKey} publicKey - The loaded CryptoKey object.
  **/
 function verify(signature, data, publicKey) {
+  const prefix = "Content-Signature:\x00";
   // from base64url to base64:
   const sigBase64 = signature.replace('-', '+').replace("_", "\/");
   return window.crypto.subtle.verify({
@@ -58,6 +62,6 @@ function verify(signature, data, publicKey) {
     },
     publicKey,
     base64ToBinary(sigBase64).buffer,
-    new TextEncoder("utf-8").encode(data)
+    new TextEncoder("utf-8").encode(prefix + data)
   );
 }

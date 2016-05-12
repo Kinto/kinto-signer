@@ -1,3 +1,10 @@
+/**
+ * The content of this file comes Mozilla Central repository.
+ * https://hg.mozilla.org/mozilla-central/raw-file/3461f3cae78495f100a0f7d3d2e0b89292d3ec02/toolkit/modules/CanonicalJSON.jsm
+ */
+
+// import jsesc from "jsesc";
+
 const CanonicalJSON = {
   stringify: function stringify(source) {
     // Array values.

@@ -65,7 +65,7 @@ class LocalUpdater(object):
         5. Send the signature to the Authoritative server.
         """
         self.create_destination()
-        records = self.get_local_records()
+        records = self.get_source_records()
         serialized_records = canonical_json(records)
         signature = self.signer.sign(serialized_records)
 
@@ -101,7 +101,7 @@ class LocalUpdater(object):
         self.permission.replace_object_permissions(
             self.destination_collection_id, permissions)
 
-    def get_local_records(self, last_modified=None, include_deleted=False):
+    def get_source_records(self, last_modified=None, include_deleted=False):
         # If last_modified was specified, only retrieve items since then.
         storage_kwargs = {}
         if last_modified is not None:
@@ -137,7 +137,7 @@ class LocalUpdater(object):
         last_modified, records_count = self.get_destination_last_modified()
         if records_count == 0:
             last_modified = None
-        new_records = self.get_local_records(
+        new_records = self.get_source_records(
             last_modified,
             include_deleted=True)
 

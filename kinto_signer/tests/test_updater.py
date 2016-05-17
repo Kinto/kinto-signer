@@ -16,8 +16,8 @@ class LocalUpdaterTest(unittest.TestCase):
         self.signer_instance = mock.MagicMock()
         self.updater = LocalUpdater(
             source={
-                'bucket': 'localbucket',
-                'collection': 'localcollection'},
+                'bucket': 'sourcebucket',
+                'collection': 'sourcecollection'},
             destination={
                 'bucket': 'destbucket',
                 'collection': 'destcollection'},
@@ -33,7 +33,7 @@ class LocalUpdaterTest(unittest.TestCase):
     def test_updater_raises_if_resources_are_not_set_properly(self):
         with pytest.raises(ValueError) as excinfo:
             LocalUpdater(
-                source={'bucket': 'local'},
+                source={'bucket': 'source'},
                 destination={},
                 signer=self.signer_instance,
                 storage=self.storage,
@@ -41,26 +41,26 @@ class LocalUpdaterTest(unittest.TestCase):
         assert str(excinfo.value) == ("Resources should contain both "
                                       "bucket and collection")
 
-    def test_get_local_records_asks_storage_for_records(self):
+    def test_get_source_records_asks_storage_for_records(self):
         records = mock.sentinel.records
         count = mock.sentinel.count
         self.storage.get_all.return_value = (records, count)
 
-        self.updater.get_local_records()
+        self.updater.get_source_records()
         self.storage.get_all.assert_called_with(
             collection_id='record',
-            parent_id='/buckets/localbucket/collections/localcollection',
+            parent_id='/buckets/sourcebucket/collections/sourcecollection',
             include_deleted=False)
 
-    def test_get_local_records_asks_storage_for_last_modified_records(self):
+    def test_get_source_records_asks_storage_for_last_modified_records(self):
         records = mock.sentinel.records
         count = mock.sentinel.count
         self.storage.get_all.return_value = (records, count)
 
-        self.updater.get_local_records(1234)
+        self.updater.get_source_records(1234)
         self.storage.get_all.assert_called_with(
             collection_id='record',
-            parent_id='/buckets/localbucket/collections/localcollection',
+            parent_id='/buckets/sourcebucket/collections/sourcecollection',
             include_deleted=False,
             filters=[Filter('last_modified', 1234, COMPARISON.GT)])
 
@@ -80,7 +80,7 @@ class LocalUpdaterTest(unittest.TestCase):
         self.patch(self.updater, 'get_destination_last_modified',
                    return_value=(1324, 10))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
-        self.patch(self.updater, 'get_local_records',  return_value=records)
+        self.patch(self.updater, 'get_source_records',  return_value=records)
         self.updater.push_records_to_destination()
         assert self.storage.update.call_count == 3
 
@@ -89,9 +89,9 @@ class LocalUpdaterTest(unittest.TestCase):
                    return_value=(1324, 10))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(0, 2)]
         records.extend([{'id': idx, 'deleted': True} for idx in range(3, 5)])
-        self.patch(self.updater, 'get_local_records', return_value=records)
+        self.patch(self.updater, 'get_source_records', return_value=records)
         self.updater.push_records_to_destination()
-        self.updater.get_local_records.assert_called_with(
+        self.updater.get_source_records.assert_called_with(
             1324, include_deleted=True)
         assert self.storage.update.call_count == 2
         assert self.storage.delete.call_count == 2
@@ -100,13 +100,13 @@ class LocalUpdaterTest(unittest.TestCase):
         self.patch(self.updater, 'get_destination_last_modified',
                    return_value=(1324, 0))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
-        self.patch(self.updater, 'get_local_records', return_value=records)
+        self.patch(self.updater, 'get_source_records', return_value=records)
         self.updater.push_records_to_destination()
-        self.updater.get_local_records.assert_called_with(
+        self.updater.get_source_records.assert_called_with(
             None, include_deleted=True)
         assert self.storage.update.call_count == 3
 
-    def test_set_destination_signature_modifies_the_local_collection(self):
+    def test_set_destination_signature_modifies_the_source_collection(self):
         self.storage.get.return_value = {'id': 1234}
         self.updater.set_destination_signature(mock.sentinel.signature)
 
@@ -119,14 +119,14 @@ class LocalUpdaterTest(unittest.TestCase):
                 'signature': mock.sentinel.signature
             })
 
-    def test_update_source_status_modifies_the_local_collection(self):
+    def test_update_source_status_modifies_the_source_collection(self):
         self.storage.get.return_value = {'id': 1234, 'status': 'to-sign'}
         self.updater.update_source_status("signed")
 
         self.storage.update.assert_called_with(
             collection_id='collection',
-            object_id='localcollection',
-            parent_id='/buckets/localbucket',
+            object_id='sourcecollection',
+            parent_id='/buckets/sourcebucket',
             record={
                 'id': 1234,
                 'status': "signed"
@@ -164,11 +164,11 @@ class LocalUpdaterTest(unittest.TestCase):
         self.storage.get_all.return_value = (records, 2)
 
         self.patch(self.storage, 'update_remote')
-        self.patch(self.updater, 'get_local_records')
+        self.patch(self.updater, 'get_source_records')
         self.patch(self.updater, 'push_records_to_destination')
         self.patch(self.updater, 'set_destination_signature')
         self.updater.sign_and_update_remote()
 
-        assert self.updater.get_local_records.call_count == 1
+        assert self.updater.get_source_records.call_count == 1
         assert self.updater.push_records_to_destination.call_count == 1
         assert self.updater.set_destination_signature.call_count == 1

@@ -8,7 +8,7 @@ This document describes changes between each past release.
 
 **Bug fix**
 
-- Do not raise when trying to remove a destination record that does not exists (#82)
+- Do not crash on record deletion if destination was never synced (#82)
 
 **Internal changes**
 

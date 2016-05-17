@@ -1,7 +1,7 @@
 import mock
 import pytest
 from cliquet.storage import Filter
-from cliquet.storage.exceptions import UnicityError
+from cliquet.storage.exceptions import UnicityError, RecordNotFoundError
 from cliquet.utils import COMPARISON
 
 from kinto_signer.updater import LocalUpdater
@@ -95,6 +95,18 @@ class LocalUpdaterTest(unittest.TestCase):
             1324, include_deleted=True)
         assert self.storage.update.call_count == 2
         assert self.storage.delete.call_count == 2
+
+    def test_push_records_skip_already_deleted_records(self):
+        # In case the record doesn't exists in the destination
+        # a RecordNotFoundError is raised.
+        self.storage.delete.side_effect = RecordNotFoundError()
+        self.patch(self.updater, 'get_destination_last_modified',
+                   return_value=(1324, 10))
+        records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(0, 2)]
+        records.extend([{'id': idx, 'deleted': True} for idx in range(3, 5)])
+        self.patch(self.updater, 'get_local_records', return_value=records)
+        # Calling the updater should not raise the RecordNotFoundError.
+        self.updater.push_records_to_destination()
 
     def test_push_records_to_destination_with_no_destination_changes(self):
         self.patch(self.updater, 'get_destination_last_modified',

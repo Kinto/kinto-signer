@@ -3,10 +3,17 @@ Changelog
 
 This document describes changes between each past release.
 
-0.5.0 (unreleased)
+0.5.0 (2016-05-17)
 ------------------
 
-- Nothing changed yet.
+**Bug fix**
+
+- Do not raise when trying to remove a destination record that does not exists (#82)
+
+**Internal changes**
+
+- Rename ``get_local_records`` to ``get_source_records`` (#83)
+- Rename ``sign_and_update_remote`` to ``sign_and_update_destination`` (#85)
 
 
 0.4.0 (2016-05-10)

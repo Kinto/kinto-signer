@@ -148,7 +148,8 @@ class ResourceChangedTest(unittest.TestCase):
             source={"bucket": "a", "collection": "b"},
             destination={"bucket": "c", "collection": "d"})
 
-        assert self.updater_mocked.return_value.sign_and_update_remote.called
+        mocked = self.updater_mocked.return_value
+        assert mocked.sign_and_update_destination.called
 
 
 class SigningErrorTest(BaseWebTest, unittest.TestCase):

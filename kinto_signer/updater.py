@@ -53,7 +53,7 @@ class LocalUpdater(object):
             self.source['bucket'],
             self.source['collection'])
 
-    def sign_and_update_remote(self):
+    def sign_and_update_destination(self):
         """Sign the specified collection.
 
         0. Create the destination bucket / collection

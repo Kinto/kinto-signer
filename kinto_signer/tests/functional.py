@@ -65,7 +65,7 @@ class BaseTestFunctional(object):
             data={'status': 'to-sign'},
             method="put")
 
-        # Ensure the remote data is signed properly.
+        # Ensure the destination data is signed properly.
         data = self.destination.get_collection()
         signature = data['data']['signature']
         assert signature is not None

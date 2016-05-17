@@ -104,7 +104,7 @@ class LocalUpdaterTest(unittest.TestCase):
                    return_value=(1324, 10))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(0, 2)]
         records.extend([{'id': idx, 'deleted': True} for idx in range(3, 5)])
-        self.patch(self.updater, 'get_local_records', return_value=records)
+        self.patch(self.updater, 'get_source_records', return_value=records)
         # Calling the updater should not raise the RecordNotFoundError.
         self.updater.push_records_to_destination()
 
@@ -170,16 +170,16 @@ class LocalUpdaterTest(unittest.TestCase):
         self.storage.create.side_effect = UnicityError('id', 'record')
         self.updater._ensure_resource_exists('bucket', '', 'abcd')
 
-    def test_sign_and_update_remote(self):
+    def test_sign_and_update_destination(self):
         records = [{'id': idx, 'foo': 'bar %s' % idx}
                    for idx in range(1, 3)]
         self.storage.get_all.return_value = (records, 2)
 
-        self.patch(self.storage, 'update_remote')
+        self.patch(self.storage, 'update_records')
         self.patch(self.updater, 'get_source_records')
         self.patch(self.updater, 'push_records_to_destination')
         self.patch(self.updater, 'set_destination_signature')
-        self.updater.sign_and_update_remote()
+        self.updater.sign_and_update_destination()
 
         assert self.updater.get_source_records.call_count == 1
         assert self.updater.push_records_to_destination.call_count == 1

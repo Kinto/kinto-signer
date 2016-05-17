@@ -1,7 +1,7 @@
 from cliquet.utils import COMPARISON
 from kinto_signer.serializer import canonical_json
 from cliquet.storage import Filter
-from cliquet.storage.exceptions import UnicityError
+from cliquet.storage.exceptions import UnicityError, RecordNotFoundError
 
 
 class LocalUpdater(object):
@@ -144,11 +144,16 @@ class LocalUpdater(object):
         # Update the destination collection.
         for record in new_records:
             if record.get('deleted', False):
-                self.storage.delete(
-                    parent_id=self.destination_collection_id,
-                    collection_id='record',
-                    object_id=record['id'],
-                )
+                try:
+                    self.storage.delete(
+                        parent_id=self.destination_collection_id,
+                        collection_id='record',
+                        object_id=record['id'],
+                    )
+                except RecordNotFoundError:
+                    # If the record doesn't exists in the destination
+                    # we are good and can ignore it.
+                    pass
             else:
                 self.storage.update(
                     parent_id=self.destination_collection_id,

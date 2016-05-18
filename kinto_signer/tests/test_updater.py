@@ -1,8 +1,8 @@
 import mock
 import pytest
-from cliquet.storage import Filter
-from cliquet.storage.exceptions import UnicityError, RecordNotFoundError
-from cliquet.utils import COMPARISON
+from kinto.core.storage import Filter
+from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
+from kinto.core.utils import COMPARISON
 
 from kinto_signer.updater import LocalUpdater
 from .support import unittest

@@ -23,8 +23,8 @@ class LocalUpdater(object):
         on the collection.
 
     :param storage:
-        The instance of kinto.core.storage that will be used to retrieve records
-        from the source and add new items to the destination.
+        The instance of kinto.core.storage that will be used to retrieve
+        records from the source and add new items to the destination.
     """
 
     def __init__(self, source, destination, signer, storage, permission):

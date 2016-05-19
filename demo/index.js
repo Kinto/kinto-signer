@@ -5,7 +5,7 @@ function log(message) {
 }
 
 
-function main() {
+function sync() {
   const kinto = new Kinto({
     remote: "https://kinto-reader.dev.mozaws.net/v1",
     bucket: "blocklists"
@@ -27,8 +27,10 @@ function main() {
             return CanonicalJSON.stringify(merged);
           }),
         fetchCollectionMetadata(collection)
-         .then(({x5u, signature}) => {
-           return loadPublicKey(x5u)
+         .then(({signature}) => {
+           log("Import the public key");
+           const certChain = document.getElementById("certificate").value;
+           return loadKey(certChain)
              .then((publicKey) => {return {publicKey, signature}});
          })
       ])
@@ -88,16 +90,8 @@ function main() {
       // Sort list by record id.
       .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
   }
-
-  function loadPublicKey(x5u) {
-    log(`Fetch public key from ${x5u}`);
-    return fetch(x5u)
-      .then((res) => res.text())
-      .then((certChain) => {
-        log("Import the public key");
-        return loadKey(certChain);
-      });
-  }
 }
 
-window.addEventListener("DOMContentLoaded", main);
+window.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("sync").addEventListener("click", sync);
+});

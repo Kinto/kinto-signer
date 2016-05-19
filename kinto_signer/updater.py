@@ -1,7 +1,7 @@
-from cliquet.utils import COMPARISON
+from kinto.core.utils import COMPARISON
 from kinto_signer.serializer import canonical_json
-from cliquet.storage import Filter
-from cliquet.storage.exceptions import UnicityError, RecordNotFoundError
+from kinto.core.storage import Filter
+from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
 
 
 class LocalUpdater(object):
@@ -23,8 +23,8 @@ class LocalUpdater(object):
         on the collection.
 
     :param storage:
-        The instance of cliquet.storage that will be used to retrieve records
-        from the source and add new items to the destination.
+        The instance of kinto.core.storage that will be used to retrieve
+        records from the source and add new items to the destination.
     """
 
     def __init__(self, source, destination, signer, storage, permission):

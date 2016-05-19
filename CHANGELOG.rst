@@ -6,7 +6,8 @@ This document describes changes between each past release.
 0.6.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Update to ``kinto.core`` for compatibility with Kinto 3.0. This
+  release is no longer compatible with Kinto < 3.0, please upgrade!
 
 
 0.5.0 (2016-05-17)

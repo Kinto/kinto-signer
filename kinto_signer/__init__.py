@@ -1,6 +1,6 @@
 import functools
 
-from cliquet.events import ACTIONS, ResourceChanged
+from kinto.core.events import ACTIONS, ResourceChanged
 from kinto import logger
 from pyramid.exceptions import ConfigurationError
 

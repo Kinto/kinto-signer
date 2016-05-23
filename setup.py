@@ -14,7 +14,7 @@ REQUIREMENTS = [
 ]
 
 setup(name='kinto-signer',
-      version='0.6.0',
+      version='0.7.0.dev0',
       description='Kinto signer',
       long_description=README,
       license='Apache License (2.0)',

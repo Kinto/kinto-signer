@@ -3,7 +3,7 @@ Changelog
 
 This document describes changes between each past release.
 
-0.6.0 (unreleased)
+0.6.0 (2016-05-19)
 ------------------
 
 - Update to ``kinto.core`` for compatibility with Kinto 3.0. This

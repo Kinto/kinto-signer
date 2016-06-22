@@ -80,7 +80,8 @@ class LocalUpdaterTest(unittest.TestCase):
         self.patch(self.updater, 'get_destination_last_modified',
                    return_value=(1324, 10))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
-        self.patch(self.updater, 'get_source_records',  return_value=records)
+        self.patch(self.updater, 'get_source_records',
+                   return_value=(records, '42'))
         self.updater.push_records_to_destination()
         assert self.storage.update.call_count == 3
 
@@ -89,7 +90,8 @@ class LocalUpdaterTest(unittest.TestCase):
                    return_value=(1324, 10))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(0, 2)]
         records.extend([{'id': idx, 'deleted': True} for idx in range(3, 5)])
-        self.patch(self.updater, 'get_source_records', return_value=records)
+        self.patch(self.updater, 'get_source_records',
+                   return_value=(records, '42'))
         self.updater.push_records_to_destination()
         self.updater.get_source_records.assert_called_with(
             1324, include_deleted=True)
@@ -104,7 +106,8 @@ class LocalUpdaterTest(unittest.TestCase):
                    return_value=(1324, 10))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(0, 2)]
         records.extend([{'id': idx, 'deleted': True} for idx in range(3, 5)])
-        self.patch(self.updater, 'get_source_records', return_value=records)
+        self.patch(self.updater, 'get_source_records',
+                   return_value=(records, '42'))
         # Calling the updater should not raise the RecordNotFoundError.
         self.updater.push_records_to_destination()
 
@@ -112,7 +115,8 @@ class LocalUpdaterTest(unittest.TestCase):
         self.patch(self.updater, 'get_destination_last_modified',
                    return_value=(1324, 0))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
-        self.patch(self.updater, 'get_source_records', return_value=records)
+        self.patch(self.updater, 'get_source_records',
+                   return_value=(records, '42'))
         self.updater.push_records_to_destination()
         self.updater.get_source_records.assert_called_with(
             None, include_deleted=True)
@@ -176,7 +180,7 @@ class LocalUpdaterTest(unittest.TestCase):
         self.storage.get_all.return_value = (records, 2)
 
         self.patch(self.storage, 'update_records')
-        self.patch(self.updater, 'get_source_records')
+        self.patch(self.updater, 'get_source_records', return_value=([], '0'))
         self.patch(self.updater, 'push_records_to_destination')
         self.patch(self.updater, 'set_destination_signature')
         self.updater.sign_and_update_destination()

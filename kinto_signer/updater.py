@@ -65,8 +65,8 @@ class LocalUpdater(object):
         5. Send the signature to the Authoritative server.
         """
         self.create_destination()
-        records = self.get_source_records()
-        serialized_records = canonical_json(records)
+        records, last_modified = self.get_source_records()
+        serialized_records = canonical_json(records, last_modified)
         signature = self.signer.sign(serialized_records)
 
         self.push_records_to_destination()
@@ -117,7 +117,11 @@ class LocalUpdater(object):
             collection_id='record',
             include_deleted=include_deleted,
             **storage_kwargs)
-        return records
+        timestamp = self.storage.collection_timestamp(
+            parent_id=parent_id,
+            collection_id='record',
+            **storage_kwargs)
+        return records, timestamp
 
     def get_destination_last_modified(self):
         parent_id = "/buckets/%s/collections/%s" % (
@@ -137,7 +141,7 @@ class LocalUpdater(object):
         last_modified, records_count = self.get_destination_last_modified()
         if records_count == 0:
             last_modified = None
-        new_records = self.get_source_records(
+        new_records, _ = self.get_source_records(
             last_modified,
             include_deleted=True)
 

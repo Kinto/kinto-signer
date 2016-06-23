@@ -72,7 +72,8 @@ class BaseTestFunctional(object):
 
         records = self.destination.get_records()
         assert len(records) == 10
-        serialized_records = canonical_json(records)
+        last_modified = records[0]['last_modified']
+        serialized_records = canonical_json(records, last_modified)
         self.signer.verify(serialized_records, signature)
 
         # the status of the source collection should be "signed".
@@ -101,14 +102,14 @@ class BaseTestFunctional(object):
         self.source.delete_record(source_records[0]['id'])
         self.source.update_collection(data={'status': 'to-sign'}, method="put")
 
-        records = self.destination.get_records()
-        assert len(records) == 9
-
         data = self.destination.get_collection()
         signature = data['data']['signature']
         assert signature is not None
 
-        serialized_records = canonical_json(records)
+        records = self.destination.get_records(_since=0)
+        assert len(records) == 10  # one is deleted.
+        last_modified = records[0]['last_modified']
+        serialized_records = canonical_json(records, last_modified)
         # This raises when the signature is invalid.
         self.signer.verify(serialized_records, signature)
 

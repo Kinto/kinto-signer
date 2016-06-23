@@ -119,8 +119,7 @@ class LocalUpdater(object):
             **storage_kwargs)
         timestamp = self.storage.collection_timestamp(
             parent_id=parent_id,
-            collection_id='record',
-            **storage_kwargs)
+            collection_id='record')
         return records, timestamp
 
     def get_destination_last_modified(self):
@@ -153,6 +152,7 @@ class LocalUpdater(object):
                         parent_id=self.destination_collection_id,
                         collection_id='record',
                         object_id=record['id'],
+                        last_modified=record['last_modified']
                     )
                 except RecordNotFoundError:
                     # If the record doesn't exists in the destination

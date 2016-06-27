@@ -60,7 +60,7 @@ Notes on canonical JSON
 Specific to Kinto:
 
 * The payload to be signature has two attributes: ``last_modified`` with the
-  current timestamp, ``data`` with the records.
+  current timestamp as string, ``data`` with the array of records.
 * Records are sorted by ascending ``id``
 * Records with ``deleted: true`` are omitted
 

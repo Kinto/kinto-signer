@@ -1,4 +1,3 @@
-import sys
 from kinto_client import cli_utils
 from kinto_signer.serializer import canonical_json
 from kinto_signer.hasher import compute_hash
@@ -25,10 +24,11 @@ def main(args=None):
     dest_col = client.get_collection()
 
     # 2. Grab records
-    records = client.get_records()
+    records = client.get_records(_sort='-last_modified')
+    collection_timestamp = '%s' % records[0]['last_modified']
 
     # 3. Serialize
-    serialized = canonical_json(records)
+    serialized = canonical_json(records, collection_timestamp)
 
     # 3. Compute the hash
     computed_hash = compute_hash(serialized)

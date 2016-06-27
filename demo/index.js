@@ -76,7 +76,7 @@ function sync() {
     // Local records by id.
     localRecords.forEach((record) => records[record.id] = stripPrivateProps(record));
     // All existing records are replaced by the version from the server.
-    changes.forEach((record) => records[record.id] = record);
+    payload.changes.forEach((record) => records[record.id] = record);
 
     // Object.values()
     const values = [];
@@ -92,7 +92,7 @@ function sync() {
 
     return {
       data: sortedRecords,
-      last_modified: payload.last_modified
+      last_modified: `${payload.lastModified}`
     }
   }
 }

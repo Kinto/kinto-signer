@@ -89,7 +89,8 @@ class LocalUpdaterTest(unittest.TestCase):
         self.patch(self.updater, 'get_destination_last_modified',
                    return_value=(1324, 10))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(0, 2)]
-        records.extend([{'id': idx, 'deleted': True} for idx in range(3, 5)])
+        records.extend([{'id': idx, 'deleted': True, 'last_modified': 42}
+                        for idx in range(3, 5)])
         self.patch(self.updater, 'get_source_records',
                    return_value=(records, '42'))
         self.updater.push_records_to_destination()
@@ -105,7 +106,8 @@ class LocalUpdaterTest(unittest.TestCase):
         self.patch(self.updater, 'get_destination_last_modified',
                    return_value=(1324, 10))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(0, 2)]
-        records.extend([{'id': idx, 'deleted': True} for idx in range(3, 5)])
+        records.extend([{'id': idx, 'deleted': True, 'last_modified': 42}
+                       for idx in range(3, 5)])
         self.patch(self.updater, 'get_source_records',
                    return_value=(records, '42'))
         # Calling the updater should not raise the RecordNotFoundError.

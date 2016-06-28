@@ -6,7 +6,10 @@ This document describes changes between each past release.
 0.7.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Breaking changes**
+
+- The collection timestamp is now included in the payload prior to signing.
+  Old clients won't be able to verify the signature made by this version.
 
 
 0.6.0 (2016-05-19)

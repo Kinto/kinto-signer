@@ -9,11 +9,12 @@ from kinto_signer.hasher import compute_hash
 from kinto_signer.signer.local_ecdsa import ECDSASigner
 
 
-DEFAULT_SERVER = "http://some:guy@localhost:8888/v1"
-SOURCE_BUCKET = 'source'
-DEST_BUCKET = 'destination'
-SOURCE_COL = 'collection1'
-DEST_COL = 'collection1'
+DEFAULT_SERVER = 'http://localhost:8888/v1'
+DEFAULT_AUTH = 'user:pass'
+SOURCE_BUCKET = 'alice'
+DEST_BUCKET = SOURCE_BUCKET
+SOURCE_COL = 'source'
+DEST_COL = 'destination'
 
 
 def _rand(size=10):
@@ -31,14 +32,16 @@ def upload_records(client, num=100):
                              if_not_exists=True)
 
     records = []
+    collection_timestamp = None
 
     for i in range(num):
         data = {'one': _rand(1000)}
         res = client.create_record(data, bucket=bucket_name,
                                    collection=collection_name)
         records.append(res['data'])
+        collection_timestamp = res['data']['last_modified']
 
-    serialized = canonical_json(records)
+    serialized = canonical_json(records, collection_timestamp)
 
     res = {'bucket': bucket_name,
            'collection': collection_name,
@@ -53,10 +56,10 @@ def _get_args():
     parser = argparse.ArgumentParser(description='End-to-end signing test')
 
     parser.add_argument('--auth', help='Basic Authentication',
-                        type=str, default='some:guy')
+                        type=str, default=DEFAULT_AUTH)
 
     parser.add_argument('--server', help='Kinto Server',
-                        type=str, default='http://localhost:8888/v1')
+                        type=str, default=DEFAULT_SERVER)
 
     parser.add_argument('--source-bucket', help='Source bucket',
                         type=str, default=SOURCE_BUCKET)

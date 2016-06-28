@@ -11,7 +11,7 @@ script:
     - tox -e $TOX_ENV
 matrix:
   include:
-    - go: 1.5
+    - go: 1.6
       language: go
       env:
         - TOX_ENV=functional
@@ -20,7 +20,7 @@ matrix:
         - make install
         - make run-autograph &
         - make run-kinto &
-    - go: 1.5
+    - go: 1.6
       language: go
       env:
         - TOX_ENV=functional

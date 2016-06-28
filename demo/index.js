@@ -21,7 +21,7 @@ function sync() {
     log("Load local records");
     return Promise.all([
         collection.list().then((result) => result.data)
-          .then((localRecords) => mergeChanges(localRecords, payload.changes))
+          .then((localRecords) => mergeChanges(localRecords, payload))
           .then((merged) => {
             log(`Serialize ${merged.length} records canonically`);
             return CanonicalJSON.stringify(merged);
@@ -60,8 +60,8 @@ function sync() {
       .then(result => result.signature);
   }
 
-  function mergeChanges(localRecords, changes) {
-    log(`Merge ${changes.length} incoming changes with ${localRecords.length} local records`);
+  function mergeChanges(localRecords, payload) {
+    log(`Merge ${payload.changes.length} incoming changes with ${localRecords.length} local records`);
     const records = {};
     // Kinto.js adds attributes to local records that aren"t present on server.
     // (e.g. _status)
@@ -76,7 +76,7 @@ function sync() {
     // Local records by id.
     localRecords.forEach((record) => records[record.id] = stripPrivateProps(record));
     // All existing records are replaced by the version from the server.
-    changes.forEach((record) => records[record.id] = record);
+    payload.changes.forEach((record) => records[record.id] = record);
 
     // Object.values()
     const values = [];
@@ -84,11 +84,16 @@ function sync() {
       values.push(records[key]);
     }
 
-    return values
+    const sortedRecords = values
       // Filter out deleted records.
       .filter((record) => record.deleted != true)
       // Sort list by record id.
       .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+
+    return {
+      data: sortedRecords,
+      last_modified: `${payload.lastModified}`
+    }
   }
 }
 

@@ -11,6 +11,10 @@ This document describes changes between each past release.
 - The collection timestamp is now included in the payload prior to signing.
   Old clients won't be able to verify the signature made by this version.
 
+**New features**
+
+- Raise configuration errors if resources are not configured correctly (ref #88)
+
 
 0.6.0 (2016-05-19)
 ------------------

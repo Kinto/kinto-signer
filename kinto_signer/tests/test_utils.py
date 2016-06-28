@@ -1,7 +1,9 @@
 import pytest
-from .support import unittest
+from pyramid.exceptions import ConfigurationError
 
 from kinto_signer import utils
+
+from .support import unittest
 
 
 class ParseResourcesTest(unittest.TestCase):
@@ -11,7 +13,7 @@ class ParseResourcesTest(unittest.TestCase):
         foo
         bar
         """
-        with pytest.raises(ValueError):
+        with pytest.raises(ConfigurationError):
             utils.parse_resources(raw_resources)
 
     def test_non_local_first_argument_raises_an_exception(self):
@@ -19,14 +21,14 @@ class ParseResourcesTest(unittest.TestCase):
         foo;bar
         bar;baz
         """
-        with pytest.raises(ValueError):
+        with pytest.raises(ConfigurationError):
             utils.parse_resources(raw_resources)
 
     def test_malformed_url_raises_an_exception(self):
         raw_resources = """
         /buckets/sbid/scid;/buckets/dbid/collections/dcid
         """
-        with pytest.raises(ValueError):
+        with pytest.raises(ConfigurationError):
             utils.parse_resources(raw_resources)
 
     def test_returned_resources_match_the_expected_format(self):
@@ -72,3 +74,24 @@ class ParseResourcesTest(unittest.TestCase):
         """
         resources = utils.parse_resources(raw_resources)
         assert len(resources) == 2
+
+    def test_resources_should_be_space_separated(self):
+        raw_resources = (
+            "/buckets/sbid1/collections/scid;/buckets/dbid1/collections/dcid,"
+            "/buckets/sbid2/collections/scid;/buckets/dbid2/collections/dcid"
+        )
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)
+
+        raw_resources = (
+            "sbid1/scid;dbid1/dcid,sbid2/scid;dbid2/dcid"
+        )
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)
+
+    def test_resources_must_be_valid_names(self):
+        raw_resources = (
+            "/buckets/sbi+d1/collections/scid;/buckets/dbid1/collections/dci,d"
+        )
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)

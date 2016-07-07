@@ -13,7 +13,7 @@ from kinto_signer import utils
 __version__ = pkg_resources.get_distribution(__package__).version
 
 
-def on_collection_changed(event, resources):
+def sign_collection_data(event, resources):
     """
     Listen to resource change events, to check if a new signature is
     requested.
@@ -60,6 +60,28 @@ def on_collection_changed(event, resources):
         except Exception:
             logger.exception("Could not sign '{0}'".format(key))
             event.request.response.status = 503
+
+
+def check_collection_status(event, resources):
+    """Make sure status changes are allowed.
+    """
+    payload = event.payload
+    key = "/buckets/{bucket_id}/collections/{collection_id}".format(**payload)
+    resource = resources.get(key)
+
+    # Only sign the configured resources.
+    if resource is None:
+        return
+
+    # Only allow to-review from work-in-progress
+    # Only allow to-sign from to-review if reviewer and no-editor
+    # Nobody can change back to signed
+
+
+def set_work_in_progress_status(event, resources):
+    """Put the status in work-in-progress if was signed.
+    """
+    pass
 
 
 def _signer_dotted_location(settings, resource):
@@ -121,7 +143,20 @@ def includeme(config):
                               resources=resources.values())
 
     config.add_subscriber(
-        functools.partial(on_collection_changed, resources=resources),
+        functools.partial(check_collection_status, resources=resources),
+        ResourceChanged,
+        for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
+        for_resources=('collection',)
+    )
+
+    config.add_subscriber(
+        functools.partial(set_work_in_progress_status, resources=resources),
+        ResourceChanged,
+        for_resources=('record',)
+    )
+
+    config.add_subscriber(
+        functools.partial(sign_collection_data, resources=resources),
         ResourceChanged,
         for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
         for_resources=('collection',)

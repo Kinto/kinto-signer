@@ -70,7 +70,7 @@ class LocalUpdater(object):
         signature = self.signer.sign(serialized_records)
 
         self.push_records_to_destination()
-        self.set_destination_signature(signature)
+        self.set_destination_signature(signature, last_modified)
         self.update_source_status("signed")
 
     def _ensure_resource_exists(self, resource_type, parent_id, record_id):
@@ -165,7 +165,7 @@ class LocalUpdater(object):
                     object_id=record['id'],
                     record=record)
 
-    def set_destination_signature(self, signature):
+    def set_destination_signature(self, signature, last_modified=None):
         # Push the new signature to the destination collection.
         parent_id = '/buckets/%s' % self.destination['bucket']
         collection_id = 'collection'
@@ -175,6 +175,11 @@ class LocalUpdater(object):
             collection_id=collection_id,
             object_id=self.destination['collection'])
 
+        # Update the collection_record
+        del collection_record['last_modified']
+        if last_modified is not None:
+            collection_record['last_modified'] = last_modified
+
         collection_record['signature'] = signature
 
         self.storage.update(
@@ -183,7 +188,7 @@ class LocalUpdater(object):
             object_id=self.destination['collection'],
             record=collection_record)
 
-    def update_source_status(self, status):
+    def update_source_status(self, status, last_modified=None):
         parent_id = '/buckets/%s' % self.source['bucket']
         collection_id = 'collection'
 
@@ -191,6 +196,11 @@ class LocalUpdater(object):
             parent_id=parent_id,
             collection_id=collection_id,
             object_id=self.source['collection'])
+
+        # Update the collection_record
+        del collection_record['last_modified']
+        if last_modified is not None:
+            collection_record['last_modified'] = last_modified
 
         collection_record['status'] = status
 

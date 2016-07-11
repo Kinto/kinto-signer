@@ -125,7 +125,7 @@ class LocalUpdaterTest(unittest.TestCase):
         assert self.storage.update.call_count == 3
 
     def test_set_destination_signature_modifies_the_source_collection(self):
-        self.storage.get.return_value = {'id': 1234}
+        self.storage.get.return_value = {'id': 1234, 'last_modified': 1234}
         self.updater.set_destination_signature(mock.sentinel.signature)
 
         self.storage.update.assert_called_with(
@@ -137,8 +137,23 @@ class LocalUpdaterTest(unittest.TestCase):
                 'signature': mock.sentinel.signature
             })
 
+    def test_set_destination_signature_set_the_collection_timestamp(self):
+        self.storage.get.return_value = {'id': 1234, 'last_modified': 4567}
+        self.updater.set_destination_signature(mock.sentinel.signature, 4567)
+
+        self.storage.update.assert_called_with(
+            collection_id='collection',
+            object_id='destcollection',
+            parent_id='/buckets/destbucket',
+            record={
+                'id': 1234,
+                'signature': mock.sentinel.signature,
+                'last_modified': 4567
+            })
+
     def test_update_source_status_modifies_the_source_collection(self):
-        self.storage.get.return_value = {'id': 1234, 'status': 'to-sign'}
+        self.storage.get.return_value = {'id': 1234, 'last_modified': 1234,
+                                         'status': 'to-sign'}
         self.updater.update_source_status("signed")
 
         self.storage.update.assert_called_with(
@@ -148,6 +163,21 @@ class LocalUpdaterTest(unittest.TestCase):
             record={
                 'id': 1234,
                 'status': "signed"
+            })
+
+    def test_update_source_status_set_the_source_collection_timestamp(self):
+        self.storage.get.return_value = {'id': 1234, 'last_modified': 1234,
+                                         'status': 'to-sign'}
+        self.updater.update_source_status("signed", 1234)
+
+        self.storage.update.assert_called_with(
+            collection_id='collection',
+            object_id='sourcecollection',
+            parent_id='/buckets/sourcebucket',
+            record={
+                'id': 1234,
+                'status': "signed",
+                'last_modified': 1234
             })
 
     def test_create_destination_updates_collection_permissions(self):
@@ -177,7 +207,7 @@ class LocalUpdaterTest(unittest.TestCase):
         self.updater._ensure_resource_exists('bucket', '', 'abcd')
 
     def test_sign_and_update_destination(self):
-        records = [{'id': idx, 'foo': 'bar %s' % idx}
+        records = [{'id': idx, 'foo': 'bar %s' % idx, 'last_modified': idx}
                    for idx in range(1, 3)]
         self.storage.get_all.return_value = (records, 2)
 

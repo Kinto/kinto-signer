@@ -175,6 +175,8 @@ class LocalUpdater(object):
             collection_id=collection_id,
             object_id=self.destination['collection'])
 
+        # Update the collection_record
+        del collection_record['last_modified']
         collection_record['signature'] = signature
 
         self.storage.update(
@@ -192,6 +194,8 @@ class LocalUpdater(object):
             collection_id=collection_id,
             object_id=self.source['collection'])
 
+        # Update the collection_record
+        del collection_record['last_modified']
         collection_record['status'] = status
 
         self.storage.update(

@@ -6,7 +6,9 @@ This document describes changes between each past release.
 0.8.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fix**
+
+- Update the `last_modified` value when updating the collection status and signature (#97)
 
 
 0.7.0 (2016-06-28)

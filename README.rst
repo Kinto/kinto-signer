@@ -1,7 +1,7 @@
 Kinto signer
 ############
 
-|travis|
+|travis| |coveralls|
 
 .. |travis| image:: https://travis-ci.org/Kinto/kinto-signer.svg?branch=master
     :target: https://travis-ci.org/Kinto/kinto-signer

@@ -19,6 +19,12 @@ def on_collection_changed(event, resources):
     and update the destination.
     """
     payload = event.payload
+
+    if 'bucket_id' not in payload:
+        # Safety check for kinto < 3.3 where events have incoherent payloads
+        # on default bucket.
+        return
+
     key = "/buckets/{bucket_id}/collections/{collection_id}".format(**payload)
     resource = resources.get(key)
 

@@ -151,6 +151,11 @@ class ResourceChangedTest(unittest.TestCase):
         mocked = self.updater_mocked.return_value
         assert mocked.sign_and_update_destination.called
 
+    def test_updater_does_not_fail_when_payload_is_inconsistent(self):
+        # This happens with events on default bucket for kinto < 3.3
+        evt = mock.MagicMock(payload={"subpath": "collections/boom"})
+        on_collection_changed(evt, resources=utils.parse_resources("a/b;c/d"))
+
 
 class SigningErrorTest(BaseWebTest, unittest.TestCase):
     def test_returns_503_if_autograph_cannot_be_reached(self):

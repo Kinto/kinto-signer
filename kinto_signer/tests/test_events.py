@@ -84,20 +84,18 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
 
         self._sign()
         event = [e for e in listener.received[before:]
-                 if e.payload["uri"] == self.source_collection
+                 if e.payload["resource_name"] == "collection"
+                 and e.payload["collection_id"] == "scid"
                  and e.payload["action"] == "update"][0]
-        self.assertEqual(len(event.impacted_records), 3)
-        # XXX : bug in kinto.core? should be 2 here ^
+        self.assertEqual(len(event.impacted_records), 2)
         self.assertEqual(event.impacted_records[0]["new"]["status"], "to-sign")
-        self.assertEqual(event.impacted_records[2]["new"]["status"], "signed")
+        self.assertEqual(event.impacted_records[1]["new"]["status"], "signed")
 
     def test_resource_changed_is_triggered_for_destination_collection(self):
         before = len(listener.received)
 
         self._sign()
-        # # XXX : bug in kinto.core? should be destination_collection
         event = [e for e in listener.received[before:]
-                 # if e.payload["uri"] == self.destination_collection
                  if e.payload["resource_name"] == "collection"
                  and e.payload.get("collection_id") == "dcid"
                  and e.payload["action"] == "update"][0]
@@ -110,11 +108,12 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         before = len(listener.received)
 
         self._sign()
-        events = [e for e in listener.received[:before]
+        events = [e for e in listener.received[before:]
                   if e.payload["resource_name"] == "record"
                   and e.payload["collection_id"] == "dcid"]
 
-        self.assertEqual(len(events), 2)
+        self.assertEqual(len(events), 1)
+        self.assertEqual(len(events[0].impacted_records), 2)
 
     def test_resource_changed_is_triggered_for_destination_removal(self):
         record_uri = self.source_collection + "/records/xyz"

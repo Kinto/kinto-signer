@@ -10,6 +10,12 @@ This document describes changes between each past release.
 
 - Update the `last_modified` value when updating the collection status and signature (#97)
 
+**New features**
+
+- Trigger ``ResourceChanged`` events when the destination collection and records are updated
+  during signing. This allows plugins like ``kinto-changes`` and ``kinto.plugins.history``
+  to catch the changes.
+
 
 0.7.0 (2016-06-28)
 ------------------

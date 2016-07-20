@@ -41,7 +41,7 @@ def on_collection_changed(event, resources):
         destination=resource['destination'])
 
     try:
-        updater.sign_and_update_destination()
+        updater.sign_and_update_destination(event.request)
     except Exception:
         logger.exception("Could not sign '{0}'".format(key))
         event.request.response.status = 503

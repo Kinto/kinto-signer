@@ -9,6 +9,7 @@ This document describes changes between each past release.
 **Bug fix**
 
 - Update the `last_modified` value when updating the collection status and signature (#97)
+- Prevents crash with events on ``default`` bucket on Kinto < 3.3
 
 
 0.7.0 (2016-06-28)

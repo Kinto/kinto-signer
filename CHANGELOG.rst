@@ -3,7 +3,7 @@ Changelog
 
 This document describes changes between each past release.
 
-0.8.0 (unreleased)
+0.7.1 (2016-07-21)
 ------------------
 
 *kinto-signer* now requires bug fixes that were released in Kinto 3.2.4 and Kinto 3.3.2.

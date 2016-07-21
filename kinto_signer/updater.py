@@ -1,25 +1,8 @@
-from pyramid import httpexceptions
-
+from kinto.core.events import ACTIONS
 from kinto.core.utils import COMPARISON, build_request, instance_uri
 from kinto_signer.serializer import canonical_json
 from kinto.core.storage import Filter
-
-
-def _invoke_subrequest(request, params):
-    subrequest = build_request(request, params)
-    subrequest.bound_data = request.bound_data  # Contains resource events.
-    return request.invoke_subrequest(subrequest)
-
-
-def _ensure_resource_exists(request, uri):
-    try:
-        _invoke_subrequest(request, {
-            'method': 'PUT',
-            'path': uri,
-            'headers': {'If-None-Match': '*'}
-        })
-    except httpexceptions.HTTPPreconditionFailed:
-        pass
+from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
 
 
 class LocalUpdater(object):
@@ -59,6 +42,18 @@ class LocalUpdater(object):
         self.storage = storage
         self.permission = permission
 
+        # Define resource IDs.
+
+        self.destination_bucket_uri = '/buckets/%s' % self.destination['bucket']
+        self.destination_collection_uri = '/buckets/%s/collections/%s' % (
+            self.destination['bucket'],
+            self.destination['collection'])
+
+        self.source_bucket_uri = '/buckets/%s' % self.source['bucket']
+        self.source_collection_uri = '/buckets/%s/collections/%s' % (
+            self.source['bucket'],
+            self.source['collection'])
+
     def sign_and_update_destination(self, request):
         """Sign the specified collection.
 
@@ -85,25 +80,66 @@ class LocalUpdater(object):
         for event in request.get_resource_events()[before:]:
             request.registry.notify(event)
 
+    def _ensure_resource_exists(self, resource_type, parent_id, record_id, request):
+        try:
+            created = self.storage.create(
+                collection_id=resource_type,
+                parent_id=parent_id,
+                record={'id': record_id})
+        except UnicityError:
+            created = None
+        return created
+
     def create_destination(self, request):
         # Create the destination bucket/collection if they don't already exist.
-        bucket_uri = instance_uri(request,
-                                  'bucket',
-                                  id=self.destination['bucket'])
-        _ensure_resource_exists(request, bucket_uri)
+        bucket_name = self.destination['bucket']
+        collection_name = self.destination['collection']
 
-        collection_uri = instance_uri(request,
-                                      'collection',
-                                      bucket_id=self.destination['bucket'],
-                                      id=self.destination['collection'])
-        _ensure_resource_exists(request, collection_uri)
+        created = self._ensure_resource_exists('bucket', '', bucket_name, request)
+        if created:
+            # Current request is updating collection metadata.
+            # We need a fake request on destination records
+            matchdict = dict(id=self.destination['bucket'])
+            fakerequest = build_request(request, {
+                'method': 'PUT',
+                'path': self.destination_bucket_uri
+            })
+            fakerequest.matchdict = matchdict
+            fakerequest.bound_data = request.bound_data
+            fakerequest.current_resource_name = "bucket"
+            fakerequest.notify_resource_event(parent_id='',
+                                              timestamp=created['last_modified'],
+                                              data=created,
+                                              action=ACTIONS.CREATE)
+        created = self._ensure_resource_exists(
+            'collection',
+            self.destination_bucket_uri,
+            collection_name,
+            request)
+        if created:
+            # Current request is updating collection metadata.
+            # We need a fake request on destination records
+            matchdict = dict(bucket_id=self.destination['bucket'],
+                             id=self.destination['collection'])
+            fakerequest = build_request(request, {
+                'method': 'PUT',
+                'path': self.destination_collection_uri
+            })
+            fakerequest.matchdict = matchdict
+            fakerequest.bound_data = request.bound_data
+            fakerequest.current_resource_name = "collection"
+            fakerequest.notify_resource_event(parent_id=self.destination_bucket_uri,
+                                              timestamp=created['last_modified'],
+                                              data=created,
+                                              action=ACTIONS.CREATE)
 
         # Set the permissions on the destination collection.
         # With the current implementation, the destination is not writable by
         # anyone and readable by everyone.
         # https://github.com/Kinto/kinto-signer/issues/55
         permissions = {'read': ("system.Everyone",)}
-        self.permission.replace_object_permissions(collection_uri, permissions)
+        self.permission.replace_object_permissions(
+            self.destination_collection_uri, permissions)
 
     def get_source_records(self, last_modified=None, include_deleted=False):
         # If last_modified was specified, only retrieve items since then.
@@ -150,46 +186,132 @@ class LocalUpdater(object):
 
         # Update the destination collection.
         for record in new_records:
-            uri = instance_uri(request, 'record',
-                               bucket_id=self.destination['bucket'],
-                               collection_id=self.destination['collection'],
-                               id=record['id'])
-
             if record.get('deleted', False):
-                uri += "?last_modified=%s" % record['last_modified']
                 try:
-                    _invoke_subrequest(request, {
+                    deleted = self.storage.delete(
+                        parent_id=self.destination_collection_uri,
+                        collection_id='record',
+                        object_id=record['id'],
+                        last_modified=record['last_modified']
+                    )
+                    # Current request is updating collection metadata.
+                    # We need a fake request on destination records
+                    matchdict = dict(bucket_id=self.destination['bucket'],
+                                     collection_id=self.destination['collection'],
+                                     id=record['id'])
+                    record_uri = instance_uri(request,
+                                              'record',
+                                              **matchdict)
+                    fakerequest = build_request(request, {
                         'method': 'DELETE',
-                        'path': uri
+                        'path': record_uri
                     })
-                except httpexceptions.HTTPNotFound:
+                    fakerequest.matchdict = matchdict
+                    fakerequest.bound_data = request.bound_data
+                    fakerequest.current_resource_name = "record"
+                    fakerequest.notify_resource_event(parent_id=self.destination_collection_uri,
+                                                      timestamp=deleted['last_modified'],
+                                                      data=deleted,
+                                                      action=ACTIONS.DELETE)
+                except RecordNotFoundError:
                     # If the record doesn't exists in the destination
                     # we are good and can ignore it.
                     pass
             else:
-                _invoke_subrequest(request, {
+                updated = self.storage.update(
+                    parent_id=self.destination_collection_uri,
+                    collection_id='record',
+                    object_id=record['id'],
+                    record=record)
+                # Current request is updating collection metadata.
+                # We need a fake request on destination records
+                matchdict = dict(bucket_id=self.destination['bucket'],
+                                 collection_id=self.destination['collection'],
+                                 id=record['id'])
+                record_uri = instance_uri(request,
+                                          'record',
+                                          **matchdict)
+                fakerequest = build_request(request, {
                     'method': 'PUT',
-                    'path': uri,
-                    'body': {'data': record}
+                    'path': record_uri
                 })
+                fakerequest.matchdict = matchdict
+                fakerequest.bound_data = request.bound_data
+                fakerequest.current_resource_name = "record"
+                fakerequest.notify_resource_event(parent_id=self.destination_collection_uri,
+                                                  timestamp=updated['last_modified'],
+                                                  data=updated,
+                                                  action=ACTIONS.UPDATE)
 
     def set_destination_signature(self, signature, request):
         # Push the new signature to the destination collection.
-        uri = instance_uri(request, 'collection',
-                           bucket_id=self.destination['bucket'],
-                           id=self.destination['collection'])
-        _invoke_subrequest(request, {
-            'method': 'PATCH',
-            'path': uri,
-            'body': {'data': {'signature': signature}}
+        parent_id = '/buckets/%s' % self.destination['bucket']
+        collection_id = 'collection'
+
+        collection_record = self.storage.get(
+            parent_id=parent_id,
+            collection_id=collection_id,
+            object_id=self.destination['collection'])
+
+        # Update the collection_record
+        new_collection = dict(**collection_record)
+        new_collection.pop('last_modified', None)
+        new_collection['signature'] = signature
+
+        updated = self.storage.update(
+            parent_id=parent_id,
+            collection_id=collection_id,
+            object_id=self.destination['collection'],
+            record=new_collection)
+        # Current request is updating collection metadata.
+        # We need a fake request on destination records
+        matchdict = dict(bucket_id=self.destination['bucket'],
+                         id=self.destination['collection'])
+        fakerequest = build_request(request, {
+            'method': 'PUT',
+            'path': self.destination_collection_uri
         })
+        fakerequest.matchdict = matchdict
+        fakerequest.bound_data = request.bound_data
+        fakerequest.current_resource_name = "collection"
+        fakerequest.notify_resource_event(parent_id=self.destination_bucket_uri,
+                                          timestamp=updated['last_modified'],
+                                          data=updated,
+                                          action=ACTIONS.UPDATE,
+                                          old=collection_record)
 
     def update_source_status(self, status, request):
-        uri = instance_uri(request, 'collection',
-                           bucket_id=self.source['bucket'],
-                           id=self.source['collection'])
-        _invoke_subrequest(request, {
-            'method': 'PATCH',
-            'path': uri,
-            'body': {'data': {'status': 'signed'}}
+        parent_id = '/buckets/%s' % self.source['bucket']
+        collection_id = 'collection'
+
+        collection_record = self.storage.get(
+            parent_id=parent_id,
+            collection_id=collection_id,
+            object_id=self.source['collection'])
+
+        # Update the collection_record
+        new_collection = dict(**collection_record)
+        new_collection.pop('last_modified', None)
+        new_collection['status'] = status
+
+        updated = self.storage.update(
+            parent_id=parent_id,
+            collection_id=collection_id,
+            object_id=self.source['collection'],
+            record=new_collection)
+        # Current request is updating collection metadata.
+        # We need a fake request on destination records
+        matchdict = dict(bucket_id=self.source['bucket'],
+                         id=self.source['collection'])
+        fakerequest = build_request(request, {
+            'method': 'PUT',
+            'path': self.source_collection_uri
         })
+        fakerequest.matchdict = matchdict
+        fakerequest.bound_data = request.bound_data
+        fakerequest.current_resource_name = "collection"
+        fakerequest.notify_resource_event(parent_id=self.source_bucket_uri,
+                                          timestamp=updated['last_modified'],
+                                          data=updated,
+                                          action=ACTIONS.UPDATE,
+                                          old=collection_record)

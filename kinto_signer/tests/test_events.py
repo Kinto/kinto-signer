@@ -67,7 +67,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         data = resp.json["data"]
         self.assertIn("signature", data)
 
-    def test_resource_changed_is_triggered_for_destination_creation(self):
+    def test_resource_changed_is_triggered_for_destination_bucket(self):
         self._sign()
         event = [e for e in listener.received
                  if e.payload["uri"] == "/buckets/destination" and
@@ -104,7 +104,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         self.assertNotEqual(event.impacted_records[0]["old"].get("signature"),
                             event.impacted_records[0]["new"]["signature"])
 
-    def test_resource_changed_is_triggered_for_destination_records(self):
+    def test_resource_changed_is_triggered_for_destination_creation(self):
         before = len(listener.received)
 
         self._sign()
@@ -113,7 +113,35 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
                   e.payload["collection_id"] == "dcid"]
 
         self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].payload['action'], 'create')
         self.assertEqual(len(events[0].impacted_records), 2)
+        updated = events[0].impacted_records[0]
+        self.assertNotIn('old', updated)
+        self.assertIn(updated['new']['title'], ('bonjour', 'hello'))
+
+    def test_resource_changed_is_triggered_for_destination_update(self):
+        record_uri = self.source_collection + "/records/xyz"
+        self.app.put_json(record_uri,
+                          {"data": {"title": "salam"}},
+                          headers=self.headers)
+        self._sign()
+        self.app.patch_json(record_uri,
+                            {"data": {"title": "servus"}},
+                            headers=self.headers)
+
+        before = len(listener.received)
+
+        self._sign()
+        events = [e for e in listener.received[before:]
+                  if e.payload["resource_name"] == "record" and
+                  e.payload["collection_id"] == "dcid"]
+
+        self.assertEqual(len(events), 1)
+        self.assertEqual(events[0].payload['action'], 'update')
+        self.assertEqual(len(events[0].impacted_records), 1)
+        updated = events[0].impacted_records[0]
+        self.assertIn(updated['old']['title'], 'salam')
+        self.assertIn(updated['new']['title'], 'servus')
 
     def test_resource_changed_is_triggered_for_destination_removal(self):
         record_uri = self.source_collection + "/records/xyz"

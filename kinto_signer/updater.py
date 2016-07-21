@@ -13,6 +13,8 @@ def notify_resource_event(request, request_options, matchdict,
     fakerequest = build_request(request, request_options)
     fakerequest.matchdict = matchdict
     fakerequest.bound_data = request.bound_data
+    fakerequest.selected_userid = "kinto-signer"
+    fakerequest.authn_type = "plugin"
     fakerequest.current_resource_name = resource_name
     fakerequest.notify_resource_event(parent_id=parent_id,
                                       timestamp=record['last_modified'],

@@ -1,8 +1,21 @@
 from kinto.core.events import ACTIONS
-from kinto.core.utils import COMPARISON, build_request, instance_uri
-from kinto_signer.serializer import canonical_json
 from kinto.core.storage import Filter
 from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
+from kinto.core.utils import COMPARISON, build_request, instance_uri
+from kinto_signer.serializer import canonical_json
+
+
+def notify_resource_event(request, request_options, matchdict,
+                          resource_name, parent_id, record, action, old=None):
+    fakerequest = build_request(request, request_options)
+    fakerequest.matchdict = matchdict
+    fakerequest.bound_data = request.bound_data
+    fakerequest.current_resource_name = resource_name
+    fakerequest.notify_resource_event(parent_id=parent_id,
+                                      timestamp=record['last_modified'],
+                                      data=record,
+                                      action=action,
+                                      old=old)
 
 
 class LocalUpdater(object):
@@ -95,43 +108,37 @@ class LocalUpdater(object):
         bucket_name = self.destination['bucket']
         collection_name = self.destination['collection']
 
-        created = self._ensure_resource_exists('bucket', '', bucket_name, request)
+        created = self._ensure_resource_exists('bucket', '',
+                                               bucket_name,
+                                               request)
         if created:
-            # Current request is updating collection metadata.
-            # We need a fake request on destination records
-            matchdict = dict(id=self.destination['bucket'])
-            fakerequest = build_request(request, {
-                'method': 'PUT',
-                'path': self.destination_bucket_uri
-            })
-            fakerequest.matchdict = matchdict
-            fakerequest.bound_data = request.bound_data
-            fakerequest.current_resource_name = "bucket"
-            fakerequest.notify_resource_event(parent_id='',
-                                              timestamp=created['last_modified'],
-                                              data=created,
-                                              action=ACTIONS.CREATE)
+            notify_resource_event(request,
+                                  {'method': 'PUT',
+                                   'path': self.destination_bucket_uri},
+                                  matchdict={'id': self.destination['bucket']},
+                                  resource_name="bucket",
+                                  parent_id='',
+                                  record=created,
+                                  action=ACTIONS.CREATE)
+
         created = self._ensure_resource_exists(
             'collection',
             self.destination_bucket_uri,
             collection_name,
             request)
         if created:
-            # Current request is updating collection metadata.
-            # We need a fake request on destination records
-            matchdict = dict(bucket_id=self.destination['bucket'],
-                             id=self.destination['collection'])
-            fakerequest = build_request(request, {
-                'method': 'PUT',
-                'path': self.destination_collection_uri
-            })
-            fakerequest.matchdict = matchdict
-            fakerequest.bound_data = request.bound_data
-            fakerequest.current_resource_name = "collection"
-            fakerequest.notify_resource_event(parent_id=self.destination_bucket_uri,
-                                              timestamp=created['last_modified'],
-                                              data=created,
-                                              action=ACTIONS.CREATE)
+            notify_resource_event(request,
+                                  {'method': 'PUT',
+                                   'path': self.destination_collection_uri},
+                                  matchdict={
+                                      'bucket_id': self.destination['bucket'],
+                                      'id': self.destination['collection']
+                                  },
+                                  resource_name="collection",
+                                  parent_id=self.destination_bucket_uri,
+                                  record=created,
+                                  action=ACTIONS.CREATE)
+
 
         # Set the permissions on the destination collection.
         # With the current implementation, the destination is not writable by
@@ -194,25 +201,22 @@ class LocalUpdater(object):
                         object_id=record['id'],
                         last_modified=record['last_modified']
                     )
-                    # Current request is updating collection metadata.
-                    # We need a fake request on destination records
-                    matchdict = dict(bucket_id=self.destination['bucket'],
-                                     collection_id=self.destination['collection'],
-                                     id=record['id'])
-                    record_uri = instance_uri(request,
-                                              'record',
-                                              **matchdict)
-                    fakerequest = build_request(request, {
-                        'method': 'DELETE',
-                        'path': record_uri
-                    })
-                    fakerequest.matchdict = matchdict
-                    fakerequest.bound_data = request.bound_data
-                    fakerequest.current_resource_name = "record"
-                    fakerequest.notify_resource_event(parent_id=self.destination_collection_uri,
-                                                      timestamp=deleted['last_modified'],
-                                                      data=deleted,
-                                                      action=ACTIONS.DELETE)
+                    matchdict = {
+                        'bucket_id': self.destination['bucket'],
+                        'collection_id': self.destination['collection'],
+                        'id': record['id']
+                    }
+                    record_uri = instance_uri(request, 'record', **matchdict)
+                    notify_resource_event(
+                        request,
+                        {'method': 'DELETE',
+                         'path': record_uri},
+                        matchdict=matchdict,
+                        resource_name="record",
+                        parent_id=self.destination_collection_uri,
+                        record=deleted,
+                        action=ACTIONS.DELETE)
+
                 except RecordNotFoundError:
                     # If the record doesn't exists in the destination
                     # we are good and can ignore it.
@@ -223,25 +227,19 @@ class LocalUpdater(object):
                     collection_id='record',
                     object_id=record['id'],
                     record=record)
-                # Current request is updating collection metadata.
-                # We need a fake request on destination records
                 matchdict = dict(bucket_id=self.destination['bucket'],
                                  collection_id=self.destination['collection'],
                                  id=record['id'])
-                record_uri = instance_uri(request,
-                                          'record',
-                                          **matchdict)
-                fakerequest = build_request(request, {
-                    'method': 'PUT',
-                    'path': record_uri
-                })
-                fakerequest.matchdict = matchdict
-                fakerequest.bound_data = request.bound_data
-                fakerequest.current_resource_name = "record"
-                fakerequest.notify_resource_event(parent_id=self.destination_collection_uri,
-                                                  timestamp=updated['last_modified'],
-                                                  data=updated,
-                                                  action=ACTIONS.UPDATE)
+                record_uri = instance_uri(request, 'record', **matchdict)
+                notify_resource_event(
+                    request,
+                    {'method': 'PUT',
+                     'path': record_uri},
+                    matchdict=matchdict,
+                    resource_name="record",
+                    parent_id=self.destination_collection_uri,
+                    record=updated,
+                    action=ACTIONS.UPDATE)
 
     def set_destination_signature(self, signature, request):
         # Push the new signature to the destination collection.
@@ -263,22 +261,21 @@ class LocalUpdater(object):
             collection_id=collection_id,
             object_id=self.destination['collection'],
             record=new_collection)
-        # Current request is updating collection metadata.
-        # We need a fake request on destination records
+
         matchdict = dict(bucket_id=self.destination['bucket'],
                          id=self.destination['collection'])
-        fakerequest = build_request(request, {
-            'method': 'PUT',
-            'path': self.destination_collection_uri
-        })
-        fakerequest.matchdict = matchdict
-        fakerequest.bound_data = request.bound_data
-        fakerequest.current_resource_name = "collection"
-        fakerequest.notify_resource_event(parent_id=self.destination_bucket_uri,
-                                          timestamp=updated['last_modified'],
-                                          data=updated,
-                                          action=ACTIONS.UPDATE,
-                                          old=collection_record)
+        notify_resource_event(
+            request,
+            {
+                'method': 'PUT',
+                'path': self.destination_collection_uri
+            },
+            matchdict=matchdict,
+            resource_name="collection",
+            parent_id=self.destination_bucket_uri,
+            record=updated,
+            action=ACTIONS.UPDATE,
+            old=collection_record)
 
     def update_source_status(self, status, request):
         parent_id = '/buckets/%s' % self.source['bucket']
@@ -299,19 +296,19 @@ class LocalUpdater(object):
             collection_id=collection_id,
             object_id=self.source['collection'],
             record=new_collection)
-        # Current request is updating collection metadata.
-        # We need a fake request on destination records
+
         matchdict = dict(bucket_id=self.source['bucket'],
                          id=self.source['collection'])
-        fakerequest = build_request(request, {
-            'method': 'PUT',
-            'path': self.source_collection_uri
-        })
-        fakerequest.matchdict = matchdict
-        fakerequest.bound_data = request.bound_data
-        fakerequest.current_resource_name = "collection"
-        fakerequest.notify_resource_event(parent_id=self.source_bucket_uri,
-                                          timestamp=updated['last_modified'],
-                                          data=updated,
-                                          action=ACTIONS.UPDATE,
-                                          old=collection_record)
+
+        notify_resource_event(
+            request,
+            {
+                'method': 'PUT',
+                'path': self.source_collection_uri
+            },
+            matchdict=matchdict,
+            resource_name="collection",
+            parent_id=self.source_bucket_uri,
+            record=updated,
+            action=ACTIONS.UPDATE,
+            old=collection_record)

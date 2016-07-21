@@ -6,7 +6,10 @@ This document describes changes between each past release.
 0.8.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+*Bug fixes**
+
+- Provide the ``old`` value on destination records updates (#104)
+- Send ``create`` event when destination record does not exist yet.
 
 
 0.7.1 (2016-07-21)

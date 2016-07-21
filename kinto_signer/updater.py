@@ -197,25 +197,41 @@ class LocalUpdater(object):
 
         # Update the destination collection.
         for record in new_records:
+            storage_kwargs = {
+                "parent_id": self.destination_collection_uri,
+                "collection_id": 'record',
+            }
+            try:
+                before = self.storage.get(object_id=record['id'],
+                                          **storage_kwargs)
+            except RecordNotFoundError:
+                before = None
+
             deleted = record.get('deleted', False)
             if deleted:
                 try:
                     pushed = self.storage.delete(
-                        parent_id=self.destination_collection_uri,
-                        collection_id='record',
                         object_id=record['id'],
-                        last_modified=record['last_modified']
+                        last_modified=record['last_modified'],
+                        **storage_kwargs
                     )
+                    action = ACTIONS.DELETE
                 except RecordNotFoundError:
                     # If the record doesn't exists in the destination
                     # we are good and can ignore it.
                     continue
             else:
-                pushed = self.storage.update(
-                    parent_id=self.destination_collection_uri,
-                    collection_id='record',
-                    object_id=record['id'],
-                    record=record)
+                if before is None:
+                    pushed = self.storage.create(
+                        record=record,
+                        **storage_kwargs)
+                    action = ACTIONS.CREATE
+                else:
+                    pushed = self.storage.update(
+                        object_id=record['id'],
+                        record=record,
+                        **storage_kwargs)
+                    action = ACTIONS.UPDATE
 
             matchdict = {
                 'bucket_id': self.destination['bucket'],
@@ -233,7 +249,8 @@ class LocalUpdater(object):
                 resource_name="record",
                 parent_id=self.destination_collection_uri,
                 record=pushed,
-                action=ACTIONS.DELETE if deleted else ACTIONS.UPDATE)
+                action=action,
+                old=before)
 
     def set_destination_signature(self, signature, request):
         # Push the new signature to the destination collection.

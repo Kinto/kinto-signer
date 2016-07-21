@@ -57,7 +57,8 @@ class LocalUpdater(object):
 
         # Define resource IDs.
 
-        self.destination_bucket_uri = '/buckets/%s' % self.destination['bucket']
+        self.destination_bucket_uri = '/buckets/%s' % (
+            self.destination['bucket'])
         self.destination_collection_uri = '/buckets/%s/collections/%s' % (
             self.destination['bucket'],
             self.destination['collection'])
@@ -93,7 +94,8 @@ class LocalUpdater(object):
         for event in request.get_resource_events()[before:]:
             request.registry.notify(event)
 
-    def _ensure_resource_exists(self, resource_type, parent_id, record_id, request):
+    def _ensure_resource_exists(self, resource_type, parent_id,
+                                record_id, request):
         try:
             created = self.storage.create(
                 collection_id=resource_type,
@@ -138,7 +140,6 @@ class LocalUpdater(object):
                                   parent_id=self.destination_bucket_uri,
                                   record=created,
                                   action=ACTIONS.CREATE)
-
 
         # Set the permissions on the destination collection.
         # With the current implementation, the destination is not writable by

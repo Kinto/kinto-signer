@@ -70,13 +70,13 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
     def test_resource_changed_is_triggered_for_destination_creation(self):
         self._sign()
         event = [e for e in listener.received
-                 if e.payload["uri"] == "/buckets/destination"
-                 and e.payload["action"] == "create"][0]
+                 if e.payload["uri"] == "/buckets/destination" and
+                 e.payload["action"] == "create"][0]
         self.assertEqual(len(event.impacted_records), 1)
 
         event = [e for e in listener.received
-                 if e.payload["uri"] == self.destination_collection
-                 and e.payload["action"] == "create"][0]
+                 if e.payload["uri"] == self.destination_collection and
+                 e.payload["action"] == "create"][0]
         self.assertEqual(len(event.impacted_records), 1)
 
     def test_resource_changed_is_triggered_for_source_collection(self):
@@ -84,9 +84,9 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
 
         self._sign()
         event = [e for e in listener.received[before:]
-                 if e.payload["resource_name"] == "collection"
-                 and e.payload["collection_id"] == "scid"
-                 and e.payload["action"] == "update"][0]
+                 if e.payload["resource_name"] == "collection" and
+                 e.payload["collection_id"] == "scid" and
+                 e.payload["action"] == "update"][0]
         self.assertEqual(len(event.impacted_records), 2)
         self.assertEqual(event.impacted_records[0]["new"]["status"], "to-sign")
         self.assertEqual(event.impacted_records[1]["new"]["status"], "signed")
@@ -96,9 +96,9 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
 
         self._sign()
         event = [e for e in listener.received[before:]
-                 if e.payload["resource_name"] == "collection"
-                 and e.payload.get("collection_id") == "dcid"
-                 and e.payload["action"] == "update"][0]
+                 if e.payload["resource_name"] == "collection" and
+                 e.payload.get("collection_id") == "dcid" and
+                 e.payload["action"] == "update"][0]
 
         self.assertEqual(len(event.impacted_records), 1)
         self.assertNotEqual(event.impacted_records[0]["old"].get("signature"),
@@ -109,8 +109,8 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
 
         self._sign()
         events = [e for e in listener.received[before:]
-                  if e.payload["resource_name"] == "record"
-                  and e.payload["collection_id"] == "dcid"]
+                  if e.payload["resource_name"] == "record" and
+                  e.payload["collection_id"] == "dcid"]
 
         self.assertEqual(len(events), 1)
         self.assertEqual(len(events[0].impacted_records), 2)

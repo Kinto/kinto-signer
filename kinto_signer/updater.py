@@ -1,7 +1,7 @@
 from kinto.core.events import ACTIONS
 from kinto.core.storage import Filter
 from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
-from kinto.core.utils import COMPARISON, build_request, instance_uri
+from kinto.core.utils import COMPARISON, build_request
 from kinto_signer.serializer import canonical_json
 
 
@@ -207,7 +207,9 @@ class LocalUpdater(object):
                         'collection_id': self.destination['collection'],
                         'id': record['id']
                     }
-                    record_uri = instance_uri(request, 'record', **matchdict)
+                    record_uri = ('/buckets/{bucket_id}'
+                                  '/collections/{collection_id}'
+                                  '/records/{id}'.format(**matchdict))
                     notify_resource_event(
                         request,
                         {'method': 'DELETE',
@@ -231,7 +233,9 @@ class LocalUpdater(object):
                 matchdict = dict(bucket_id=self.destination['bucket'],
                                  collection_id=self.destination['collection'],
                                  id=record['id'])
-                record_uri = instance_uri(request, 'record', **matchdict)
+                record_uri = ('/buckets/{bucket_id}'
+                              '/collections/{collection_id}'
+                              '/records/{id}'.format(**matchdict))
                 notify_resource_event(
                     request,
                     {'method': 'PUT',

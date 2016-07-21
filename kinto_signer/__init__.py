@@ -4,9 +4,9 @@ from kinto.core.events import ACTIONS, ResourceChanged
 from kinto import logger
 from pyramid.exceptions import ConfigurationError
 
-from kinto_signer import utils
 from kinto_signer.updater import LocalUpdater
 from kinto_signer.signer import heartbeat
+from kinto_signer import utils
 
 
 def on_collection_changed(event, resources):

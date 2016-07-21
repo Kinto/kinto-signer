@@ -7,6 +7,9 @@ from kinto_signer.serializer import canonical_json
 
 def notify_resource_event(request, request_options, matchdict,
                           resource_name, parent_id, record, action, old=None):
+    """Private helper that triggers resource events when the updater modifies
+    the source and destination objects.
+    """
     fakerequest = build_request(request, request_options)
     fakerequest.matchdict = matchdict
     fakerequest.bound_data = request.bound_data
@@ -194,57 +197,43 @@ class LocalUpdater(object):
 
         # Update the destination collection.
         for record in new_records:
-            if record.get('deleted', False):
+            deleted = record.get('deleted', False)
+            if deleted:
                 try:
-                    deleted = self.storage.delete(
+                    pushed = self.storage.delete(
                         parent_id=self.destination_collection_uri,
                         collection_id='record',
                         object_id=record['id'],
                         last_modified=record['last_modified']
                     )
-                    matchdict = {
-                        'bucket_id': self.destination['bucket'],
-                        'collection_id': self.destination['collection'],
-                        'id': record['id']
-                    }
-                    record_uri = ('/buckets/{bucket_id}'
-                                  '/collections/{collection_id}'
-                                  '/records/{id}'.format(**matchdict))
-                    notify_resource_event(
-                        request,
-                        {'method': 'DELETE',
-                         'path': record_uri},
-                        matchdict=matchdict,
-                        resource_name="record",
-                        parent_id=self.destination_collection_uri,
-                        record=deleted,
-                        action=ACTIONS.DELETE)
-
                 except RecordNotFoundError:
                     # If the record doesn't exists in the destination
                     # we are good and can ignore it.
-                    pass
+                    continue
             else:
-                updated = self.storage.update(
+                pushed = self.storage.update(
                     parent_id=self.destination_collection_uri,
                     collection_id='record',
                     object_id=record['id'],
                     record=record)
-                matchdict = dict(bucket_id=self.destination['bucket'],
-                                 collection_id=self.destination['collection'],
-                                 id=record['id'])
-                record_uri = ('/buckets/{bucket_id}'
-                              '/collections/{collection_id}'
-                              '/records/{id}'.format(**matchdict))
-                notify_resource_event(
-                    request,
-                    {'method': 'PUT',
-                     'path': record_uri},
-                    matchdict=matchdict,
-                    resource_name="record",
-                    parent_id=self.destination_collection_uri,
-                    record=updated,
-                    action=ACTIONS.UPDATE)
+
+            matchdict = {
+                'bucket_id': self.destination['bucket'],
+                'collection_id': self.destination['collection'],
+                'id': record['id']
+            }
+            record_uri = ('/buckets/{bucket_id}'
+                          '/collections/{collection_id}'
+                          '/records/{id}'.format(**matchdict))
+            notify_resource_event(
+                request,
+                {'method': 'DELETE' if deleted else 'PUT',
+                 'path': record_uri},
+                matchdict=matchdict,
+                resource_name="record",
+                parent_id=self.destination_collection_uri,
+                record=pushed,
+                action=ACTIONS.DELETE if deleted else ACTIONS.UPDATE)
 
     def set_destination_signature(self, signature, request):
         # Push the new signature to the destination collection.
@@ -304,7 +293,6 @@ class LocalUpdater(object):
 
         matchdict = dict(bucket_id=self.source['bucket'],
                          id=self.source['collection'])
-
         notify_resource_event(
             request,
             {

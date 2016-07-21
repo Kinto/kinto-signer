@@ -38,6 +38,27 @@ class BaseTestFunctional(object):
         # Delete all the created objects.
         self._flush_server(self.server_url)
 
+    def setUp(self):
+        # Give the permission to tigger signatures to anybody
+        perms = {"write": ["system.Authenticated"]}
+        self.source.create_bucket()
+        self.source.create_collection(permissions=perms)
+
+        # Create some data on the source collection and send it.
+        with self.source.batch() as batch:
+            for n in range(0, 10):
+                batch.create_record(data={'newdata': n})
+
+        self.source_records = self.source.get_records()
+        assert len(self.source_records) == 10
+
+        # Trigger a signature.
+        self.source.update_collection(data={'status': 'to-sign'})
+
+        # Wait so the new last_modified timestamp will be greater than the
+        # one from the previous records.
+        time.sleep(0.01)
+
     def _flush_server(self, server_url):
         flush_url = urljoin(self.server_url, '/__flush__')
         resp = requests.post(flush_url)
@@ -49,22 +70,6 @@ class BaseTestFunctional(object):
         resp.raise_for_status()
 
     def test_destination_creation_and_new_records_signature(self):
-        self.source.create_bucket()
-        self.source.create_collection()
-
-        # Send new data to the signer.
-        with self.source.batch() as batch:
-            for n in range(0, 10):
-                batch.create_record(data={'newdata': n})
-
-        source_records = self.source.get_records()
-        assert len(source_records) == 10
-
-        # Trigger a signature.
-        self.source.update_collection(
-            data={'status': 'to-sign'},
-            method="put")
-
         # Ensure the destination data is signed properly.
         data = self.destination.get_collection()
         signature = data['data']['signature']
@@ -81,26 +86,9 @@ class BaseTestFunctional(object):
         assert source_collection['status'] == 'signed'
 
     def test_records_deletion_and_signature(self):
-        self.source.create_bucket()
-        self.source.create_collection()
-
-        # Create some data on the source collection and send it.
-        with self.source.batch() as batch:
-            for n in range(0, 10):
-                batch.create_record(data={'newdata': n})
-
-        source_records = self.source.get_records()
-        assert len(source_records) == 10
-
-        # Trigger a signature.
-        self.source.update_collection(data={'status': 'to-sign'}, method="put")
-
-        # Wait so the new last_modified timestamp will be greater than the
-        # one from the previous records.
-        time.sleep(0.01)
         # Now delete one record on the source and trigger another signature.
-        self.source.delete_record(source_records[0]['id'])
-        self.source.update_collection(data={'status': 'to-sign'}, method="put")
+        self.source.delete_record(self.source_records[0]['id'])
+        self.source.update_collection(data={'status': 'to-sign'})
 
         data = self.destination.get_collection()
         signature = data['data']['signature']
@@ -112,6 +100,24 @@ class BaseTestFunctional(object):
         serialized_records = canonical_json(records, last_modified)
         # This raises when the signature is invalid.
         self.signer.verify(serialized_records, signature)
+
+    def test_distinct_users_can_trigger_signatures(self):
+        collection = self.destination.get_collection()
+        before = collection['data']['signature']
+
+        self.source.create_record(data={"pim": "pam"})
+        client = Client(
+            server_url=self.server_url,
+            auth=("Sam", "Wan-Elss"),
+            bucket=self.source_bucket,
+            collection=self.source_collection)
+        # Trigger a signature as someone else.
+        client.update_collection(data={'status': 'to-sign'})
+
+        collection = self.destination.get_collection()
+        after = collection['data']['signature']
+
+        assert before != after
 
 
 class AliceFunctionalTest(BaseTestFunctional, unittest2.TestCase):

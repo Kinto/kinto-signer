@@ -6,10 +6,15 @@ This document describes changes between each past release.
 0.8.0 (unreleased)
 ------------------
 
+*kinto-signer* now requires bug fixes that were released in Kinto 3.2.4 and Kinto 3.3.2.
+
 **Bug fix**
 
 - Update the `last_modified` value when updating the collection status and signature (#97)
 - Prevents crash with events on ``default`` bucket on Kinto < 3.3
+- Trigger ``ResourceChanged`` events when the destination collection and records are updated
+  during signing. This allows plugins like ``kinto-changes`` and ``kinto.plugins.history``
+  to catch the changes (#101).
 
 
 0.7.0 (2016-06-28)

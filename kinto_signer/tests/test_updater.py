@@ -1,8 +1,10 @@
 import mock
 import pytest
+
 from kinto.core.storage import Filter
 from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
 from kinto.core.utils import COMPARISON
+from kinto.tests.core.support import DummyRequest
 
 from kinto_signer.updater import LocalUpdater
 from .support import unittest
@@ -24,6 +26,11 @@ class LocalUpdaterTest(unittest.TestCase):
             signer=self.signer_instance,
             storage=self.storage,
             permission=self.permission)
+
+        # Resource events are bypassed completely in this test suite.
+        patcher = mock.patch('kinto_signer.updater.build_request')
+        self.addCleanup(patcher.stop)
+        patcher.start()
 
     def patch(self, obj, *args, **kwargs):
         patcher = mock.patch.object(obj, *args, **kwargs)
@@ -82,7 +89,7 @@ class LocalUpdaterTest(unittest.TestCase):
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
         self.patch(self.updater, 'get_source_records',
                    return_value=(records, '42'))
-        self.updater.push_records_to_destination()
+        self.updater.push_records_to_destination(DummyRequest())
         assert self.storage.update.call_count == 3
 
     def test_push_records_removes_deleted_records(self):
@@ -93,7 +100,7 @@ class LocalUpdaterTest(unittest.TestCase):
                         for idx in range(3, 5)])
         self.patch(self.updater, 'get_source_records',
                    return_value=(records, '42'))
-        self.updater.push_records_to_destination()
+        self.updater.push_records_to_destination(DummyRequest())
         self.updater.get_source_records.assert_called_with(
             1324, include_deleted=True)
         assert self.storage.update.call_count == 2
@@ -111,7 +118,7 @@ class LocalUpdaterTest(unittest.TestCase):
         self.patch(self.updater, 'get_source_records',
                    return_value=(records, '42'))
         # Calling the updater should not raise the RecordNotFoundError.
-        self.updater.push_records_to_destination()
+        self.updater.push_records_to_destination(DummyRequest())
 
     def test_push_records_to_destination_with_no_destination_changes(self):
         self.patch(self.updater, 'get_destination_last_modified',
@@ -119,14 +126,15 @@ class LocalUpdaterTest(unittest.TestCase):
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
         self.patch(self.updater, 'get_source_records',
                    return_value=(records, '42'))
-        self.updater.push_records_to_destination()
+        self.updater.push_records_to_destination(DummyRequest())
         self.updater.get_source_records.assert_called_with(
             None, include_deleted=True)
         assert self.storage.update.call_count == 3
 
     def test_set_destination_signature_modifies_the_source_collection(self):
         self.storage.get.return_value = {'id': 1234, 'last_modified': 1234}
-        self.updater.set_destination_signature(mock.sentinel.signature)
+        self.updater.set_destination_signature(mock.sentinel.signature,
+                                               DummyRequest())
 
         self.storage.update.assert_called_with(
             collection_id='collection',
@@ -140,7 +148,7 @@ class LocalUpdaterTest(unittest.TestCase):
     def test_update_source_status_modifies_the_source_collection(self):
         self.storage.get.return_value = {'id': 1234, 'last_modified': 1234,
                                          'status': 'to-sign'}
-        self.updater.update_source_status("signed")
+        self.updater.update_source_status("signed", DummyRequest())
 
         self.storage.update.assert_called_with(
             collection_id='collection',
@@ -153,13 +161,13 @@ class LocalUpdaterTest(unittest.TestCase):
 
     def test_create_destination_updates_collection_permissions(self):
         collection_id = '/buckets/destbucket/collections/destcollection'
-        self.updater.create_destination()
+        self.updater.create_destination(DummyRequest())
         self.permission.replace_object_permissions.assert_called_with(
             collection_id,
             {"read": ("system.Everyone",)})
 
     def test_create_destination_creates_bucket(self):
-        self.updater.create_destination()
+        self.updater.create_destination(DummyRequest())
         self.storage.create.assert_any_call(
             collection_id='bucket',
             parent_id='',
@@ -167,7 +175,7 @@ class LocalUpdaterTest(unittest.TestCase):
 
     def test_create_destination_creates_collection(self):
         bucket_id = '/buckets/destbucket'
-        self.updater.create_destination()
+        self.updater.create_destination(DummyRequest())
         self.storage.create.assert_any_call(
             collection_id='collection',
             parent_id=bucket_id,
@@ -175,7 +183,8 @@ class LocalUpdaterTest(unittest.TestCase):
 
     def test_ensure_resource_exists_handles_uniticy_errors(self):
         self.storage.create.side_effect = UnicityError('id', 'record')
-        self.updater._ensure_resource_exists('bucket', '', 'abcd')
+        self.updater._ensure_resource_exists('bucket', '', 'abcd',
+                                             DummyRequest())
 
     def test_sign_and_update_destination(self):
         records = [{'id': idx, 'foo': 'bar %s' % idx, 'last_modified': idx}
@@ -186,7 +195,7 @@ class LocalUpdaterTest(unittest.TestCase):
         self.patch(self.updater, 'get_source_records', return_value=([], '0'))
         self.patch(self.updater, 'push_records_to_destination')
         self.patch(self.updater, 'set_destination_signature')
-        self.updater.sign_and_update_destination()
+        self.updater.sign_and_update_destination(DummyRequest())
 
         assert self.updater.get_source_records.call_count == 1
         assert self.updater.push_records_to_destination.call_count == 1

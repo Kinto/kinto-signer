@@ -4,9 +4,9 @@ from kinto.core.events import ACTIONS, ResourceChanged
 from kinto import logger
 from pyramid.exceptions import ConfigurationError
 
-from kinto_signer import utils
 from kinto_signer.updater import LocalUpdater
 from kinto_signer.signer import heartbeat
+from kinto_signer import utils
 
 
 def on_collection_changed(event, resources):
@@ -47,7 +47,7 @@ def on_collection_changed(event, resources):
         destination=resource['destination'])
 
     try:
-        updater.sign_and_update_destination()
+        updater.sign_and_update_destination(event.request)
     except Exception:
         logger.exception("Could not sign '{0}'".format(key))
         event.request.response.status = 503

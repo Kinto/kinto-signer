@@ -10,7 +10,7 @@ This document describes changes between each past release.
 
 - Provide the ``old`` value on destination records updates (#104)
 - Send ``create`` event when destination record does not exist yet.
-- Events sent by kinto-signer for created/updated/deleted object now show
+- Events sent by kinto-signer for created/updated/deleted objects in destination now show
   user_id as ``plugin:kinto-signer``
 
 0.7.1 (2016-07-21)

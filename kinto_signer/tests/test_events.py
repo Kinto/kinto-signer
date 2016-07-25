@@ -78,6 +78,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
                  if e.payload["uri"] == self.destination_collection and
                  e.payload["action"] == "create"][0]
         self.assertEqual(len(event.impacted_records), 1)
+        self.assertEqual(event.payload['user_id'], "plugin:kinto-signer")
 
     def test_resource_changed_is_triggered_for_source_collection(self):
         before = len(listener.received)

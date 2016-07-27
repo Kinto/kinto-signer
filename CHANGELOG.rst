@@ -6,7 +6,7 @@ This document describes changes between each past release.
 0.8.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Add the plugin version in the capability. (#108)
 
 
 0.7.2 (2016-07-25)

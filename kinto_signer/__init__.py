@@ -1,3 +1,4 @@
+import pkg_resources
 import functools
 
 from kinto.core.events import ACTIONS, ResourceChanged
@@ -7,6 +8,9 @@ from pyramid.exceptions import ConfigurationError
 from kinto_signer.updater import LocalUpdater
 from kinto_signer.signer import heartbeat
 from kinto_signer import utils
+
+#: Module version, as defined in PEP-0396.
+__version__ = pkg_resources.get_distribution(__package__).version
 
 
 def on_collection_changed(event, resources):
@@ -108,6 +112,7 @@ def includeme(config):
     message = "Digital signatures for integrity and authenticity of records."
     docs = "https://github.com/Kinto/kinto-signer#kinto-signer"
     config.add_api_capability("signer", message, docs,
+                              version=__version__,
                               resources=resources.values())
 
     config.add_subscriber(

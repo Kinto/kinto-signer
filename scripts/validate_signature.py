@@ -1,4 +1,4 @@
-from kinto_client import cli_utils
+from kinto_http import cli_utils
 from kinto_signer.serializer import canonical_json
 from kinto_signer.hasher import compute_hash
 from kinto_signer.signer.local_ecdsa import ECDSASigner
@@ -7,13 +7,6 @@ from kinto_signer.signer.local_ecdsa import ECDSASigner
 DEFAULT_SERVER = "https://kinto.stage.mozaws.net/v1"
 DEST_BUCKET = 'blocklists'
 DEST_COLLECTION = 'certificates'
-
-
-def collection_timestamp(client):
-    # XXXX Waiting https://github.com/Kinto/kinto-http.py/issues/77
-    endpoint = client.get_endpoint('records')
-    record_resp, headers = client.session.request('get', endpoint)
-    return headers.get('ETag', '').strip('"')
 
 
 def main(args=None):
@@ -32,7 +25,7 @@ def main(args=None):
 
     # 2. Grab records
     records = client.get_records(_sort='-last_modified')
-    timestamp = collection_timestamp(client)
+    timestamp = client.get_records_timestamp()
 
     # 3. Serialize
     serialized = canonical_json(records, timestamp)

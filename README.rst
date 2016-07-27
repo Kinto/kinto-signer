@@ -25,9 +25,9 @@ How does it work?
 When the *source* collection metadata ``status`` is set to ``"to-sign"``, it will:
 
 #. grab the whole list of records in this *source* collection
-#. serialize it in a Canonical JSON form (*see below*)
-#. compute a signature using the configured backend
 #. update the *destination* collection records with the recent changes
+#. serialize the result in a Canonical JSON form (*see below*)
+#. compute a signature using the configured backend
 #. update the *destination* collection metadata ``signature`` with the information
    obtain form the signature backend
 #. set the *source* metadata ``status`` to ``"signed"``.
@@ -37,6 +37,7 @@ When the *source* collection metadata ``status`` is set to ``"to-sign"``, it wil
     The current implementation assumes the destination collection will be
     readable anonymously and won't be writable by anyone.
     (See `Kinto/kinto-signer#55 <https://github.com/Kinto/kinto-signer/issues/55>`_)
+
 
 Content-Signature protocol
 --------------------------

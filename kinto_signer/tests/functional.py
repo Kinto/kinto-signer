@@ -1,3 +1,4 @@
+import time
 import os.path
 from six.moves.urllib.parse import urljoin
 
@@ -58,6 +59,8 @@ class BaseTestFunctional(object):
         self.source_records = self.source.get_records()
         assert len(self.source_records) == 10
 
+        time.sleep(0.1)
+
         # Trigger a signature.
         self.source.update_collection(data={'status': 'to-sign'})
 
@@ -80,6 +83,9 @@ class BaseTestFunctional(object):
         # the status of the source collection should be "signed".
         source_collection = self.source.get_collection()['data']
         assert source_collection['status'] == 'signed'
+
+        assert (collection_timestamp(self.destination) ==
+                collection_timestamp(self.source))
 
     def test_destination_creation_and_new_records_signature(self):
         # Create one record and trigger another signature.

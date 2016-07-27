@@ -53,11 +53,11 @@ class LocalUpdaterTest(unittest.TestCase):
         count = mock.sentinel.count
         self.storage.get_all.return_value = (records, count)
 
-        self.updater.get_source_records()
+        self.updater.get_source_records(None)
         self.storage.get_all.assert_called_with(
             collection_id='record',
             parent_id='/buckets/sourcebucket/collections/sourcecollection',
-            include_deleted=False)
+            include_deleted=True)
 
     def test_get_source_records_asks_storage_for_last_modified_records(self):
         records = mock.sentinel.records
@@ -68,7 +68,7 @@ class LocalUpdaterTest(unittest.TestCase):
         self.storage.get_all.assert_called_with(
             collection_id='record',
             parent_id='/buckets/sourcebucket/collections/sourcecollection',
-            include_deleted=False,
+            include_deleted=True,
             filters=[Filter('last_modified', 1234, COMPARISON.GT)])
 
     def test_get_destination_records(self):
@@ -102,8 +102,7 @@ class LocalUpdaterTest(unittest.TestCase):
         self.patch(self.updater, 'get_source_records',
                    return_value=(records, '42'))
         self.updater.push_records_to_destination(DummyRequest())
-        self.updater.get_source_records.assert_called_with(
-            1324, include_deleted=True)
+        self.updater.get_source_records.assert_called_with(last_modified=1324)
         assert self.storage.update.call_count == 2
         assert self.storage.delete.call_count == 2
 
@@ -128,8 +127,7 @@ class LocalUpdaterTest(unittest.TestCase):
         self.patch(self.updater, 'get_source_records',
                    return_value=(records, '42'))
         self.updater.push_records_to_destination(DummyRequest())
-        self.updater.get_source_records.assert_called_with(
-            None, include_deleted=True)
+        self.updater.get_source_records.assert_called_with(last_modified=None)
         assert self.storage.update.call_count == 3
 
     def test_set_destination_signature_modifies_the_source_collection(self):
@@ -199,6 +197,7 @@ class LocalUpdaterTest(unittest.TestCase):
         self.patch(self.updater, 'set_destination_signature')
         self.updater.sign_and_update_destination(DummyRequest())
 
-        assert self.updater.get_destination_records.call_count == 1
+        # get_destination called twice: before and after pushing records:
+        assert self.updater.get_destination_records.call_count == 2
         assert self.updater.push_records_to_destination.call_count == 1
         assert self.updater.set_destination_signature.call_count == 1

@@ -87,10 +87,12 @@ class LocalUpdater(object):
 
         self.create_destination(request)
 
+        records, timestamp = self.get_destination_records()
         self.push_records_to_destination(request)
 
-        records, last_modified = self.get_destination_records()
-        serialized_records = canonical_json(records, last_modified)
+        records, timestamp = self.get_destination_records()
+
+        serialized_records = canonical_json(records, timestamp)
         signature = self.signer.sign(serialized_records)
 
         self.set_destination_signature(signature, request)
@@ -180,17 +182,17 @@ class LocalUpdater(object):
 
         return records, collection_timestamp
 
-    def get_source_records(self, last_modified=None, include_deleted=True):
-        return self._get_records(self.source, last_modified)
+    def get_source_records(self, last_modified):
+        return self._get_records(self.source,
+                                 last_modified,
+                                 include_deleted=True)
 
     def get_destination_records(self):
         return self._get_records(self.destination)
 
     def push_records_to_destination(self, request):
-        records, last_modified = self.get_destination_records()
-        new_records, _ = self.get_source_records(last_modified,
-                                                 include_deleted=True)
-
+        __, timestamp = self.get_destination_records()
+        new_records, _ = self.get_source_records(last_modified=timestamp)
         # Update the destination collection.
         for record in new_records:
             storage_kwargs = {

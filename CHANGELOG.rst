@@ -6,13 +6,19 @@ This document describes changes between each past release.
 0.8.0 (unreleased)
 ------------------
 
-- Add the plugin version in the capability. (#108)
+**Bug fixes**
 
+- Fix signature inconsistency (timestamp) when several changes are sent from
+  the *source* to the *destination* collection (fixes #110)
+
+**Minor change**
+
+- Add the plugin version in the capability. (#108)
 
 0.7.2 (2016-07-25)
 ------------------
 
-*Bug fixes**
+**Bug fixes**
 
 - Provide the ``old`` value on destination records updates (#104)
 - Send ``create`` event when destination record does not exist yet.

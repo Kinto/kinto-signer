@@ -5,7 +5,7 @@ from pyramid import testing
 from pyramid.exceptions import ConfigurationError
 from requests import exceptions as requests_exceptions
 
-from kinto_signer import on_collection_changed
+from kinto_signer import on_collection_changed, __version__ as signer_version
 from kinto_signer.signer.autograph import AutographSigner
 from kinto_signer import includeme
 from kinto_signer import utils
@@ -24,6 +24,7 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
         expected = {
             "description": "Digital signatures for integrity and authenticity of records.",  # NOQA
             "url": ("https://github.com/Kinto/kinto-signer#kinto-signer"),
+            "version": signer_version,
             "resources": [
                 {"destination": {"bucket": "alice",
                                  "collection": "destination"},

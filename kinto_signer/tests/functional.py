@@ -16,6 +16,13 @@ SERVER_URL = "http://localhost:8888/v1"
 DEFAULT_AUTH = ('user', 'p4ssw0rd')
 
 
+def collection_timestamp(client):
+    # XXXX Waiting https://github.com/Kinto/kinto-http.py/issues/77
+    endpoint = client.get_endpoint('records')
+    record_resp, headers = client.session.request('get', endpoint)
+    return headers.get('ETag', '').strip('"')
+
+
 class BaseTestFunctional(object):
     @classmethod
     def setUpClass(cls):
@@ -77,7 +84,7 @@ class BaseTestFunctional(object):
 
         records = self.destination.get_records()
         assert len(records) == 10
-        last_modified = records[0]['last_modified']
+        last_modified = collection_timestamp(self.destination)
         serialized_records = canonical_json(records, last_modified)
         self.signer.verify(serialized_records, signature)
 
@@ -96,7 +103,7 @@ class BaseTestFunctional(object):
 
         records = self.destination.get_records(_since=0)
         assert len(records) == 10  # one is deleted.
-        last_modified = records[0]['last_modified']
+        last_modified = collection_timestamp(self.destination)
         serialized_records = canonical_json(records, last_modified)
         # This raises when the signature is invalid.
         self.signer.verify(serialized_records, signature)

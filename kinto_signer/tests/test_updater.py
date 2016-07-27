@@ -71,21 +71,22 @@ class LocalUpdaterTest(unittest.TestCase):
             include_deleted=False,
             filters=[Filter('last_modified', 1234, COMPARISON.GT)])
 
-    def test_get_destination_last_modified(self):
+    def test_get_destination_records(self):
         records = mock.sentinel.records
         count = mock.sentinel.count
         self.storage.get_all.return_value = (records, count)
-        self.updater.get_destination_last_modified()
+        self.updater.get_destination_records()
         self.storage.collection_timestamp.assert_called_with(
             collection_id='record',
             parent_id='/buckets/destbucket/collections/destcollection')
         self.storage.get_all.assert_called_with(
             collection_id='record',
-            parent_id='/buckets/destbucket/collections/destcollection')
+            parent_id='/buckets/destbucket/collections/destcollection',
+            include_deleted=False)
 
     def test_push_records_to_destination(self):
-        self.patch(self.updater, 'get_destination_last_modified',
-                   return_value=(1324, 10))
+        self.patch(self.updater, 'get_destination_records',
+                   return_value=([], 1324))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
         self.patch(self.updater, 'get_source_records',
                    return_value=(records, '42'))
@@ -93,8 +94,8 @@ class LocalUpdaterTest(unittest.TestCase):
         assert self.storage.update.call_count == 3
 
     def test_push_records_removes_deleted_records(self):
-        self.patch(self.updater, 'get_destination_last_modified',
-                   return_value=(1324, 10))
+        self.patch(self.updater, 'get_destination_records',
+                   return_value=([], 1324))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(0, 2)]
         records.extend([{'id': idx, 'deleted': True, 'last_modified': 42}
                         for idx in range(3, 5)])
@@ -110,8 +111,8 @@ class LocalUpdaterTest(unittest.TestCase):
         # In case the record doesn't exists in the destination
         # a RecordNotFoundError is raised.
         self.storage.delete.side_effect = RecordNotFoundError()
-        self.patch(self.updater, 'get_destination_last_modified',
-                   return_value=(1324, 10))
+        self.patch(self.updater, 'get_destination_records',
+                   return_value=([], 1324))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(0, 2)]
         records.extend([{'id': idx, 'deleted': True, 'last_modified': 42}
                        for idx in range(3, 5)])
@@ -121,8 +122,8 @@ class LocalUpdaterTest(unittest.TestCase):
         self.updater.push_records_to_destination(DummyRequest())
 
     def test_push_records_to_destination_with_no_destination_changes(self):
-        self.patch(self.updater, 'get_destination_last_modified',
-                   return_value=(1324, 0))
+        self.patch(self.updater, 'get_destination_records',
+                   return_value=([], None))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
         self.patch(self.updater, 'get_source_records',
                    return_value=(records, '42'))
@@ -192,11 +193,12 @@ class LocalUpdaterTest(unittest.TestCase):
         self.storage.get_all.return_value = (records, 2)
 
         self.patch(self.storage, 'update_records')
-        self.patch(self.updater, 'get_source_records', return_value=([], '0'))
+        self.patch(self.updater, 'get_destination_records',
+                   return_value=([], '0'))
         self.patch(self.updater, 'push_records_to_destination')
         self.patch(self.updater, 'set_destination_signature')
         self.updater.sign_and_update_destination(DummyRequest())
 
-        assert self.updater.get_source_records.call_count == 1
+        assert self.updater.get_destination_records.call_count == 1
         assert self.updater.push_records_to_destination.call_count == 1
         assert self.updater.set_destination_signature.call_count == 1

@@ -1,5 +1,5 @@
 from kinto.core.events import ACTIONS
-from kinto.core.storage import Filter
+from kinto.core.storage import Filter, Sort
 from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
 from kinto.core.utils import COMPARISON, build_request
 from kinto_signer.serializer import canonical_json
@@ -163,6 +163,7 @@ class LocalUpdater(object):
                                       COMPARISON.GT)
             storage_kwargs['filters'] = [gt_last_modified, ]
 
+        storage_kwargs['sorting'] = [Sort('last_modified', 1)]
         parent_id = "/buckets/{bucket}/collections/{collection}".format(**rc)
 
         records, count = self.storage.get_all(

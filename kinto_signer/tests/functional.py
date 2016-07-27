@@ -88,8 +88,11 @@ class BaseTestFunctional(object):
                 collection_timestamp(self.source))
 
     def test_destination_creation_and_new_records_signature(self):
-        # Create one record and trigger another signature.
+        # Create some records and trigger another signature.
         self.source.create_record({'newdata': 'hello'})
+        self.source.create_record({'newdata': 'bonjour'})
+
+        time.sleep(0.1)
 
         self.source.update_collection(data={'status': 'to-sign'})
 
@@ -98,17 +101,22 @@ class BaseTestFunctional(object):
         assert signature is not None
 
         records = self.destination.get_records()
-        assert len(records) == 11
+        assert len(records) == 12
         last_modified = collection_timestamp(self.destination)
         serialized_records = canonical_json(records, last_modified)
         # This raises when the signature is invalid.
         self.signer.verify(serialized_records, signature)
 
     def test_records_update_and_signature(self):
-        # Update one record and trigger another signature.
+        # Update some records and trigger another signature.
         updated = self.source_records[5].copy()
         updated['newdata'] = 'bump'
         self.source.update_record(updated)
+        updated = self.source_records[0].copy()
+        updated['newdata'] = 'hoop'
+        self.source.update_record(updated)
+
+        time.sleep(0.1)
 
         self.source.update_collection(data={'status': 'to-sign'})
 
@@ -125,7 +133,10 @@ class BaseTestFunctional(object):
 
     def test_records_deletion_and_signature(self):
         # Now delete one record on the source and trigger another signature.
+        self.source.delete_record(self.source_records[1]['id'])
         self.source.delete_record(self.source_records[5]['id'])
+
+        time.sleep(0.1)
 
         self.source.update_collection(data={'status': 'to-sign'})
 
@@ -134,7 +145,7 @@ class BaseTestFunctional(object):
         assert signature is not None
 
         records = self.destination.get_records(_since=0)  # obtain deleted too
-        assert len(records) == 10  # one is deleted.
+        assert len(records) == 10  # two of them are deleted.
         last_modified = collection_timestamp(self.destination)
         serialized_records = canonical_json(records, last_modified)
         # This raises when the signature is invalid.

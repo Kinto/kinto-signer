@@ -1,5 +1,4 @@
 import os.path
-import time
 from six.moves.urllib.parse import urljoin
 
 import unittest2
@@ -62,10 +61,6 @@ class BaseTestFunctional(object):
         # Trigger a signature.
         self.source.update_collection(data={'status': 'to-sign'})
 
-        # Wait so the new last_modified timestamp will be greater than the
-        # one from the previous records.
-        time.sleep(0.01)
-
     def _flush_server(self, server_url):
         flush_url = urljoin(self.server_url, '/__flush__')
         resp = requests.post(flush_url)
@@ -76,8 +71,41 @@ class BaseTestFunctional(object):
         resp = requests.get(hb_url)
         resp.raise_for_status()
 
-    def test_destination_creation_and_new_records_signature(self):
+    def test_metadata_attributes(self):
         # Ensure the destination data is signed properly.
+        destination_collection = self.destination.get_collection()['data']
+        signature = destination_collection['signature']
+        assert signature is not None
+
+        # the status of the source collection should be "signed".
+        source_collection = self.source.get_collection()['data']
+        assert source_collection['status'] == 'signed'
+
+    def test_destination_creation_and_new_records_signature(self):
+        # Create one record and trigger another signature.
+        self.source.create_record({'newdata': 'hello'})
+
+        self.source.update_collection(data={'status': 'to-sign'})
+
+        data = self.destination.get_collection()
+        signature = data['data']['signature']
+        assert signature is not None
+
+        records = self.destination.get_records()
+        assert len(records) == 11
+        last_modified = collection_timestamp(self.destination)
+        serialized_records = canonical_json(records, last_modified)
+        # This raises when the signature is invalid.
+        self.signer.verify(serialized_records, signature)
+
+    def test_records_update_and_signature(self):
+        # Update one record and trigger another signature.
+        updated = self.source_records[5].copy()
+        updated['newdata'] = 'bump'
+        self.source.update_record(updated)
+
+        self.source.update_collection(data={'status': 'to-sign'})
+
         data = self.destination.get_collection()
         signature = data['data']['signature']
         assert signature is not None
@@ -86,22 +114,20 @@ class BaseTestFunctional(object):
         assert len(records) == 10
         last_modified = collection_timestamp(self.destination)
         serialized_records = canonical_json(records, last_modified)
+        # This raises when the signature is invalid.
         self.signer.verify(serialized_records, signature)
-
-        # the status of the source collection should be "signed".
-        source_collection = self.source.get_collection()['data']
-        assert source_collection['status'] == 'signed'
 
     def test_records_deletion_and_signature(self):
         # Now delete one record on the source and trigger another signature.
-        self.source.delete_record(self.source_records[0]['id'])
+        self.source.delete_record(self.source_records[5]['id'])
+
         self.source.update_collection(data={'status': 'to-sign'})
 
         data = self.destination.get_collection()
         signature = data['data']['signature']
         assert signature is not None
 
-        records = self.destination.get_records(_since=0)
+        records = self.destination.get_records(_since=0)  # obtain deleted too
         assert len(records) == 10  # one is deleted.
         last_modified = collection_timestamp(self.destination)
         serialized_records = canonical_json(records, last_modified)

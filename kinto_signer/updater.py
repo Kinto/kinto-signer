@@ -87,11 +87,9 @@ class LocalUpdater(object):
 
         self.create_destination(request)
 
-        records, timestamp = self.get_destination_records()
         self.push_records_to_destination(request)
 
         records, timestamp = self.get_destination_records()
-
         serialized_records = canonical_json(records, timestamp)
         signature = self.signer.sign(serialized_records)
 

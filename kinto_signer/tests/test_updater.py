@@ -197,7 +197,6 @@ class LocalUpdaterTest(unittest.TestCase):
         self.patch(self.updater, 'set_destination_signature')
         self.updater.sign_and_update_destination(DummyRequest())
 
-        # get_destination called twice: before and after pushing records:
-        assert self.updater.get_destination_records.call_count == 2
+        assert self.updater.get_destination_records.call_count == 1
         assert self.updater.push_records_to_destination.call_count == 1
         assert self.updater.set_destination_signature.call_count == 1

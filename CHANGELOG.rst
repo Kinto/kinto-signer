@@ -9,7 +9,8 @@ This document describes changes between each past release.
 **Bug fixes**
 
 - Fix signature inconsistency (timestamp) when several changes are sent from
-  the *source* to the *destination* collection (fixes #110)
+  the *source* to the *destination* collection.
+  Fixed ``e2e.py`` and ``validate_signature.py`` scripts (fixes #110)
 
 **Minor change**
 

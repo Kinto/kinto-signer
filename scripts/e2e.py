@@ -3,7 +3,7 @@ from string import hexdigits
 import argparse
 from functools import partial
 
-from kinto_client import Client
+from kinto_client import Client, exceptions as kinto_exceptions
 from kinto_signer.serializer import canonical_json
 from kinto_signer.hasher import compute_hash
 from kinto_signer.signer.local_ecdsa import ECDSASigner
@@ -21,35 +21,24 @@ def _rand(size=10):
     return ''.join([random.choice(hexdigits) for _ in range(size)])
 
 
+def collection_timestamp(client):
+    # XXXX Waiting https://github.com/Kinto/kinto-http.py/issues/77
+    endpoint = client.get_endpoint('records')
+    record_resp, headers = client.session.request('get', endpoint)
+    return headers.get('ETag', '').strip('"')
+
+
 def upload_records(client, num=100):
-    bucket_name = SOURCE_BUCKET
-    collection_name = SOURCE_COL
-
-    client.delete_collection(bucket=bucket_name, collection=collection_name)
-
-    client.create_bucket(bucket=bucket_name, if_not_exists=True)
-    client.create_collection(bucket=bucket_name, collection=collection_name,
-                             if_not_exists=True)
-
-    records = []
-    collection_timestamp = None
+    try:
+        client.delete_collection()
+    except kinto_exceptions.KintoException:
+        pass
+    client.create_bucket(if_not_exists=True)
+    client.create_collection(if_not_exists=True)
 
     for i in range(num):
         data = {'one': _rand(1000)}
-        res = client.create_record(data, bucket=bucket_name,
-                                   collection=collection_name)
-        records.append(res['data'])
-        collection_timestamp = res['data']['last_modified']
-
-    serialized = canonical_json(records, collection_timestamp)
-
-    res = {'bucket': bucket_name,
-           'collection': collection_name,
-           'records': records,
-           'hash': compute_hash(serialized),
-           'payload': serialized}
-
-    return res
+        client.create_record(data)
 
 
 def _get_args():
@@ -88,33 +77,42 @@ def main():
         user, password = args.auth.split(':')
         args.auth = partial(_auth, user=user, password=password)
 
-    client = Client(server_url=args.server, auth=args.auth)
+    client = Client(server_url=args.server, auth=args.auth,
+                    bucket=args.source_bucket,
+                    collection=args.source_col)
 
     # 1. upload data
     print('Uploading 100 random records')
-    res = upload_records(client, 100)
-    print('Hash is %r' % res['hash'])
+    upload_records(client, 100)
 
     # 2. ask for a signature by toggling "to-sign"
     data = {"status": "to-sign"}
-    client.patch_collection(data=data, bucket=res['bucket'],
-                            collection=res['collection'])
+    client.patch_collection(data=data)
 
     # 3. wait for the result
 
-    # 4. get back the signed hash
-    dest_col = client.get_collection(bucket=DEST_BUCKET,
-                                     collection=DEST_COL)
+    # 4. obtain the destination records and serialize canonically.
 
+    dest_client = Client(server_url=args.server, bucket=args.dest_bucket,
+                         collection=args.dest_col)
+
+    records = dest_client.get_records()
+    timestamp = collection_timestamp(dest_client)
+    serialized = canonical_json(records, timestamp)
+    print('Hash is %r' % compute_hash(serialized))
+
+    # 5. get back the signed hash
+
+    dest_col = dest_client.get_collection()
     signature = dest_col['data']['signature']
 
     with open('pub', 'w') as f:
         f.write(signature['public_key'])
 
-    # 5. verify the signature matches the hash
+    # 6. verify the signature matches the hash
     signer = ECDSASigner(public_key='pub')
     try:
-        signer.verify(res['payload'], signature)
+        signer.verify(serialized, signature)
         print('Signature OK')
     except Exception:
         print('Signature KO')

@@ -1,7 +1,7 @@
 import mock
 import pytest
 
-from kinto.core.storage import Filter
+from kinto.core.storage import Filter, Sort
 from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
 from kinto.core.utils import COMPARISON
 from kinto.tests.core.support import DummyRequest
@@ -53,11 +53,12 @@ class LocalUpdaterTest(unittest.TestCase):
         count = mock.sentinel.count
         self.storage.get_all.return_value = (records, count)
 
-        self.updater.get_source_records()
+        self.updater.get_source_records(None)
         self.storage.get_all.assert_called_with(
             collection_id='record',
             parent_id='/buckets/sourcebucket/collections/sourcecollection',
-            include_deleted=False)
+            include_deleted=True,
+            sorting=[Sort('last_modified', 1)])
 
     def test_get_source_records_asks_storage_for_last_modified_records(self):
         records = mock.sentinel.records
@@ -68,24 +69,27 @@ class LocalUpdaterTest(unittest.TestCase):
         self.storage.get_all.assert_called_with(
             collection_id='record',
             parent_id='/buckets/sourcebucket/collections/sourcecollection',
-            include_deleted=False,
-            filters=[Filter('last_modified', 1234, COMPARISON.GT)])
+            include_deleted=True,
+            filters=[Filter('last_modified', 1234, COMPARISON.GT)],
+            sorting=[Sort('last_modified', 1)])
 
-    def test_get_destination_last_modified(self):
+    def test_get_destination_records(self):
         records = mock.sentinel.records
         count = mock.sentinel.count
         self.storage.get_all.return_value = (records, count)
-        self.updater.get_destination_last_modified()
+        self.updater.get_destination_records()
         self.storage.collection_timestamp.assert_called_with(
             collection_id='record',
             parent_id='/buckets/destbucket/collections/destcollection')
         self.storage.get_all.assert_called_with(
             collection_id='record',
-            parent_id='/buckets/destbucket/collections/destcollection')
+            parent_id='/buckets/destbucket/collections/destcollection',
+            include_deleted=False,
+            sorting=[Sort('last_modified', 1)])
 
     def test_push_records_to_destination(self):
-        self.patch(self.updater, 'get_destination_last_modified',
-                   return_value=(1324, 10))
+        self.patch(self.updater, 'get_destination_records',
+                   return_value=([], 1324))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
         self.patch(self.updater, 'get_source_records',
                    return_value=(records, '42'))
@@ -93,16 +97,15 @@ class LocalUpdaterTest(unittest.TestCase):
         assert self.storage.update.call_count == 3
 
     def test_push_records_removes_deleted_records(self):
-        self.patch(self.updater, 'get_destination_last_modified',
-                   return_value=(1324, 10))
+        self.patch(self.updater, 'get_destination_records',
+                   return_value=([], 1324))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(0, 2)]
         records.extend([{'id': idx, 'deleted': True, 'last_modified': 42}
                         for idx in range(3, 5)])
         self.patch(self.updater, 'get_source_records',
                    return_value=(records, '42'))
         self.updater.push_records_to_destination(DummyRequest())
-        self.updater.get_source_records.assert_called_with(
-            1324, include_deleted=True)
+        self.updater.get_source_records.assert_called_with(last_modified=1324)
         assert self.storage.update.call_count == 2
         assert self.storage.delete.call_count == 2
 
@@ -110,8 +113,8 @@ class LocalUpdaterTest(unittest.TestCase):
         # In case the record doesn't exists in the destination
         # a RecordNotFoundError is raised.
         self.storage.delete.side_effect = RecordNotFoundError()
-        self.patch(self.updater, 'get_destination_last_modified',
-                   return_value=(1324, 10))
+        self.patch(self.updater, 'get_destination_records',
+                   return_value=([], 1324))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(0, 2)]
         records.extend([{'id': idx, 'deleted': True, 'last_modified': 42}
                        for idx in range(3, 5)])
@@ -121,14 +124,13 @@ class LocalUpdaterTest(unittest.TestCase):
         self.updater.push_records_to_destination(DummyRequest())
 
     def test_push_records_to_destination_with_no_destination_changes(self):
-        self.patch(self.updater, 'get_destination_last_modified',
-                   return_value=(1324, 0))
+        self.patch(self.updater, 'get_destination_records',
+                   return_value=([], None))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
         self.patch(self.updater, 'get_source_records',
                    return_value=(records, '42'))
         self.updater.push_records_to_destination(DummyRequest())
-        self.updater.get_source_records.assert_called_with(
-            None, include_deleted=True)
+        self.updater.get_source_records.assert_called_with(last_modified=None)
         assert self.storage.update.call_count == 3
 
     def test_set_destination_signature_modifies_the_source_collection(self):
@@ -192,11 +194,12 @@ class LocalUpdaterTest(unittest.TestCase):
         self.storage.get_all.return_value = (records, 2)
 
         self.patch(self.storage, 'update_records')
-        self.patch(self.updater, 'get_source_records', return_value=([], '0'))
+        self.patch(self.updater, 'get_destination_records',
+                   return_value=([], '0'))
         self.patch(self.updater, 'push_records_to_destination')
         self.patch(self.updater, 'set_destination_signature')
         self.updater.sign_and_update_destination(DummyRequest())
 
-        assert self.updater.get_source_records.call_count == 1
+        assert self.updater.get_destination_records.call_count == 1
         assert self.updater.push_records_to_destination.call_count == 1
         assert self.updater.set_destination_signature.call_count == 1

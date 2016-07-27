@@ -1,5 +1,5 @@
 from kinto.core.events import ACTIONS
-from kinto.core.storage import Filter
+from kinto.core.storage import Filter, Sort
 from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
 from kinto.core.utils import COMPARISON, build_request
 from kinto_signer.serializer import canonical_json
@@ -78,20 +78,21 @@ class LocalUpdater(object):
 
         0. Create the destination bucket / collection
         1. Get all the records of the collection
-        2. Compute a hash of these records
-        3. Ask the signer for a signature
-        4. Send all records since the last_modified field of the Authoritative
-           server
-        5. Send the signature to the Authoritative server.
+        2. Send all records since the last_modified of the destination
+        3. Compute a hash of these records
+        4. Ask the signer for a signature
+        5. Send the signature to the destination.
         """
         before = len(request.get_resource_events())
 
         self.create_destination(request)
-        records, last_modified = self.get_source_records()
-        serialized_records = canonical_json(records, last_modified)
-        signature = self.signer.sign(serialized_records)
 
         self.push_records_to_destination(request)
+
+        records, timestamp = self.get_destination_records()
+        serialized_records = canonical_json(records, timestamp)
+        signature = self.signer.sign(serialized_records)
+
         self.set_destination_signature(signature, request)
         self.update_source_status("signed", request)
 
@@ -154,7 +155,7 @@ class LocalUpdater(object):
         self.permission.replace_object_permissions(
             self.destination_collection_uri, permissions)
 
-    def get_source_records(self, last_modified=None, include_deleted=False):
+    def _get_records(self, rc, last_modified=None, include_deleted=False):
         # If last_modified was specified, only retrieve items since then.
         storage_kwargs = {}
         if last_modified is not None:
@@ -162,41 +163,35 @@ class LocalUpdater(object):
                                       COMPARISON.GT)
             storage_kwargs['filters'] = [gt_last_modified, ]
 
-        parent_id = "/buckets/%s/collections/%s" % (
-            self.source['bucket'], self.source['collection'])
+        storage_kwargs['sorting'] = [Sort('last_modified', 1)]
+        parent_id = "/buckets/{bucket}/collections/{collection}".format(**rc)
 
-        records, _ = self.storage.get_all(
+        records, count = self.storage.get_all(
             parent_id=parent_id,
             collection_id='record',
             include_deleted=include_deleted,
             **storage_kwargs)
-        timestamp = self.storage.collection_timestamp(
-            parent_id=parent_id,
-            collection_id='record')
-        return records, timestamp
 
-    def get_destination_last_modified(self):
-        parent_id = "/buckets/%s/collections/%s" % (
-            self.destination['bucket'], self.destination['collection'])
+        if count == 0:
+            collection_timestamp = None
+        else:
+            collection_timestamp = self.storage.collection_timestamp(
+                parent_id=parent_id,
+                collection_id='record')
 
-        collection_timestamp = self.storage.collection_timestamp(
-            parent_id=parent_id,
-            collection_id='record')
+        return records, collection_timestamp
 
-        _, records_count = self.storage.get_all(
-            parent_id=parent_id,
-            collection_id='record')
+    def get_source_records(self, last_modified):
+        return self._get_records(self.source,
+                                 last_modified,
+                                 include_deleted=True)
 
-        return collection_timestamp, records_count
+    def get_destination_records(self):
+        return self._get_records(self.destination)
 
     def push_records_to_destination(self, request):
-        last_modified, records_count = self.get_destination_last_modified()
-        if records_count == 0:
-            last_modified = None
-        new_records, _ = self.get_source_records(
-            last_modified,
-            include_deleted=True)
-
+        __, timestamp = self.get_destination_records()
+        new_records, _ = self.get_source_records(last_modified=timestamp)
         # Update the destination collection.
         for record in new_records:
             storage_kwargs = {

@@ -1,7 +1,7 @@
 import mock
 import pytest
 
-from kinto.core.storage import Filter
+from kinto.core.storage import Filter, Sort
 from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
 from kinto.core.utils import COMPARISON
 from kinto.tests.core.support import DummyRequest
@@ -57,7 +57,8 @@ class LocalUpdaterTest(unittest.TestCase):
         self.storage.get_all.assert_called_with(
             collection_id='record',
             parent_id='/buckets/sourcebucket/collections/sourcecollection',
-            include_deleted=True)
+            include_deleted=True,
+            sorting=[Sort('last_modified', 1)])
 
     def test_get_source_records_asks_storage_for_last_modified_records(self):
         records = mock.sentinel.records
@@ -69,7 +70,8 @@ class LocalUpdaterTest(unittest.TestCase):
             collection_id='record',
             parent_id='/buckets/sourcebucket/collections/sourcecollection',
             include_deleted=True,
-            filters=[Filter('last_modified', 1234, COMPARISON.GT)])
+            filters=[Filter('last_modified', 1234, COMPARISON.GT)],
+            sorting=[Sort('last_modified', 1)])
 
     def test_get_destination_records(self):
         records = mock.sentinel.records
@@ -82,7 +84,8 @@ class LocalUpdaterTest(unittest.TestCase):
         self.storage.get_all.assert_called_with(
             collection_id='record',
             parent_id='/buckets/destbucket/collections/destcollection',
-            include_deleted=False)
+            include_deleted=False,
+            sorting=[Sort('last_modified', 1)])
 
     def test_push_records_to_destination(self):
         self.patch(self.updater, 'get_destination_records',

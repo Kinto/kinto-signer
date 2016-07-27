@@ -55,7 +55,7 @@ function loadKey(pemChain) {
 function verify(signature, data, publicKey) {
   const prefix = "Content-Signature:\x00";
   // from base64url to base64:
-  const sigBase64 = signature.replace('-', '+').replace("_", "\/");
+  const sigBase64 = signature.replace(/\-/g, '+').replace(/_/g, "\/");
   return window.crypto.subtle.verify({
       name: "ECDSA",
       hash: {name: "SHA-384"}

@@ -23,7 +23,7 @@ function sync() {
         collection.list().then((result) => result.data)
           .then((localRecords) => mergeChanges(localRecords, payload))
           .then((merged) => {
-            log(`Serialize ${merged.length} records canonically`);
+            log(`Serialize ${merged.data.length} records canonically`);
             return CanonicalJSON.stringify(merged);
           }),
         fetchCollectionMetadata(collection)

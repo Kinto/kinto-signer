@@ -28,17 +28,13 @@ def collection_timestamp(client):
     return headers.get('ETag', '').strip('"')
 
 
-def upload_records(client, num=100):
-    try:
-        client.delete_collection()
-    except kinto_exceptions.KintoException:
-        pass
-    client.create_bucket(if_not_exists=True)
-    client.create_collection(if_not_exists=True)
-
+def upload_records(client, num):
+    records = []
     for i in range(num):
         data = {'one': _rand(1000)}
-        client.create_record(data)
+        record = client.create_record(data)
+        records.append(record['data'])
+    return records
 
 
 def _get_args():
@@ -81,27 +77,54 @@ def main():
                     bucket=args.source_bucket,
                     collection=args.source_col)
 
+    # 0. initialize source bucket/collection (if necessary)
+    try:
+        client.delete_collection()
+    except kinto_exceptions.KintoException:
+        pass
+    client.create_bucket(if_not_exists=True)
+    client.create_collection(if_not_exists=True)
+
     # 1. upload data
-    print('Uploading 100 random records')
-    upload_records(client, 100)
+    print('Uploading 20 random records')
+    records = upload_records(client, 20)
 
     # 2. ask for a signature by toggling "to-sign"
+    print('Trigger signature')
     data = {"status": "to-sign"}
     client.patch_collection(data=data)
 
-    # 3. wait for the result
+    # 3. upload more data
+    print('Create 20 others records')
+    upload_records(client, 20)
 
-    # 4. obtain the destination records and serialize canonically.
+    print('Update 5 random records')
+    for toupdate in random.sample(records, 5):
+        client.patch_record(dict(newkey=_rand(10), **toupdate))
+
+    print('Delete 5 random records')
+    for todelete in random.sample(records, 5):
+        client.delete_record(todelete['id'])
+
+    # 4. ask again for a signature by toggling "to-sign"
+    print('Trigger signature')
+    data = {"status": "to-sign"}
+    client.patch_collection(data=data)
+
+    # 5. wait for the result
+
+    # 6. obtain the destination records and serialize canonically.
 
     dest_client = Client(server_url=args.server, bucket=args.dest_bucket,
                          collection=args.dest_col)
 
     records = dest_client.get_records()
+    assert len(records) == 35, "%s != 35 records" % len(records)
     timestamp = collection_timestamp(dest_client)
     serialized = canonical_json(records, timestamp)
     print('Hash is %r' % compute_hash(serialized))
 
-    # 5. get back the signed hash
+    # 7. get back the signed hash
 
     dest_col = dest_client.get_collection()
     signature = dest_col['data']['signature']
@@ -109,7 +132,7 @@ def main():
     with open('pub', 'w') as f:
         f.write(signature['public_key'])
 
-    # 6. verify the signature matches the hash
+    # 8. verify the signature matches the hash
     signer = ECDSASigner(public_key='pub')
     try:
         signer.verify(serialized, signature)

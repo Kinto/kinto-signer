@@ -298,6 +298,8 @@ class LocalUpdater(object):
         new_collection = dict(**collection_record)
         new_collection.pop('last_modified', None)
         new_collection['status'] = status
+        if status == "work-in-progress":
+            new_collection["last_editor"] = request.prefixed_userid
 
         updated = self.storage.update(
             parent_id=parent_id,

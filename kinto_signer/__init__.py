@@ -75,9 +75,9 @@ def check_collection_status(event, resources):
         return
 
     for impacted in event.impacted_records:
-        old_collection = impacted.get("old", {})
+        old_collection = impacted.get("old", {}).copy()
         old_status = old_collection.get("status")
-        new_collection = impacted["new"]
+        new_collection = impacted["new"].copy()
         new_status = new_collection.get("status")
 
         key = "/buckets/{bucket_id}/collections/{collection_id}".format(
@@ -87,9 +87,24 @@ def check_collection_status(event, resources):
         if key not in resources:
             continue
 
-        if new_status not in (None, "to-sign", "signed"):
+        if new_status not in (None, "to-sign", "to-review", "signed"):
             raise errors.http_error(httpexceptions.HTTPBadRequest(),
                                     message="Invalid status %r" % new_status)
+
+        if new_status == "to-review":
+            new_collection["last_promoter"] = event.request.prefixed_userid
+            event.request.registry.storage.update(
+                parent_id="/buckets/{bucket_id}".format(**payload),
+                collection_id='collection',
+                object_id=new_collection['id'],
+                record=new_collection)
+        elif new_status == "to-sign":
+            new_collection["last_reviewer"] = event.request.prefixed_userid
+            event.request.registry.storage.update(
+                parent_id="/buckets/{bucket_id}".format(**payload),
+                collection_id='collection',
+                object_id=new_collection['id'],
+                record=new_collection)
 
         # Nobody can change back to signed
         was_changed_to_signed = (new_status == "signed" and

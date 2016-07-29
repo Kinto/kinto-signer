@@ -112,3 +112,41 @@ class CollectionStatusTest(BaseWebTest, unittest.TestCase):
                            headers=self.headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "work-in-progress"
+
+
+class UseridTest(BaseWebTest, unittest.TestCase):
+
+    def setUp(self):
+        super(UseridTest, self).setUp()
+        self.headers = get_user_headers('tarte:en-pion')
+
+        resp = self.app.get("/", headers=self.headers)
+        self.userid = resp.json["user"]["id"]
+
+        patch = _patch_autograph()
+        self.addCleanup(patch.stop)
+
+        self.app.put_json("/buckets/alice", headers=self.headers)
+        self.source_collection = "/buckets/alice/collections/source"
+        self.app.put_json(self.source_collection, headers=self.headers)
+
+    def test_last_editor_is_tracked(self):
+        self.app.post_json(self.source_collection + "/records",
+                           {"data": {"title": "Hallo"}},
+                           headers=self.headers)
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["last_editor"] == self.userid
+
+    def test_last_promoter_is_tracked(self):
+        self.app.put_json(self.source_collection,
+                          {"data": {"status": "to-review"}},
+                          headers=self.headers)
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["last_promoter"] == self.userid
+
+    def test_last_reviewer_is_tracked(self):
+        self.app.put_json(self.source_collection,
+                          {"data": {"status": "to-sign"}},
+                          headers=self.headers)
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["last_reviewer"] == self.userid

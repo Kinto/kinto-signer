@@ -115,7 +115,7 @@ class IncludeMeTest(unittest.TestCase):
         assert signer2.server_url == "http://localhost"
 
 
-class ResourceChangedTest(unittest.TestCase):
+class OnCollectionChangedTest(unittest.TestCase):
 
     def setUp(self):
         patch = mock.patch('kinto_signer.LocalUpdater')
@@ -156,6 +156,41 @@ class ResourceChangedTest(unittest.TestCase):
         # This happens with events on default bucket for kinto < 3.3
         evt = mock.MagicMock(payload={"subpath": "collections/boom"})
         on_collection_changed(evt, resources=utils.parse_resources("a/b;c/d"))
+
+
+class BatchTest(BaseWebTest, unittest.TestCase):
+    def test_various_collections_can_be_signed_using_batch(self):
+        headers = get_user_headers('me')
+        self.app.put_json("/buckets/alice", headers=headers)
+        self.app.put_json("/buckets/alice/collections/source",
+                          headers=headers)
+        self.app.post_json("/buckets/alice/collections/source/records",
+                           {"data": {"title": "hello"}},
+                           headers=headers)
+        self.app.put_json("/buckets/bob", headers=headers)
+        self.app.put_json("/buckets/bob/collections/source",
+                          headers=headers)
+        self.app.post_json("/buckets/bob/collections/source/records",
+                           {"data": {"title": "hello"}},
+                           headers=headers)
+
+        self.app.post_json("/batch", {
+            "defaults": {
+                "method": "PATCH",
+                "body": {"data": {"status": "to-sign"}}
+            },
+            "requests": [
+                {"path": "/buckets/alice/collections/source"},
+                {"path": "/buckets/bob/collections/source"},
+            ]
+        }, headers=headers)
+
+        resp = self.app.get("/buckets/alice/collections/source",
+                            headers=headers)
+        assert resp.json["data"]["status"] == "signed"
+        resp = self.app.get("/buckets/bob/collections/source",
+                            headers=headers)
+        assert resp.json["data"]["status"] == "signed"
 
 
 class SigningErrorTest(BaseWebTest, unittest.TestCase):

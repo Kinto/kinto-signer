@@ -82,7 +82,7 @@ def sign_collection_data(event, resources):
                 updater.update_source_promoter(event.request)
 
 
-def check_collection_status(event, resources):
+def check_collection_status(event, resources, force_review):
     """Make sure status changes are allowed.
     """
     payload = event.payload
@@ -95,8 +95,7 @@ def check_collection_status(event, resources):
     promoters_group = "/buckets/{bucket_id}/groups/promoters".format(**payload)
     reviewers_group = "/buckets/{bucket_id}/groups/reviewers".format(**payload)
     current_user_id = event.request.prefixed_userid
-    # XXX event.request.effective_principals
-    current_principals = event.request.registry.permission.get_user_principals(current_user_id)
+    current_principals = event.request.effective_principals
 
     for impacted in event.impacted_records:
         old_collection = impacted.get("old", {}).copy()
@@ -117,13 +116,13 @@ def check_collection_status(event, resources):
         if old_status == new_status:
             continue
 
-        # XXX: Only allow to-review from work-in-progress
-        # XXX: lot of work in end-to-end script etc.)
-
         # Only allow to-sign from to-review if reviewer and no-editor
         if new_status == "to-sign":
             if reviewers_group not in current_principals:
                 raise_forbidden(message="Not in reviewers group")
+
+            if old_status != "to-review" and force_review:
+                raise_forbidden(message="Collection not reviewed")
 
             if old_collection.get("last_promoter") == current_user_id:
                 raise_forbidden(message="Promoter cannot review")
@@ -231,6 +230,8 @@ def includeme(config):
 
     settings = config.get_settings()
 
+    force_review = settings.get("force_review", False)
+
     # Check source and destination resources are configured.
     raw_resources = settings.get('signer.resources')
     if raw_resources is None:
@@ -260,7 +261,7 @@ def includeme(config):
     )
 
     config.add_subscriber(
-        functools.partial(check_collection_status, resources=resources),
+        functools.partial(check_collection_status, resources=resources, force_review=force_review),
         ResourceChanged,
         for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
         for_resources=('collection',)

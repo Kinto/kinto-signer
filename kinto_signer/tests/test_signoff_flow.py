@@ -85,17 +85,12 @@ class CollectionStatusTest(PostgresWebTest, unittest.TestCase):
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "work-in-progress"
 
-    # XXX
-    # def test_status_cannot_be_set_to_to_sign_without_review(self):
-    #     self.app.patch_json(self.source_collection,
-    #                         {"data": {"status": "to-sign"}},
-    #                         headers=self.headers,
-    #                         status=403)
-
-    # def test_passing_from_signed_to_to_sign_is_allowed():
-    #     """This is useful when the x5u certificate changed and you want
-    #        to retrigger a new signature."""
-    #     pass
+    def test_passing_from_signed_to_to_sign_is_allowed(self):
+        """This is useful when the x5u certificate changed and you want
+           to retrigger a new signature."""
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.other_headers)
 
     def test_status_cannot_be_set_to_signed_manually(self):
         self.app.patch_json(self.source_collection,
@@ -139,6 +134,21 @@ class CollectionStatusTest(PostgresWebTest, unittest.TestCase):
         self.app.post_json(self.source_collection + "/records",
                            {"data": {"title": "Hallo"}},
                            headers=self.headers)
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "work-in-progress"
+
+
+class ForceReviewTest(PostgresWebTest, unittest.TestCase):
+    def get_app_settings(self, extra=None):
+        settings = super(ForceReviewTest, self).get_app_settings(extra)
+        settings['force_review'] = 'true'
+        return settings
+
+    def test_status_cannot_be_set_to_to_sign_without_review(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers,
+                            status=403)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "work-in-progress"
 

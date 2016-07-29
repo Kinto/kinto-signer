@@ -285,7 +285,19 @@ class LocalUpdater(object):
             action=ACTIONS.UPDATE,
             old=collection_record)
 
+    def update_source_promoter(self, request):
+        attrs = {'last_promoter': request.prefixed_userid}
+        return self._update_source_attributes(request, **attrs)
+
     def update_source_status(self, status, request):
+        attrs = {'status': status}
+        if status == "work-in-progress":
+            attrs["last_editor"] = request.prefixed_userid
+        if status == "signed":
+            attrs["last_reviewer"] = request.prefixed_userid
+        return self._update_source_attributes(request, **attrs)
+
+    def _update_source_attributes(self, request, **kwargs):
         parent_id = '/buckets/%s' % self.source['bucket']
         collection_id = 'collection'
 
@@ -297,9 +309,7 @@ class LocalUpdater(object):
         # Update the collection_record
         new_collection = dict(**collection_record)
         new_collection.pop('last_modified', None)
-        new_collection['status'] = status
-        if status == "work-in-progress":
-            new_collection["last_editor"] = request.prefixed_userid
+        new_collection.update(**kwargs)
 
         updated = self.storage.update(
             parent_id=parent_id,

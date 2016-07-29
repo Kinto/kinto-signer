@@ -44,10 +44,7 @@ def sign_collection_data(event, resources):
         if resource is None:
             continue
 
-        # Only sign when the new collection status is "to-sign".
-        status = new_collection.get("status")
-        if status != "to-sign":
-            continue
+        new_status = new_collection.get("status")
 
         registry = event.request.registry
         updater = LocalUpdater(
@@ -57,11 +54,17 @@ def sign_collection_data(event, resources):
             source=resource['source'],
             destination=resource['destination'])
 
-        try:
-            updater.sign_and_update_destination(event.request)
-        except Exception:
-            logger.exception("Could not sign '{0}'".format(key))
-            event.request.response.status = 503
+        # Only sign when the new collection status is "to-sign".
+        if new_status == "to-sign":
+            try:
+                updater.sign_and_update_destination(event.request)
+            except Exception:
+                logger.exception("Could not sign '{0}'".format(key))
+                event.request.response.status = 503
+
+        elif new_status == "to-review":
+            if "last_promoter" not in new_collection:  # recursivity.
+                updater.update_source_promoter(event.request)
 
 
 def check_collection_status(event, resources):
@@ -91,20 +94,18 @@ def check_collection_status(event, resources):
             raise errors.http_error(httpexceptions.HTTPBadRequest(),
                                     message="Invalid status %r" % new_status)
 
-        if new_status == "to-review":
-            new_collection["last_promoter"] = event.request.prefixed_userid
-            event.request.registry.storage.update(
-                parent_id="/buckets/{bucket_id}".format(**payload),
-                collection_id='collection',
-                object_id=new_collection['id'],
-                record=new_collection)
-        elif new_status == "to-sign":
-            new_collection["last_reviewer"] = event.request.prefixed_userid
-            event.request.registry.storage.update(
-                parent_id="/buckets/{bucket_id}".format(**payload),
-                collection_id='collection',
-                object_id=new_collection['id'],
-                record=new_collection)
+        if old_status == new_status:
+            continue
+
+        # XXX: Only allow to-review from work-in-progress
+        # XXX: lot of work in end-to-end script etc.)
+
+        # Only allow to-sign from to-review if reviewer and no-editor
+        if new_status == "to-sign":
+            current_user_id = event.request.prefixed_userid
+            if old_collection.get("last_promoter") == current_user_id:
+                raise errors.http_error(httpexceptions.HTTPForbidden(),
+                                        message="Promoter cannot review")
 
         # Nobody can change back to signed
         was_changed_to_signed = (new_status == "signed" and
@@ -120,8 +121,31 @@ def check_collection_status(event, resources):
             raise errors.http_error(httpexceptions.HTTPForbidden(),
                                     message="Cannot remove status")
 
-        # Only allow to-review from work-in-progress
-        # Only allow to-sign from to-review if reviewer and no-editor
+
+def check_collection_tracking(event, resources):
+    """Make tracking fields are not changed manually/removed.
+
+    XXX: Use readonly field notion from kinto.core ?
+    """
+    payload = event.payload
+
+    if 'bucket_id' not in payload:
+        # Safety check for kinto < 3.3 where events have incoherent payloads
+        # on default bucket.
+        return
+
+    tracking_fields = ("last_editor", "last_promoter", "last_reviewer")
+
+    for impacted in event.impacted_records:
+        old_collection = impacted.get("old", {})
+        new_collection = impacted["new"]
+
+        for field in tracking_fields:
+            old = old_collection.get(field)
+            new = new_collection.get(field)
+            if old != new:
+                raise errors.http_error(httpexceptions.HTTPForbidden(),
+                                        message="Cannot change %r" % field)
 
 
 def set_work_in_progress_status(event, resources):
@@ -208,6 +232,12 @@ def includeme(config):
                               resources=resources.values())
 
     config.add_subscriber(
+        functools.partial(set_work_in_progress_status, resources=resources),
+        ResourceChanged,
+        for_resources=('record',)
+    )
+
+    config.add_subscriber(
         functools.partial(check_collection_status, resources=resources),
         ResourceChanged,
         for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
@@ -215,9 +245,10 @@ def includeme(config):
     )
 
     config.add_subscriber(
-        functools.partial(set_work_in_progress_status, resources=resources),
+        functools.partial(check_collection_tracking, resources=resources),
         ResourceChanged,
-        for_resources=('record',)
+        for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
+        for_resources=('collection',)
     )
 
     config.add_subscriber(

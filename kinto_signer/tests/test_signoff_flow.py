@@ -1,14 +1,4 @@
-# def test_changing_to_review_keep_track_of_user_asking_the_review():
-#     pass
-
 # def test_only_reviewers_can_change_status_to_to_sign():
-#     pass
-
-
-# def test_the_reviewer_cannot_be_the_one_who_asked_for_review():
-#     pass
-
-# def test_passing_from_work_in_progress_to_to_sign_is_forbidden():
 #     pass
 
 # def test_passing_from_signed_to_to_sign_is_allowed_as_a_reviewer():
@@ -70,6 +60,13 @@ class CollectionStatusTest(BaseWebTest, unittest.TestCase):
                             headers=self.headers,
                             status=400)
 
+    # XXX
+    # def test_status_cannot_be_set_to_to_sign_without_review(self):
+    #     self.app.patch_json(self.source_collection,
+    #                         {"data": {"status": "to-sign"}},
+    #                         headers=self.headers,
+    #                         status=403)
+
     def test_status_cannot_be_set_to_signed_manually(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "signed"}},
@@ -77,21 +74,21 @@ class CollectionStatusTest(BaseWebTest, unittest.TestCase):
                             status=403)
 
     def test_status_cannot_be_maintained_as_signed_manually(self):
-        self.app.put_json(self.source_collection,
-                          {"data": {"status": "to-sign"}},
-                          headers=self.headers)
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
         # Signature occured, the source collection will be signed.
-        self.app.put_json(self.source_collection,
-                          {"data": {"status": "signed"}},
-                          headers=self.headers)
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "signed"}},
+                            headers=self.headers)
         self.app.patch_json(self.source_collection,
                             {"data": {"author": "dali"}},
                             headers=self.headers)
 
     def test_status_cannot_be_removed_once_it_was_set(self):
-        self.app.put_json(self.source_collection,
-                          {"data": {"status": "to-sign"}},
-                          headers=self.headers)
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
         self.app.put_json(self.source_collection,
                           {"data": {}},
                           headers=self.headers,
@@ -101,9 +98,9 @@ class CollectionStatusTest(BaseWebTest, unittest.TestCase):
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "work-in-progress"
 
-        self.app.put_json(self.source_collection,
-                          {"data": {"status": "to-sign"}},
-                          headers=self.headers)
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
@@ -126,7 +123,9 @@ class UseridTest(BaseWebTest, unittest.TestCase):
         patch = _patch_autograph()
         self.addCleanup(patch.stop)
 
-        self.app.put_json("/buckets/alice", headers=self.headers)
+        self.app.put_json("/buckets/alice",
+                          {"permissions": {"write": ["system.Authenticated"]}},
+                          headers=self.headers)
         self.source_collection = "/buckets/alice/collections/source"
         self.app.put_json(self.source_collection, headers=self.headers)
 
@@ -138,15 +137,64 @@ class UseridTest(BaseWebTest, unittest.TestCase):
         assert resp.json["data"]["last_editor"] == self.userid
 
     def test_last_promoter_is_tracked(self):
-        self.app.put_json(self.source_collection,
-                          {"data": {"status": "to-review"}},
-                          headers=self.headers)
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["last_promoter"] == self.userid
 
     def test_last_reviewer_is_tracked(self):
-        self.app.put_json(self.source_collection,
-                          {"data": {"status": "to-sign"}},
-                          headers=self.headers)
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
         assert resp.json["data"]["last_reviewer"] == self.userid
+
+    def test_promoter_cannot_be_reviewer(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers,
+                            status=403)
+        # Try again as someone else
+        self.app.patch_json(self.source_collection,
+                            {"data": {"statut": "to-sign"}},
+                            headers=get_user_headers("Sam:Wan Heilss"))
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+
+    def test_editor_reviewer_promoter_cannot_be_changed_nor_removed(self):
+        self.app.post_json(self.source_collection + "/records",
+                           {"data": {"title": "Hallo"}},
+                           headers=self.headers)
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=get_user_headers("Sam:Wan Heilss"))
+
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        source_collection = resp.json["data"]
+        assert source_collection["status"] == "signed"
+
+        # All tracking fields are here.
+        expected = ("last_editor", "last_promoter", "last_reviewer")
+        assert all([f in source_collection for f in expected])
+
+        # They cannot be changed nor removed.
+        for f in expected:
+            self.app.patch_json(self.source_collection,
+                                {"data": {f: "changed"}},
+                                headers=self.headers,
+                                status=403)
+            changed = source_collection.copy()
+            changed.pop(f)
+            self.app.put_json(self.source_collection,
+                              {"data": changed},
+                              headers=self.headers,
+                              status=403)

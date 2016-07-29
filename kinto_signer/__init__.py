@@ -1,6 +1,7 @@
 import pkg_resources
 import functools
 
+import transaction
 from kinto.core import errors
 from kinto.core.events import ACTIONS, ResourceChanged
 from kinto import logger
@@ -13,6 +14,20 @@ from kinto_signer import utils
 
 #: Module version, as defined in PEP-0396.
 __version__ = pkg_resources.get_distribution(__package__).version
+
+
+def raise_invalid(**kwargs):
+    # We are obliged to abort explicitly because 4XX errors don't rollback
+    # transactions. See https://github.com/Kinto/kinto/issues/624
+    # Note: this only works with PostgreSQL backend since other don't
+    # implement "per-request" transactions.
+    transaction.abort()
+    raise errors.http_error(httpexceptions.HTTPBadRequest(), **kwargs)
+
+
+def raise_forbidden(**kwargs):
+    transaction.abort()
+    raise errors.http_error(httpexceptions.HTTPForbidden(), **kwargs)
 
 
 def sign_collection_data(event, resources):
@@ -77,6 +92,12 @@ def check_collection_status(event, resources):
         # on default bucket.
         return
 
+    promoters_group = "/buckets/{bucket_id}/groups/promoters".format(**payload)
+    reviewers_group = "/buckets/{bucket_id}/groups/reviewers".format(**payload)
+    current_user_id = event.request.prefixed_userid
+    # XXX event.request.effective_principals
+    current_principals = event.request.registry.permission.get_user_principals(current_user_id)
+
     for impacted in event.impacted_records:
         old_collection = impacted.get("old", {}).copy()
         old_status = old_collection.get("status")
@@ -91,8 +112,7 @@ def check_collection_status(event, resources):
             continue
 
         if new_status not in (None, "to-sign", "to-review", "signed"):
-            raise errors.http_error(httpexceptions.HTTPBadRequest(),
-                                    message="Invalid status %r" % new_status)
+            raise_invalid(message="Invalid status %r" % new_status)
 
         if old_status == new_status:
             continue
@@ -102,24 +122,27 @@ def check_collection_status(event, resources):
 
         # Only allow to-sign from to-review if reviewer and no-editor
         if new_status == "to-sign":
-            current_user_id = event.request.prefixed_userid
+            if reviewers_group not in current_principals:
+                raise_forbidden(message="Not in reviewers group")
+
             if old_collection.get("last_promoter") == current_user_id:
-                raise errors.http_error(httpexceptions.HTTPForbidden(),
-                                        message="Promoter cannot review")
+                raise_forbidden(message="Promoter cannot review")
+
+        elif new_status == "to-review":
+            if promoters_group not in current_principals:
+                raise_forbidden(message="Not in promoters group")
 
         # Nobody can change back to signed
         was_changed_to_signed = (new_status == "signed" and
                                  old_status != "signed")
         if was_changed_to_signed:
-            raise errors.http_error(httpexceptions.HTTPForbidden(),
-                                    message="Cannot set status to 'signed'")
+            raise_forbidden(message="Cannot set status to 'signed'")
 
         # Nobody can remove the status
         was_removed = (new_status is None and
                        old_status == "signed")
         if was_removed:
-            raise errors.http_error(httpexceptions.HTTPForbidden(),
-                                    message="Cannot remove status")
+            raise_forbidden(message="Cannot remove status")
 
 
 def check_collection_tracking(event, resources):
@@ -144,8 +167,7 @@ def check_collection_tracking(event, resources):
             old = old_collection.get(field)
             new = new_collection.get(field)
             if old != new:
-                raise errors.http_error(httpexceptions.HTTPForbidden(),
-                                        message="Cannot change %r" % field)
+                raise_forbidden(message="Cannot change %r" % field)
 
 
 def set_work_in_progress_status(event, resources):

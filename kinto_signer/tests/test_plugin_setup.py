@@ -171,6 +171,17 @@ class BatchTest(BaseWebTest, unittest.TestCase):
         self.app.put_json("/buckets/alice", headers=self.headers)
         self.app.put_json("/buckets/bob", headers=self.headers)
 
+        # Patch calls to Autograph.
+        patch = mock.patch('kinto_signer.signer.autograph.requests')
+        self.mock = patch.start()
+        self.addCleanup(patch.stop)
+        self.mock.post.return_value.json.return_value = [{
+            "signature": "",
+            "hash_algorithm": "",
+            "signature_encoding": "",
+            "content-signature": "",
+            "x5u": ""}]
+
     def test_various_collections_can_be_signed_using_batch(self):
         self.app.put_json("/buckets/alice/collections/source",
                           headers=self.headers)
@@ -196,24 +207,24 @@ class BatchTest(BaseWebTest, unittest.TestCase):
         assert resp.json["data"]["status"] == "signed"
 
     def test_various_collections_can_be_signed_using_batch_creation(self):
-            self.app.post_json("/batch", {
-                "defaults": {
-                    "method": "POST",
-                    "path": "/buckets/alice/collections"
-                },
-                "requests": [
-                    {"body": {"data": {"id": "source", "status": "to-sign"}}},
-                    {"body": {"data": {"id": "ignored", "status": "to-sign"}}},
-                    {"body": {"data": {"id": "from", "status": "to-sign"}}}
-                ]
-            }, headers=self.headers)
+        self.app.post_json("/batch", {
+            "defaults": {
+                "method": "POST",
+                "path": "/buckets/alice/collections"
+            },
+            "requests": [
+                {"body": {"data": {"id": "source", "status": "to-sign"}}},
+                {"body": {"data": {"id": "ignored", "status": "to-sign"}}},
+                {"body": {"data": {"id": "from", "status": "to-sign"}}}
+            ]
+        }, headers=self.headers)
 
-            resp = self.app.get("/buckets/alice/collections/source",
-                                headers=self.headers)
-            assert resp.json["data"]["status"] == "signed"
-            resp = self.app.get("/buckets/alice/collections/from",
-                                headers=self.headers)
-            assert resp.json["data"]["status"] == "signed"
+        resp = self.app.get("/buckets/alice/collections/source",
+                            headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+        resp = self.app.get("/buckets/alice/collections/from",
+                            headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
 
 
 class SigningErrorTest(BaseWebTest, unittest.TestCase):

@@ -1,8 +1,10 @@
 import pkg_resources
 import functools
 
+from kinto.core import errors
 from kinto.core.events import ACTIONS, ResourceChanged
 from kinto import logger
+from pyramid import httpexceptions
 from pyramid.exceptions import ConfigurationError
 
 from kinto_signer.updater import LocalUpdater
@@ -66,22 +68,70 @@ def check_collection_status(event, resources):
     """Make sure status changes are allowed.
     """
     payload = event.payload
-    key = "/buckets/{bucket_id}/collections/{collection_id}".format(**payload)
-    resource = resources.get(key)
 
-    # Only sign the configured resources.
-    if resource is None:
+    if 'bucket_id' not in payload:
+        # Safety check for kinto < 3.3 where events have incoherent payloads
+        # on default bucket.
         return
 
-    # Only allow to-review from work-in-progress
-    # Only allow to-sign from to-review if reviewer and no-editor
-    # Nobody can change back to signed
+    for impacted in event.impacted_records:
+        old_collection = impacted.get("old", {})
+        old_status = old_collection.get("status")
+        new_collection = impacted["new"]
+        new_status = new_collection.get("status")
+
+        key = "/buckets/{bucket_id}/collections/{collection_id}".format(
+            bucket_id=payload["bucket_id"],
+            collection_id=new_collection["id"])
+
+        if key not in resources:
+            continue
+
+        if new_status not in (None, "to-sign", "signed"):
+            raise errors.http_error(httpexceptions.HTTPBadRequest(),
+                                    message="Invalid status %r" % new_status)
+
+        # Nobody can change back to signed
+        was_changed_to_signed = (new_status == "signed" and
+                                 old_status != "signed")
+        if was_changed_to_signed:
+            raise errors.http_error(httpexceptions.HTTPForbidden(),
+                                    message="Cannot set status to 'signed'")
+
+        # Nobody can remove the status
+        was_removed = (new_status is None and
+                       old_status == "signed")
+        if was_removed:
+            raise errors.http_error(httpexceptions.HTTPForbidden(),
+                                    message="Cannot remove status")
+
+        # Only allow to-review from work-in-progress
+        # Only allow to-sign from to-review if reviewer and no-editor
 
 
 def set_work_in_progress_status(event, resources):
     """Put the status in work-in-progress if was signed.
     """
-    pass
+    payload = event.payload
+
+    if 'bucket_id' not in payload:
+        # Safety check for kinto < 3.3 where events have incoherent payloads
+        # on default bucket.
+        return
+
+    key = "/buckets/{bucket_id}/collections/{collection_id}".format(**payload)
+    resource = resources.get(key)
+    if resource is None:
+        return
+
+    registry = event.request.registry
+    updater = LocalUpdater(
+        signer=registry.signers[key],
+        storage=registry.storage,
+        permission=registry.permission,
+        source=resource['source'],
+        destination=resource['destination'])
+    updater.update_source_status("work-in-progress", event.request)
 
 
 def _signer_dotted_location(settings, resource):

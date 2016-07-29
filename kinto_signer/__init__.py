@@ -117,14 +117,22 @@ def check_collection_status(event, resources, force_review, force_groups):
         if key not in resources:
             continue
 
-        if new_status not in (None, "to-sign", "to-review", "signed"):
-            raise_invalid(message="Invalid status %r" % new_status)
-
         if old_status == new_status:
             continue
 
-        # Only allow to-sign from to-review if reviewer and no-editor
-        if new_status == "to-sign":
+        # Only these status can be set manually.
+        if new_status in ("work-in-progress", "signed"):
+            raise_forbidden(message="Cannot set status to '%s'" % new_status)
+
+        # 1. None -> work-in-progress
+        # 2. work-in-progress -> to-review
+        elif new_status == "to-review":
+            if promoters_group not in current_principals and force_groups:
+                raise_forbidden(message="Not in promoters group")
+
+        # 3. to-review -> to-sign
+        elif new_status == "to-sign":
+            # Only allow to-sign from to-review if reviewer and no-editor
             if reviewers_group not in current_principals and force_groups:
                 raise_forbidden(message="Not in reviewers group")
 
@@ -134,17 +142,14 @@ def check_collection_status(event, resources, force_review, force_groups):
             if old_collection.get("last_promoter") == current_user_id:
                 raise_forbidden(message="Promoter cannot review")
 
-        elif new_status == "to-review":
-            if promoters_group not in current_principals and force_groups:
-                raise_forbidden(message="Not in promoters group")
+        # 4. to-sign -> signed
 
-        elif new_status is None and old_status is not None:
-            # Nobody can remove the status
+        # Nobody can remove the status
+        elif new_status is None:
             raise_forbidden(message="Cannot remove status")
-
-        elif new_status == "signed":
-            # Nobody can set to signed
-            raise_forbidden(message="Cannot set status to 'signed'")
+        # Unknown manual status
+        else:
+            raise_invalid(message="Invalid status '%s'" % new_status)
 
 
 def check_collection_tracking(event, resources):

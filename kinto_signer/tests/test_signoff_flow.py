@@ -115,6 +115,15 @@ class CollectionStatusTest(PostgresWebTest, unittest.TestCase):
                           headers=self.headers,
                           status=403)
 
+    def test_status_cannot_be_emptied_once_it_was_set(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
+        self.app.put_json(self.source_collection,
+                          {"data": {"status": ""}},
+                          headers=self.headers,
+                          status=400)
+
     def test_status_can_be_reset(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},

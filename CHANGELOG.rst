@@ -6,7 +6,10 @@ This document describes changes between each past release.
 0.8.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Fix crash when several collections are created with status: to-sign using
+  a batch request (fixes #116)
 
 
 0.7.3 (2016-07-27)

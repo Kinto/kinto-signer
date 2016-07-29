@@ -29,32 +29,37 @@ def on_collection_changed(event, resources):
         # on default bucket.
         return
 
-    key = "/buckets/{bucket_id}/collections/{collection_id}".format(**payload)
-    resource = resources.get(key)
+    for impacted in event.impacted_records:
+        new_collection = impacted['new']
 
-    # Only sign the configured resources.
-    if resource is None:
-        return
+        key = "/buckets/{bucket_id}/collections/{collection_id}".format(
+            collection_id=new_collection['id'],
+            bucket_id=payload['bucket_id'])
 
-    # Only sign when the new collection status is "to-sign".
-    should_sign = any([True for r in event.impacted_records
-                       if r['new'].get('status') == 'to-sign'])
-    if not should_sign:
-        return
+        resource = resources.get(key)
 
-    registry = event.request.registry
-    updater = LocalUpdater(
-        signer=registry.signers[key],
-        storage=registry.storage,
-        permission=registry.permission,
-        source=resource['source'],
-        destination=resource['destination'])
+        # Only sign the configured resources.
+        if resource is None:
+            continue
 
-    try:
-        updater.sign_and_update_destination(event.request)
-    except Exception:
-        logger.exception("Could not sign '{0}'".format(key))
-        event.request.response.status = 503
+        # Only sign when the new collection status is "to-sign".
+        status = new_collection.get("status")
+        if status != "to-sign":
+            continue
+
+        registry = event.request.registry
+        updater = LocalUpdater(
+            signer=registry.signers[key],
+            storage=registry.storage,
+            permission=registry.permission,
+            source=resource['source'],
+            destination=resource['destination'])
+
+        try:
+            updater.sign_and_update_destination(event.request)
+        except Exception:
+            logger.exception("Could not sign '{0}'".format(key))
+            event.request.response.status = 503
 
 
 def _signer_dotted_location(settings, resource):

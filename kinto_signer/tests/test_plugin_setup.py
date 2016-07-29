@@ -30,6 +30,10 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
                                  "collection": "destination"},
                  "source": {"bucket": "alice",
                             "collection": "source"}},
+                {"destination": {"bucket": "alice",
+                                 "collection": "to"},
+                 "source": {"bucket": "alice",
+                            "collection": "from"}},
                 {"destination": {"bucket": "bob",
                                  "collection": "destination"},
                  "source": {"bucket": "bob",
@@ -115,7 +119,7 @@ class IncludeMeTest(unittest.TestCase):
         assert signer2.server_url == "http://localhost"
 
 
-class ResourceChangedTest(unittest.TestCase):
+class OnCollectionChangedTest(unittest.TestCase):
 
     def setUp(self):
         patch = mock.patch('kinto_signer.LocalUpdater')
@@ -129,13 +133,15 @@ class ResourceChangedTest(unittest.TestCase):
 
     def test_nothing_happens_when_status_is_not_to_sign(self):
         evt = mock.MagicMock(payload={"bucket_id": "a", "collection_id": "b"},
-                             impacted_records=[{"new": {"status": "signed"}}])
+                             impacted_records=[{
+                                 "new": {"id": "b", "status": "signed"}}])
         on_collection_changed(evt, resources=utils.parse_resources("a/b;c/d"))
         assert not self.updater_mocked.called
 
     def test_updater_is_called_when_resource_and_status_matches(self):
         evt = mock.MagicMock(payload={"bucket_id": "a", "collection_id": "b"},
-                             impacted_records=[{"new": {"status": "to-sign"}}])
+                             impacted_records=[{
+                                 "new": {"id": "b", "status": "to-sign"}}])
         evt.request.registry.storage = mock.sentinel.storage
         evt.request.registry.permission = mock.sentinel.permission
         evt.request.registry.signers = {
@@ -156,6 +162,69 @@ class ResourceChangedTest(unittest.TestCase):
         # This happens with events on default bucket for kinto < 3.3
         evt = mock.MagicMock(payload={"subpath": "collections/boom"})
         on_collection_changed(evt, resources=utils.parse_resources("a/b;c/d"))
+
+
+class BatchTest(BaseWebTest, unittest.TestCase):
+    def setUp(self):
+        super(BatchTest, self).setUp()
+        self.headers = get_user_headers('me')
+        self.app.put_json("/buckets/alice", headers=self.headers)
+        self.app.put_json("/buckets/bob", headers=self.headers)
+
+        # Patch calls to Autograph.
+        patch = mock.patch('kinto_signer.signer.autograph.requests')
+        self.mock = patch.start()
+        self.addCleanup(patch.stop)
+        self.mock.post.return_value.json.return_value = [{
+            "signature": "",
+            "hash_algorithm": "",
+            "signature_encoding": "",
+            "content-signature": "",
+            "x5u": ""}]
+
+    def test_various_collections_can_be_signed_using_batch(self):
+        self.app.put_json("/buckets/alice/collections/source",
+                          headers=self.headers)
+        self.app.put_json("/buckets/bob/collections/source",
+                          headers=self.headers)
+
+        self.app.post_json("/batch", {
+            "defaults": {
+                "method": "PATCH",
+                "body": {"data": {"status": "to-sign"}}
+            },
+            "requests": [
+                {"path": "/buckets/alice/collections/source"},
+                {"path": "/buckets/bob/collections/source"},
+            ]
+        }, headers=self.headers)
+
+        resp = self.app.get("/buckets/alice/collections/source",
+                            headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+        resp = self.app.get("/buckets/bob/collections/source",
+                            headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+
+    def test_various_collections_can_be_signed_using_batch_creation(self):
+        self.app.post_json("/batch", {
+            "defaults": {
+                "method": "POST",
+                "path": "/buckets/alice/collections"
+            },
+            "requests": [
+                {"body": {"data": {"id": "source", "status": "to-sign"}}},
+                {"body": {"data": {"id": "ignored", "status": "to-sign"}}},
+                {"body": {"data": {"id": "from", "status": "to-sign"}}}
+            ]
+        }, headers=self.headers)
+
+        resp = self.app.get("/buckets/alice/collections/source",
+                            headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+        resp = self.app.get("/buckets/alice/collections/from",
+                            headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
 
 
 class SigningErrorTest(BaseWebTest, unittest.TestCase):

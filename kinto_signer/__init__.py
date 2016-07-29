@@ -121,7 +121,7 @@ def check_collection_status(event, resources, force_review):
             if reviewers_group not in current_principals:
                 raise_forbidden(message="Not in reviewers group")
 
-            if old_status != "to-review" and force_review:
+            if old_status not in ("to-review", "signed") and force_review:
                 raise_forbidden(message="Collection not reviewed")
 
             if old_collection.get("last_promoter") == current_user_id:

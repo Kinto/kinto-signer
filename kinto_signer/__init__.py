@@ -131,17 +131,13 @@ def check_collection_status(event, resources, force_review):
             if promoters_group not in current_principals:
                 raise_forbidden(message="Not in promoters group")
 
-        # Nobody can change back to signed
-        was_changed_to_signed = (new_status == "signed" and
-                                 old_status != "signed")
-        if was_changed_to_signed:
-            raise_forbidden(message="Cannot set status to 'signed'")
-
-        # Nobody can remove the status
-        was_removed = (new_status is None and
-                       old_status == "signed")
-        if was_removed:
+        elif new_status is None and old_status is not None:
+            # Nobody can remove the status
             raise_forbidden(message="Cannot remove status")
+
+        elif new_status == "signed":
+            # Nobody can set to signed
+            raise_forbidden(message="Cannot set status to 'signed'")
 
 
 def check_collection_tracking(event, resources):

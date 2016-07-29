@@ -86,10 +86,11 @@ class CollectionStatusTest(PostgresWebTest, unittest.TestCase):
         assert resp.json["data"]["status"] == "work-in-progress"
 
     def test_status_cannot_be_set_to_signed_manually(self):
-        self.app.patch_json(self.source_collection,
-                            {"data": {"status": "signed"}},
-                            headers=self.headers,
-                            status=403)
+        resp = self.app.patch_json(self.source_collection,
+                                   {"data": {"status": "signed"}},
+                                   headers=self.headers,
+                                   status=403)
+        assert resp.json["message"] == "Cannot set status to 'signed'"
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "work-in-progress"
 

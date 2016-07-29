@@ -28,6 +28,8 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         settings['cache_backend'] = 'kinto.core.cache.memory'
         settings['permission_backend'] = 'kinto.core.permission.memory'
 
+        settings['signer.force_groups'] = 'false'
+
         settings['includes'] = 'kinto_signer'
         settings['signer.ecdsa.private_key'] = os.path.join(
             here, 'config', 'ecdsa.private.pem')

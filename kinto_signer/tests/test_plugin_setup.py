@@ -5,7 +5,7 @@ from pyramid import testing
 from pyramid.exceptions import ConfigurationError
 from requests import exceptions as requests_exceptions
 
-from kinto_signer import on_collection_changed, __version__ as signer_version
+from kinto_signer import sign_collection_data, __version__ as signer_version
 from kinto_signer.signer.autograph import AutographSigner
 from kinto_signer import includeme
 from kinto_signer import utils
@@ -128,14 +128,14 @@ class OnCollectionChangedTest(unittest.TestCase):
 
     def test_nothing_happens_when_resource_is_not_configured(self):
         evt = mock.MagicMock(payload={"bucket_id": "a", "collection_id": "b"})
-        on_collection_changed(evt, resources=utils.parse_resources("c/d;e/f"))
+        sign_collection_data(evt, resources=utils.parse_resources("c/d;e/f"))
         assert not self.updater_mocked.called
 
     def test_nothing_happens_when_status_is_not_to_sign(self):
         evt = mock.MagicMock(payload={"bucket_id": "a", "collection_id": "b"},
                              impacted_records=[{
                                  "new": {"id": "b", "status": "signed"}}])
-        on_collection_changed(evt, resources=utils.parse_resources("a/b;c/d"))
+        sign_collection_data(evt, resources=utils.parse_resources("a/b;c/d"))
         assert not self.updater_mocked.called
 
     def test_updater_is_called_when_resource_and_status_matches(self):
@@ -147,7 +147,7 @@ class OnCollectionChangedTest(unittest.TestCase):
         evt.request.registry.signers = {
             "/buckets/a/collections/b": mock.sentinel.signer
         }
-        on_collection_changed(evt, resources=utils.parse_resources("a/b;c/d"))
+        sign_collection_data(evt, resources=utils.parse_resources("a/b;c/d"))
         self.updater_mocked.assert_called_with(
             signer=mock.sentinel.signer,
             storage=mock.sentinel.storage,
@@ -161,7 +161,7 @@ class OnCollectionChangedTest(unittest.TestCase):
     def test_updater_does_not_fail_when_payload_is_inconsistent(self):
         # This happens with events on default bucket for kinto < 3.3
         evt = mock.MagicMock(payload={"subpath": "collections/boom"})
-        on_collection_changed(evt, resources=utils.parse_resources("a/b;c/d"))
+        sign_collection_data(evt, resources=utils.parse_resources("a/b;c/d"))
 
 
 class BatchTest(BaseWebTest, unittest.TestCase):
@@ -240,7 +240,7 @@ class SigningErrorTest(BaseWebTest, unittest.TestCase):
         rc = '/buckets/alice/collections/source'
         self.app.app.registry.signers[rc].server_url = 'http://0.0.0.0:1234'
 
-        self.app.put_json("/buckets/alice/collections/source",
-                          {"data": {"status": "to-sign"}},
-                          headers=headers,
-                          status=503)
+        self.app.patch_json("/buckets/alice/collections/source",
+                            {"data": {"status": "to-sign"}},
+                            headers=headers,
+                            status=503)

@@ -3,6 +3,7 @@ import functools
 
 import transaction
 from kinto.core import errors
+from kinto.core.initialization import load_default_settings
 from kinto.core.events import ACTIONS, ResourceChanged
 from kinto import logger
 from pyramid import httpexceptions
@@ -14,6 +15,12 @@ from kinto_signer import utils
 
 #: Module version, as defined in PEP-0396.
 __version__ = pkg_resources.get_distribution(__package__).version
+
+
+DEFAULT_SETTINGS = {
+    'signer.force_review': 'false',
+    'signer.force_groups': 'true',
+}
 
 
 def raise_invalid(**kwargs):
@@ -82,7 +89,7 @@ def sign_collection_data(event, resources):
                 updater.update_source_promoter(event.request)
 
 
-def check_collection_status(event, resources, force_review):
+def check_collection_status(event, resources, force_review, force_groups):
     """Make sure status changes are allowed.
     """
     payload = event.payload
@@ -118,7 +125,7 @@ def check_collection_status(event, resources, force_review):
 
         # Only allow to-sign from to-review if reviewer and no-editor
         if new_status == "to-sign":
-            if reviewers_group not in current_principals:
+            if reviewers_group not in current_principals and force_groups:
                 raise_forbidden(message="Not in reviewers group")
 
             if old_status not in ("to-review", "signed") and force_review:
@@ -128,7 +135,7 @@ def check_collection_status(event, resources, force_review):
                 raise_forbidden(message="Promoter cannot review")
 
         elif new_status == "to-review":
-            if promoters_group not in current_principals:
+            if promoters_group not in current_principals and force_groups:
                 raise_forbidden(message="Not in promoters group")
 
         elif new_status is None and old_status is not None:
@@ -226,7 +233,10 @@ def includeme(config):
 
     settings = config.get_settings()
 
-    force_review = settings.get("force_review", False)
+    load_default_settings(config, DEFAULT_SETTINGS)
+
+    force_review = settings["signer.force_review"]
+    force_groups = settings["signer.force_groups"]
 
     # Check source and destination resources are configured.
     raw_resources = settings.get('signer.resources')
@@ -257,7 +267,8 @@ def includeme(config):
     )
 
     config.add_subscriber(
-        functools.partial(check_collection_status, resources=resources, force_review=force_review),
+        functools.partial(check_collection_status, resources=resources,
+                          force_review=force_review, force_groups=force_groups),
         ResourceChanged,
         for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
         for_resources=('collection',)

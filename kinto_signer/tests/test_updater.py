@@ -158,6 +158,7 @@ class LocalUpdaterTest(unittest.TestCase):
             parent_id='/buckets/sourcebucket',
             record={
                 'id': 1234,
+                'last_reviewer': 'basicauth:bob',
                 'status': "signed"
             })
 

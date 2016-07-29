@@ -85,8 +85,8 @@ def sign_collection_data(event, resources):
                 event.request.response.status = 503
 
         elif new_status == "to-review":
-            if "last_promoter" not in new_collection:  # recursivity.
-                updater.update_source_promoter(event.request)
+            if "last_editor" not in new_collection:  # recursivity.
+                updater.update_source_editor(event.request)
 
 
 def check_collection_status(event, resources, force_review, force_groups):
@@ -99,7 +99,7 @@ def check_collection_status(event, resources, force_review, force_groups):
         # on default bucket.
         return
 
-    promoters_group = "/buckets/{bucket_id}/groups/promoters".format(**payload)
+    editors_group = "/buckets/{bucket_id}/groups/editors".format(**payload)
     reviewers_group = "/buckets/{bucket_id}/groups/reviewers".format(**payload)
     current_user_id = event.request.prefixed_userid
     current_principals = event.request.effective_principals
@@ -127,8 +127,8 @@ def check_collection_status(event, resources, force_review, force_groups):
         # 1. None -> work-in-progress
         # 2. work-in-progress -> to-review
         elif new_status == "to-review":
-            if promoters_group not in current_principals and force_groups:
-                raise_forbidden(message="Not in promoters group")
+            if editors_group not in current_principals and force_groups:
+                raise_forbidden(message="Not in editors group")
 
         # 3. to-review -> to-sign
         elif new_status == "to-sign":
@@ -139,8 +139,8 @@ def check_collection_status(event, resources, force_review, force_groups):
             if old_status not in ("to-review", "signed") and force_review:
                 raise_forbidden(message="Collection not reviewed")
 
-            if old_collection.get("last_promoter") == current_user_id:
-                raise_forbidden(message="Promoter cannot review")
+            if old_collection.get("last_editor") == current_user_id:
+                raise_forbidden(message="Editor cannot review")
 
         # 4. to-sign -> signed
 
@@ -164,7 +164,7 @@ def check_collection_tracking(event, resources):
         # on default bucket.
         return
 
-    tracking_fields = ("last_editor", "last_promoter", "last_reviewer")
+    tracking_fields = ("last_author", "last_editor", "last_reviewer")
 
     for impacted in event.impacted_records:
         old_collection = impacted.get("old", {})

@@ -285,14 +285,14 @@ class LocalUpdater(object):
             action=ACTIONS.UPDATE,
             old=collection_record)
 
-    def update_source_promoter(self, request):
-        attrs = {'last_promoter': request.prefixed_userid}
+    def update_source_editor(self, request):
+        attrs = {'last_editor': request.prefixed_userid}
         return self._update_source_attributes(request, **attrs)
 
     def update_source_status(self, status, request):
         attrs = {'status': status}
         if status == "work-in-progress":
-            attrs["last_editor"] = request.prefixed_userid
+            attrs["last_author"] = request.prefixed_userid
         if status == "signed":
             attrs["last_reviewer"] = request.prefixed_userid
         return self._update_source_attributes(request, **attrs)

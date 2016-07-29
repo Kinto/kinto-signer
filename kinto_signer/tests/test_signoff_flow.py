@@ -38,7 +38,7 @@ class PostgresWebTest(BaseWebTest):
         self.app.put_json("/buckets/alice",
                           {"permissions": {"write": ["system.Authenticated"]}},
                           headers=self.headers)
-        self.app.put_json("/buckets/alice/groups/promoters",
+        self.app.put_json("/buckets/alice/groups/editors",
                           {"data": {"members": [self.userid, self.other_userid]}},
                           headers=self.headers)
         self.app.put_json("/buckets/alice/groups/reviewers",
@@ -189,19 +189,19 @@ class ForceReviewTest(PostgresWebTest, unittest.TestCase):
 
 class TrackingFieldsTest(PostgresWebTest, unittest.TestCase):
 
-    def test_last_editor_is_tracked(self):
+    def last_author_is_tracked(self):
         self.app.post_json(self.source_collection + "/records",
                            {"data": {"title": "Hallo"}},
                            headers=self.headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
-        assert resp.json["data"]["last_editor"] == self.userid
+        assert resp.json["data"]["last_author"] == self.userid
 
-    def test_last_promoter_is_tracked(self):
+    def test_last_editor_is_tracked(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
                             headers=self.headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
-        assert resp.json["data"]["last_promoter"] == self.userid
+        assert resp.json["data"]["last_editor"] == self.userid
 
     def test_last_reviewer_is_tracked(self):
         self.app.patch_json(self.source_collection,
@@ -211,7 +211,7 @@ class TrackingFieldsTest(PostgresWebTest, unittest.TestCase):
         assert resp.json["data"]["status"] == "signed"
         assert resp.json["data"]["last_reviewer"] == self.userid
 
-    def test_promoter_cannot_be_reviewer(self):
+    def test_editor_cannot_be_reviewer(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
                             headers=self.headers)
@@ -230,7 +230,7 @@ class TrackingFieldsTest(PostgresWebTest, unittest.TestCase):
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
-    def test_editor_reviewer_promoter_cannot_be_changed_nor_removed(self):
+    def test_editor_reviewer_editor_cannot_be_changed_nor_removed(self):
         self.app.post_json(self.source_collection + "/records",
                            {"data": {"title": "Hallo"}},
                            headers=self.headers)
@@ -246,7 +246,7 @@ class TrackingFieldsTest(PostgresWebTest, unittest.TestCase):
         assert source_collection["status"] == "signed"
 
         # All tracking fields are here.
-        expected = ("last_editor", "last_promoter", "last_reviewer")
+        expected = ("last_author", "last_editor", "last_reviewer")
         assert all([f in source_collection for f in expected])
 
         # They cannot be changed nor removed.
@@ -275,23 +275,23 @@ class UserGroupsTest(PostgresWebTest, unittest.TestCase):
         resp = self.app.get("/", headers=self.editor_headers)
         self.editor = resp.json["user"]["id"]
 
-        self.promoter_headers = get_user_headers('emo:billier')
-        resp = self.app.get("/", headers=self.promoter_headers)
-        self.promoter = resp.json["user"]["id"]
+        self.editor_headers = get_user_headers('emo:billier')
+        resp = self.app.get("/", headers=self.editor_headers)
+        self.editor = resp.json["user"]["id"]
 
         self.reviewer_headers = get_user_headers('ray:weaver')
         resp = self.app.get("/", headers=self.reviewer_headers)
         self.reviewer = resp.json["user"]["id"]
 
-        self.app.put_json("/buckets/alice/groups/promoters",
-                          {"data": {"members": [self.promoter]}},
+        self.app.put_json("/buckets/alice/groups/editors",
+                          {"data": {"members": [self.editor]}},
                           headers=self.headers)
 
         self.app.put_json("/buckets/alice/groups/reviewers",
                           {"data": {"members": [self.reviewer]}},
                           headers=self.headers)
 
-    def test_only_promoters_can_ask_to_review(self):
+    def test_only_editors_can_ask_to_review(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
                             headers=self.editor_headers,
@@ -303,12 +303,12 @@ class UserGroupsTest(PostgresWebTest, unittest.TestCase):
                             status=403)
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
-                            headers=self.promoter_headers)
+                            headers=self.editor_headers)
 
     def test_only_reviewers_can_ask_to_sign(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
-                            headers=self.promoter_headers)
+                            headers=self.editor_headers)
 
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
@@ -316,7 +316,7 @@ class UserGroupsTest(PostgresWebTest, unittest.TestCase):
                             status=403)
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
-                            headers=self.promoter_headers,
+                            headers=self.editor_headers,
                             status=403)
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},

@@ -136,7 +136,7 @@ class OnCollectionChangedTest(unittest.TestCase):
                              impacted_records=[{
                                  "new": {"id": "b", "status": "signed"}}])
         sign_collection_data(evt, resources=utils.parse_resources("a/b;c/d"))
-        assert not self.updater_mocked.called
+        assert not self.updater_mocked.sign_and_update_destination.called
 
     def test_updater_is_called_when_resource_and_status_matches(self):
         evt = mock.MagicMock(payload={"bucket_id": "a", "collection_id": "b"},

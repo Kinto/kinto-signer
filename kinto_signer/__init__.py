@@ -8,6 +8,7 @@ from kinto.core.events import ACTIONS, ResourceChanged
 from kinto import logger
 from pyramid import httpexceptions
 from pyramid.exceptions import ConfigurationError
+from pyramid.settings import asbool
 
 from kinto_signer.updater import LocalUpdater
 from kinto_signer.signer import heartbeat
@@ -24,16 +25,12 @@ DEFAULT_SETTINGS = {
 
 
 def raise_invalid(**kwargs):
-    # We are obliged to abort explicitly because 4XX errors don't rollback
-    # transactions. See https://github.com/Kinto/kinto/issues/624
-    # Note: this only works with PostgreSQL backend since other don't
-    # implement "per-request" transactions.
-    transaction.abort()
+    transaction.doom()
     raise errors.http_error(httpexceptions.HTTPBadRequest(), **kwargs)
 
 
 def raise_forbidden(**kwargs):
-    transaction.abort()
+    transaction.doom()
     raise errors.http_error(httpexceptions.HTTPForbidden(), **kwargs)
 
 
@@ -66,18 +63,16 @@ def sign_collection_data(event, resources):
         if resource is None:
             continue
 
-        new_status = new_collection.get("status")
-
         registry = event.request.registry
-        updater = LocalUpdater(
-            signer=registry.signers[key],
-            storage=registry.storage,
-            permission=registry.permission,
-            source=resource['source'],
-            destination=resource['destination'])
+        updater = LocalUpdater(signer=registry.signers[key],
+                               storage=registry.storage,
+                               permission=registry.permission,
+                               source=resource['source'],
+                               destination=resource['destination'])
 
-        # Only sign when the new collection status is "to-sign".
+        new_status = new_collection.get("status")
         if new_status == "to-sign":
+            # Run signature process (will set `last_reviewer` field).
             try:
                 updater.sign_and_update_destination(event.request)
             except Exception:
@@ -85,7 +80,8 @@ def sign_collection_data(event, resources):
                 event.request.response.status = 503
 
         elif new_status == "to-review":
-            if "last_editor" not in new_collection:  # recursivity.
+            # Track `last_editor`
+            if "last_editor" not in new_collection:  # XXX why recursivity ?
                 updater.update_source_editor(event.request)
 
 
@@ -153,7 +149,7 @@ def check_collection_status(event, resources, force_review, force_groups):
 
 
 def check_collection_tracking(event, resources):
-    """Make tracking fields are not changed manually/removed.
+    """Make sure tracking fields are not changed manually/removed.
 
     XXX: Use readonly field notion from kinto.core ?
     """
@@ -240,8 +236,8 @@ def includeme(config):
 
     load_default_settings(config, DEFAULT_SETTINGS)
 
-    force_review = settings["signer.force_review"]
-    force_groups = settings["signer.force_groups"]
+    force_review = asbool(settings["signer.force_review"])
+    force_groups = asbool(settings["signer.force_groups"])
 
     # Check source and destination resources are configured.
     raw_resources = settings.get('signer.resources')

@@ -268,8 +268,10 @@ def includeme(config):
     )
 
     config.add_subscriber(
-        functools.partial(check_collection_status, resources=resources,
-                          force_review=force_review, force_groups=force_groups),
+        functools.partial(check_collection_status,
+                          resources=resources,
+                          force_review=force_review,
+                          force_groups=force_groups),
         ResourceChanged,
         for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
         for_resources=('collection',)

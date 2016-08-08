@@ -39,10 +39,12 @@ class PostgresWebTest(BaseWebTest):
                           {"permissions": {"write": ["system.Authenticated"]}},
                           headers=self.headers)
         self.app.put_json("/buckets/alice/groups/editors",
-                          {"data": {"members": [self.userid, self.other_userid]}},
+                          {"data": {"members": [self.userid,
+                                                self.other_userid]}},
                           headers=self.headers)
         self.app.put_json("/buckets/alice/groups/reviewers",
-                          {"data": {"members": [self.userid, self.other_userid]}},
+                          {"data": {"members": [self.userid,
+                                                self.other_userid]}},
                           headers=self.headers)
         self.app.put_json(self.source_collection, headers=self.headers)
         self.app.post_json(self.source_collection + "/records",

@@ -1,4 +1,4 @@
-from kinto_client import cli_utils
+from kinto_http import cli_utils
 from kinto_signer.serializer import canonical_json
 from kinto_signer.hasher import compute_hash
 from kinto_signer.signer.local_ecdsa import ECDSASigner

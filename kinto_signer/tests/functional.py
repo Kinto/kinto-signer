@@ -8,19 +8,12 @@ import requests
 from kinto_signer.serializer import canonical_json
 from kinto_signer.signer import local_ecdsa
 
-from kinto_client import Client
+from kinto_http import Client
 
 __HERE__ = os.path.abspath(os.path.dirname(__file__))
 
 SERVER_URL = "http://localhost:8888/v1"
 DEFAULT_AUTH = ('user', 'p4ssw0rd')
-
-
-def collection_timestamp(client):
-    # XXXX Waiting https://github.com/Kinto/kinto-http.py/issues/77
-    endpoint = client.get_endpoint('records')
-    record_resp, headers = client.session.request('get', endpoint)
-    return headers.get('ETag', '').strip('"')
 
 
 class BaseTestFunctional(object):
@@ -84,8 +77,8 @@ class BaseTestFunctional(object):
         source_collection = self.source.get_collection()['data']
         assert source_collection['status'] == 'signed'
 
-        assert (collection_timestamp(self.destination) ==
-                collection_timestamp(self.source))
+        assert (self.source.get_records_timestamp() ==
+                self.destination.get_records_timestamp())
 
     def test_destination_creation_and_new_records_signature(self):
         # Create some records and trigger another signature.
@@ -102,7 +95,7 @@ class BaseTestFunctional(object):
 
         records = self.destination.get_records()
         assert len(records) == 12
-        last_modified = collection_timestamp(self.destination)
+        last_modified = self.destination.get_records_timestamp()
         serialized_records = canonical_json(records, last_modified)
         # This raises when the signature is invalid.
         self.signer.verify(serialized_records, signature)
@@ -126,7 +119,7 @@ class BaseTestFunctional(object):
 
         records = self.destination.get_records()
         assert len(records) == 10
-        last_modified = collection_timestamp(self.destination)
+        last_modified = self.destination.get_records_timestamp()
         serialized_records = canonical_json(records, last_modified)
         # This raises when the signature is invalid.
         self.signer.verify(serialized_records, signature)
@@ -146,7 +139,7 @@ class BaseTestFunctional(object):
 
         records = self.destination.get_records(_since=0)  # obtain deleted too
         assert len(records) == 10  # two of them are deleted.
-        last_modified = collection_timestamp(self.destination)
+        last_modified = self.destination.get_records_timestamp()
         serialized_records = canonical_json(records, last_modified)
         # This raises when the signature is invalid.
         self.signer.verify(serialized_records, signature)

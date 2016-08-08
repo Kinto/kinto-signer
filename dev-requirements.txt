@@ -9,3 +9,4 @@ pytest-sugar
 tox
 unittest2
 webtest
+kinto[postgresql]

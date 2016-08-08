@@ -90,7 +90,7 @@ def check_collection_status(event, resources, force_review, force_groups):
     """
     payload = event.payload
 
-    if 'bucket_id' not in payload:
+    if 'bucket_id' not in payload:  # Pragma: no cover
         # Safety check for kinto < 3.3 where events have incoherent payloads
         # on default bucket.
         return
@@ -118,7 +118,7 @@ def check_collection_status(event, resources, force_review, force_groups):
 
         # Only these status can be set manually.
         if new_status in ("work-in-progress", "signed"):
-            raise_forbidden(message="Cannot set status to '%s'" % new_status)
+            raise_invalid(message="Cannot set status to '%s'" % new_status)
 
         # 1. None -> work-in-progress
         # 2. work-in-progress -> to-review
@@ -133,7 +133,7 @@ def check_collection_status(event, resources, force_review, force_groups):
                 raise_forbidden(message="Not in reviewers group")
 
             if old_status not in ("to-review", "signed") and force_review:
-                raise_forbidden(message="Collection not reviewed")
+                raise_invalid(message="Collection not reviewed")
 
             if old_collection.get("last_editor") == current_user_id:
                 raise_forbidden(message="Editor cannot review")
@@ -142,7 +142,7 @@ def check_collection_status(event, resources, force_review, force_groups):
 
         # Nobody can remove the status
         elif new_status is None:
-            raise_forbidden(message="Cannot remove status")
+            raise_invalid(message="Cannot remove status")
         # Unknown manual status
         else:
             raise_invalid(message="Invalid status '%s'" % new_status)
@@ -155,7 +155,7 @@ def check_collection_tracking(event, resources):
     """
     payload = event.payload
 
-    if 'bucket_id' not in payload:
+    if 'bucket_id' not in payload:  # Pragma: no cover
         # Safety check for kinto < 3.3 where events have incoherent payloads
         # on default bucket.
         return
@@ -170,7 +170,7 @@ def check_collection_tracking(event, resources):
             old = old_collection.get(field)
             new = new_collection.get(field)
             if old != new:
-                raise_forbidden(message="Cannot change %r" % field)
+                raise_invalid(message="Cannot change %r" % field)
 
 
 def set_work_in_progress_status(event, resources):
@@ -178,7 +178,7 @@ def set_work_in_progress_status(event, resources):
     """
     payload = event.payload
 
-    if 'bucket_id' not in payload:
+    if 'bucket_id' not in payload:  # Pragma: no cover
         # Safety check for kinto < 3.3 where events have incoherent payloads
         # on default bucket.
         return

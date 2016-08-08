@@ -89,7 +89,7 @@ class CollectionStatusTest(PostgresWebTest, unittest.TestCase):
         resp = self.app.patch_json(self.source_collection,
                                    {"data": {"status": "signed"}},
                                    headers=self.headers,
-                                   status=403)
+                                   status=400)
         assert resp.json["message"] == "Cannot set status to 'signed'"
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "work-in-progress"
@@ -113,7 +113,7 @@ class CollectionStatusTest(PostgresWebTest, unittest.TestCase):
         self.app.put_json(self.source_collection,
                           {"data": {}},
                           headers=self.headers,
-                          status=403)
+                          status=400)
 
     def test_status_cannot_be_emptied_once_it_was_set(self):
         self.app.patch_json(self.source_collection,
@@ -164,7 +164,7 @@ class ForceReviewTest(PostgresWebTest, unittest.TestCase):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
                             headers=self.headers,
-                            status=403)
+                            status=400)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "work-in-progress"
 
@@ -254,13 +254,13 @@ class TrackingFieldsTest(PostgresWebTest, unittest.TestCase):
             self.app.patch_json(self.source_collection,
                                 {"data": {f: "changed"}},
                                 headers=self.headers,
-                                status=403)
+                                status=400)
             changed = source_collection.copy()
             changed.pop(f)
             self.app.put_json(self.source_collection,
                               {"data": changed},
                               headers=self.headers,
-                              status=403)
+                              status=400)
 
 
 class UserGroupsTest(PostgresWebTest, unittest.TestCase):
@@ -294,11 +294,6 @@ class UserGroupsTest(PostgresWebTest, unittest.TestCase):
     def test_only_editors_can_ask_to_review(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
-                            headers=self.editor_headers,
-                            status=403)
-
-        self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-review"}},
                             headers=self.reviewer_headers,
                             status=403)
         self.app.patch_json(self.source_collection,
@@ -310,10 +305,6 @@ class UserGroupsTest(PostgresWebTest, unittest.TestCase):
                             {"data": {"status": "to-review"}},
                             headers=self.editor_headers)
 
-        self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-sign"}},
-                            headers=self.editor_headers,
-                            status=403)
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
                             headers=self.editor_headers,

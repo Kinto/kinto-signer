@@ -39,7 +39,7 @@ class BaseTestFunctional(object):
         self._flush_server(self.server_url)
 
     def setUp(self):
-        # Give the permission to tigger signatures to anybody
+        # Give the permission to trigger signatures to anybody
         perms = {"write": ["system.Authenticated"]}
         self.source.create_bucket()
         self.source.create_collection(permissions=perms)
@@ -55,7 +55,7 @@ class BaseTestFunctional(object):
         time.sleep(0.1)
 
         # Trigger a signature.
-        self.source.update_collection(data={'status': 'to-sign'})
+        self.source.patch_collection(data={'status': 'to-sign'})
 
     def _flush_server(self, server_url):
         flush_url = urljoin(self.server_url, '/__flush__')
@@ -77,8 +77,8 @@ class BaseTestFunctional(object):
         source_collection = self.source.get_collection()['data']
         assert source_collection['status'] == 'signed'
 
-        assert (self.source.get_records_timestamp() ==
-                self.destination.get_records_timestamp())
+        assert (self.source.get_records_timestamp(refresh=True) ==
+                self.destination.get_records_timestamp(refresh=True))
 
     def test_destination_creation_and_new_records_signature(self):
         # Create some records and trigger another signature.
@@ -87,7 +87,7 @@ class BaseTestFunctional(object):
 
         time.sleep(0.1)
 
-        self.source.update_collection(data={'status': 'to-sign'})
+        self.source.patch_collection(data={'status': 'to-sign'})
 
         data = self.destination.get_collection()
         signature = data['data']['signature']
@@ -111,7 +111,7 @@ class BaseTestFunctional(object):
 
         time.sleep(0.1)
 
-        self.source.update_collection(data={'status': 'to-sign'})
+        self.source.patch_collection(data={'status': 'to-sign'})
 
         data = self.destination.get_collection()
         signature = data['data']['signature']
@@ -131,7 +131,7 @@ class BaseTestFunctional(object):
 
         time.sleep(0.1)
 
-        self.source.update_collection(data={'status': 'to-sign'})
+        self.source.patch_collection(data={'status': 'to-sign'})
 
         data = self.destination.get_collection()
         signature = data['data']['signature']
@@ -155,7 +155,7 @@ class BaseTestFunctional(object):
             bucket=self.source_bucket,
             collection=self.source_collection)
         # Trigger a signature as someone else.
-        client.update_collection(data={'status': 'to-sign'})
+        client.patch_collection(data={'status': 'to-sign'})
 
         collection = self.destination.get_collection()
         after = collection['data']['signature']

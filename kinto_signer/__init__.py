@@ -114,7 +114,7 @@ def check_collection_status(event, resources, force_groups, force_review,
             continue
 
         # Only these status can be set manually.
-        if new_status in ("work-in-progress", "signed"):
+        if new_status in ("signed",):
             raise_invalid(message="Cannot set status to '%s'" % new_status)
 
         # 1. None -> work-in-progress
@@ -122,6 +122,10 @@ def check_collection_status(event, resources, force_groups, force_review,
         elif new_status == "to-review":
             if editors_group not in current_principals and force_groups:
                 raise_forbidden(message="Not in editors group")
+
+        # 3. to-review -> work-in-progress
+        elif new_status == "work-in-progress":
+            pass
 
         # 3. to-review -> to-sign
         elif new_status == "to-sign":

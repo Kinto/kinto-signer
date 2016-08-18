@@ -2,6 +2,7 @@ from base64 import b64decode, urlsafe_b64encode
 import tempfile
 import re
 import os
+import unittest
 
 import mock
 import pytest
@@ -10,7 +11,6 @@ from kinto_signer.signer import base
 from kinto_signer.signer import exceptions
 from kinto_signer.signer import autograph
 from kinto_signer.signer import local_ecdsa
-from .support import unittest
 
 
 SIGNATURE = (

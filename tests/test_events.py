@@ -1,6 +1,8 @@
 import os
+import unittest
 
-from kinto.tests.support import BaseWebTest, unittest
+from .support import BaseWebTest
+
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -40,7 +42,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
             self.destination_collection)
 
         settings['event_listeners'] = 'ks'
-        settings['event_listeners.ks.use'] = 'kinto_signer.tests.test_events'
+        settings['event_listeners.ks.use'] = 'tests.test_events'
         return settings
 
     def setUp(self):

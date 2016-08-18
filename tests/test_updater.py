@@ -1,5 +1,6 @@
 import mock
 import pytest
+import unittest
 
 from kinto.core.storage import Filter, Sort
 from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
@@ -7,7 +8,6 @@ from kinto.core.utils import COMPARISON
 from kinto.tests.core.support import DummyRequest
 
 from kinto_signer.updater import LocalUpdater
-from .support import unittest
 
 
 class LocalUpdaterTest(unittest.TestCase):

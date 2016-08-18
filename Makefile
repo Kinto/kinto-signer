@@ -48,8 +48,8 @@ maintainer-clean: distclean
 	rm -fr .venv/ .tox/ dist/ build/
 
 run-kinto:
-	$(VENV)/bin/kinto --ini kinto_signer/tests/config/signer.ini migrate
-	$(VENV)/bin/kinto --ini kinto_signer/tests/config/signer.ini start
+	$(VENV)/bin/kinto --ini tests/config/signer.ini migrate
+	$(VENV)/bin/kinto --ini tests/config/signer.ini start
 
 install-autograph: $(VENV)/bin/autograph
 
@@ -57,10 +57,10 @@ $(VENV)/bin/autograph:
 	export GOPATH=$(VENV); export PATH="$$GOPATH/bin;$$PATH"; go get -u github.com/mozilla-services/autograph
 
 run-autograph: install-autograph
-	$(VENV)/bin/autograph -c kinto_signer/tests/config/autograph.yaml
+	$(VENV)/bin/autograph -c tests/config/autograph.yaml
 
 need-kinto-running:
 	@curl http://localhost:8888/v1/ 2>/dev/null 1>&2 || (echo "Run 'make run-kinto' before starting tests." && exit 1)
 
 functional: install-dev need-kinto-running
-	$(VENV)/bin/py.test kinto_signer/tests/functional.py
+	$(VENV)/bin/py.test tests/functional.py

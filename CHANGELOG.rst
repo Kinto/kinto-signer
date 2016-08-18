@@ -6,6 +6,16 @@ This document describes changes between each past release.
 0.8.0 (unreleased)
 ------------------
 
+**New features**
+
+- The API can now rely on a workflow and can check that users changing collection status
+  belong to some groups (e.g. ``editors``, ``reviewers``).
+- When a change is made is the source collection, its status is switch to
+  ``work-in-progress``
+- When a collection is modified, the attribute ``last-author`` is set to current userid.
+  When set to ``to-review``, the ``last_editor`` is set, and when set to ``to-sign``
+  the ``last_reviewer`` is set.
+
 **Bug fixes**
 
 - Fix crash when several collections are created with status: to-sign using

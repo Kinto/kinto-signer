@@ -7,6 +7,5 @@ pytest-capturelog
 pytest-cover
 pytest-sugar
 tox
-unittest2
 webtest
 kinto[postgresql]

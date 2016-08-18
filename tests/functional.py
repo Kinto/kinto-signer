@@ -1,8 +1,8 @@
 import time
+import unittest
 import os.path
 from six.moves.urllib.parse import urljoin
 
-import unittest2
 import requests
 
 from kinto_signer.serializer import canonical_json
@@ -170,7 +170,7 @@ class BaseTestFunctional(object):
         assert before != after
 
 
-class AliceFunctionalTest(BaseTestFunctional, unittest2.TestCase):
+class AliceFunctionalTest(BaseTestFunctional, unittest.TestCase):
     private_key = os.path.join(__HERE__, 'config/ecdsa.private.pem')
     source_bucket = "alice"
     destination_bucket = "alice"
@@ -179,7 +179,7 @@ class AliceFunctionalTest(BaseTestFunctional, unittest2.TestCase):
 
 
 # Signer is configured to use a different key for Bob and Alice.
-class BobFunctionalTest(BaseTestFunctional, unittest2.TestCase):
+class BobFunctionalTest(BaseTestFunctional, unittest.TestCase):
     private_key = os.path.join(__HERE__, 'config/bob.ecdsa.private.pem')
     source_bucket = "bob"
     source_collection = "source"
@@ -188,4 +188,4 @@ class BobFunctionalTest(BaseTestFunctional, unittest2.TestCase):
 
 
 if __name__ == '__main__':
-    unittest2.main()
+    unittest.main()

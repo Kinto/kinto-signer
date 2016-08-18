@@ -9,13 +9,6 @@ DEST_BUCKET = 'blocklists'
 DEST_COLLECTION = 'certificates'
 
 
-def collection_timestamp(client):
-    # XXXX Waiting https://github.com/Kinto/kinto-http.py/issues/77
-    endpoint = client.get_endpoint('records')
-    record_resp, headers = client.session.request('get', endpoint)
-    return headers.get('ETag', '').strip('"')
-
-
 def main(args=None):
     parser = cli_utils.add_parser_options(
         description='Validate collection signature',
@@ -32,7 +25,7 @@ def main(args=None):
 
     # 2. Grab records
     records = client.get_records(_sort='-last_modified')
-    timestamp = collection_timestamp(client)
+    timestamp = client.get_records_timestamp()
 
     # 3. Serialize
     serialized = canonical_json(records, timestamp)

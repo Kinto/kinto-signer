@@ -1,8 +1,6 @@
-import os
+import unittest
 
-from kinto.tests.support import BaseWebTest, unittest
-
-here = os.path.abspath(os.path.dirname(__file__))
+from .support import BaseWebTest
 
 
 class Listener(object):
@@ -21,28 +19,18 @@ def load_from_config(config, prefix):
 
 
 class ResourceEventsTest(BaseWebTest, unittest.TestCase):
-    def get_app_settings(self, extra=None):
-        settings = super(ResourceEventsTest, self).get_app_settings(extra)
-
-        settings['storage_backend'] = 'kinto.core.storage.memory'
-        settings['cache_backend'] = 'kinto.core.cache.memory'
-        settings['permission_backend'] = 'kinto.core.permission.memory'
-
-        settings['signer.force_groups'] = 'false'
-
-        settings['includes'] = 'kinto_signer'
-        settings['signer.ecdsa.private_key'] = os.path.join(
-            here, 'config', 'ecdsa.private.pem')
+    def get_app_settings(self, extras=None):
+        settings = super(ResourceEventsTest, self).get_app_settings(extras)
 
         self.source_collection = "/buckets/alice/collections/scid"
         self.destination_collection = "/buckets/destination/collections/dcid"
 
-        settings['signer.resources'] = '%s;%s' % (
+        settings['kinto.signer.resources'] = '%s;%s' % (
             self.source_collection,
             self.destination_collection)
 
         settings['event_listeners'] = 'ks'
-        settings['event_listeners.ks.use'] = 'kinto_signer.tests.test_events'
+        settings['event_listeners.ks.use'] = 'tests.test_events'
         return settings
 
     def setUp(self):

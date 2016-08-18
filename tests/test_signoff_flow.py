@@ -1,11 +1,8 @@
-import os
+import unittest
 
 import mock
 
-from kinto.tests.support import BaseWebTest, unittest, get_user_headers
-
-
-here = os.path.abspath(os.path.dirname(__file__))
+from .support import BaseWebTest, get_user_headers
 
 
 def _patch_autograph():
@@ -54,8 +51,8 @@ class PostgresWebTest(BaseWebTest):
                            {"data": {"title": "bonjour"}},
                            headers=self.headers)
 
-    def get_app_settings(self, extra=None):
-        settings = super(PostgresWebTest, self).get_app_settings(extra)
+    def get_app_settings(self, extras=None):
+        settings = super(PostgresWebTest, self).get_app_settings(extras)
 
         settings['storage_backend'] = 'kinto.core.storage.postgresql'
         db = "postgres://postgres:postgres@localhost/testdb"
@@ -64,14 +61,10 @@ class PostgresWebTest(BaseWebTest):
         settings['permission_url'] = db
         settings['cache_backend'] = 'kinto.core.cache.memory'
 
-        settings['includes'] = 'kinto_signer'
-        settings['signer.ecdsa.private_key'] = os.path.join(
-            here, 'config', 'ecdsa.private.pem')
-
         self.source_collection = "/buckets/alice/collections/scid"
         self.destination_collection = "/buckets/destination/collections/dcid"
 
-        settings['signer.resources'] = '%s;%s' % (
+        settings['kinto.signer.resources'] = '%s;%s' % (
             self.source_collection,
             self.destination_collection)
         return settings
@@ -157,8 +150,8 @@ class CollectionStatusTest(PostgresWebTest, unittest.TestCase):
 
 
 class ForceReviewTest(PostgresWebTest, unittest.TestCase):
-    def get_app_settings(self, extra=None):
-        settings = super(ForceReviewTest, self).get_app_settings(extra)
+    def get_app_settings(self, extras=None):
+        settings = super(ForceReviewTest, self).get_app_settings(extras)
         settings['signer.force_review'] = 'true'
         return settings
 
@@ -266,8 +259,8 @@ class TrackingFieldsTest(PostgresWebTest, unittest.TestCase):
 
 
 class UserGroupsTest(PostgresWebTest, unittest.TestCase):
-    def get_app_settings(self, extra=None):
-        settings = super(UserGroupsTest, self).get_app_settings(extra)
+    def get_app_settings(self, extras=None):
+        settings = super(UserGroupsTest, self).get_app_settings(extras)
         settings['signer.force_groups'] = 'true'
         return settings
 

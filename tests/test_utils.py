@@ -1,9 +1,9 @@
+import unittest
+
 import pytest
 from pyramid.exceptions import ConfigurationError
 
 from kinto_signer import utils
-
-from .support import unittest
 
 
 class ParseResourcesTest(unittest.TestCase):

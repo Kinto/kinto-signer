@@ -1,3 +1,5 @@
+import unittest
+
 import mock
 import pytest
 from kinto import main as kinto_main
@@ -10,8 +12,7 @@ from kinto_signer.signer.autograph import AutographSigner
 from kinto_signer import includeme
 from kinto_signer import utils
 
-from . import BaseWebTest, get_user_headers
-from .support import unittest
+from .support import BaseWebTest, get_user_headers
 
 
 class HelloViewTest(BaseWebTest, unittest.TestCase):

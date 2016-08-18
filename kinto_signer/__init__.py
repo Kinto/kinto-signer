@@ -3,7 +3,6 @@ import functools
 
 import transaction
 from kinto.core import errors
-from kinto.core.initialization import load_default_settings
 from kinto.core.events import ACTIONS, ResourceChanged
 from kinto import logger
 from pyramid import httpexceptions
@@ -16,12 +15,6 @@ from kinto_signer import utils
 
 #: Module version, as defined in PEP-0396.
 __version__ = pkg_resources.get_distribution(__package__).version
-
-
-DEFAULT_SETTINGS = {
-    'signer.force_review': 'false',
-    'signer.force_groups': 'true',
-}
 
 
 def raise_invalid(**kwargs):
@@ -85,7 +78,8 @@ def sign_collection_data(event, resources):
                 updater.update_source_editor(event.request)
 
 
-def check_collection_status(event, resources, force_review, force_groups):
+def check_collection_status(event, resources, force_groups, force_review,
+                            editors_group, reviewers_group):
     """Make sure status changes are allowed.
     """
     payload = event.payload
@@ -95,8 +89,11 @@ def check_collection_status(event, resources, force_review, force_groups):
         # on default bucket.
         return
 
-    editors_group = "/buckets/{bucket_id}/groups/editors".format(**payload)
-    reviewers_group = "/buckets/{bucket_id}/groups/reviewers".format(**payload)
+    editors_group = "/buckets/{bucket_id}/groups/{group_name}".format(
+        group_name=editors_group, **payload)
+    reviewers_group = "/buckets/{bucket_id}/groups/{group_name}".format(
+        group_name=reviewers_group, **payload)
+
     current_user_id = event.request.prefixed_userid
     current_principals = event.request.effective_principals
 
@@ -234,10 +231,10 @@ def includeme(config):
 
     settings = config.get_settings()
 
-    load_default_settings(config, DEFAULT_SETTINGS)
-
-    force_review = asbool(settings["signer.force_review"])
-    force_groups = asbool(settings["signer.force_groups"])
+    reviewers_group = settings.get("signer.reviewers_group", "reviewers")
+    editors_group = settings.get("signer.editors_group", "editors")
+    force_review = asbool(settings.get("signer.force_review", "false"))
+    force_groups = asbool(settings.get("signer.force_groups", "true"))
 
     # Check source and destination resources are configured.
     raw_resources = settings.get('signer.resources')
@@ -271,7 +268,9 @@ def includeme(config):
         functools.partial(check_collection_status,
                           resources=resources,
                           force_review=force_review,
-                          force_groups=force_groups),
+                          force_groups=force_groups,
+                          editors_group=editors_group,
+                          reviewers_group=reviewers_group),
         ResourceChanged,
         for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
         for_resources=('collection',)

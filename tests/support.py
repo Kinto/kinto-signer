@@ -11,7 +11,8 @@ try:
         BaseWebTest as CoreWebTest, get_user_headers, DummyRequest)
 except ImportError:
     # kinto <= 4.0.0
-    from kinto.tests.support import BaseWebTest as CoreWebTest, get_user_headers, DummyRequest  # NOQA
+    from kinto.tests.support import BaseWebTest as CoreWebTest, get_user_headers  # NOQA
+    from kinto.tests.core.support import DummyRequest  # NOQA
 
 
 here = os.path.abspath(os.path.dirname(__file__))

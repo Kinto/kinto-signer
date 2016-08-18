@@ -1,6 +1,10 @@
+import os
 import unittest
 
 from .support import BaseWebTest
+
+
+here = os.path.abspath(os.path.dirname(__file__))
 
 
 class Listener(object):
@@ -28,6 +32,11 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         settings['kinto.signer.resources'] = '%s;%s' % (
             self.source_collection,
             self.destination_collection)
+
+        settings['kinto.signer.signer_backend'] = ('kinto_signer.signer.'
+                                                   'local_ecdsa')
+        settings['signer.ecdsa.private_key'] = os.path.join(
+            here, 'config', 'ecdsa.private.pem')
 
         settings['event_listeners'] = 'ks'
         settings['event_listeners.ks.use'] = 'tests.test_events'

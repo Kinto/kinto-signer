@@ -8,13 +8,11 @@ from kinto import main as kinto_main
 
 try:
     from kinto.core.testing import (
-        BaseWebTest as CoreWebTest, get_user_headers, DummyRequest,
-        get_request_class)
+        BaseWebTest as CoreWebTest, get_user_headers, DummyRequest)
 except ImportError:
     # kinto <= 4.0.0
     from kinto.tests.support import (
-        BaseWebTest as CoreWebTest, get_user_headers, get_request_class,
-        DummyRequest)  # NOQA
+        BaseWebTest as CoreWebTest, get_user_headers, DummyRequest)  # NOQA
 
 
 here = os.path.abspath(os.path.dirname(__file__))

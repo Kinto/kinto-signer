@@ -234,7 +234,7 @@ def includeme(config):
     reviewers_group = settings.get("signer.reviewers_group", "reviewers")
     editors_group = settings.get("signer.editors_group", "editors")
     force_review = asbool(settings.get("signer.force_review", "false"))
-    force_groups = asbool(settings.get("signer.force_groups", "true"))
+    force_groups = asbool(settings.get("signer.force_groups", "false"))
 
     # Check source and destination resources are configured.
     raw_resources = settings.get('signer.resources')
@@ -256,7 +256,11 @@ def includeme(config):
     docs = "https://github.com/Kinto/kinto-signer#kinto-signer"
     config.add_api_capability("signer", message, docs,
                               version=__version__,
-                              resources=resources.values())
+                              resources=resources.values(),
+                              force_review=force_review,
+                              force_groups=force_groups,
+                              editors_group=editors_group,
+                              reviewers_group=reviewers_group)
 
     config.add_subscriber(
         functools.partial(set_work_in_progress_status, resources=resources),

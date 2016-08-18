@@ -1,10 +1,6 @@
-import os
 import unittest
 
 from .support import BaseWebTest
-
-
-here = os.path.abspath(os.path.dirname(__file__))
 
 
 class Listener(object):
@@ -23,21 +19,13 @@ def load_from_config(config, prefix):
 
 
 class ResourceEventsTest(BaseWebTest, unittest.TestCase):
-    def get_app_settings(self, extra=None):
-        settings = super(ResourceEventsTest, self).get_app_settings(extra)
-
-        settings['storage_backend'] = 'kinto.core.storage.memory'
-        settings['cache_backend'] = 'kinto.core.cache.memory'
-        settings['permission_backend'] = 'kinto.core.permission.memory'
-
-        settings['includes'] = 'kinto_signer'
-        settings['signer.ecdsa.private_key'] = os.path.join(
-            here, 'config', 'ecdsa.private.pem')
+    def get_app_settings(self, extras=None):
+        settings = super(ResourceEventsTest, self).get_app_settings(extras)
 
         self.source_collection = "/buckets/alice/collections/scid"
         self.destination_collection = "/buckets/destination/collections/dcid"
 
-        settings['signer.resources'] = '%s;%s' % (
+        settings['kinto.signer.resources'] = '%s;%s' % (
             self.source_collection,
             self.destination_collection)
 

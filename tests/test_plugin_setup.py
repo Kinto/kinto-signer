@@ -7,9 +7,10 @@ from pyramid import testing
 from pyramid.exceptions import ConfigurationError
 from requests import exceptions as requests_exceptions
 
-from kinto_signer import sign_collection_data, __version__ as signer_version
+from kinto_signer import __version__ as signer_version
 from kinto_signer.signer.autograph import AutographSigner
 from kinto_signer import includeme
+from kinto_signer.listeners import sign_collection_data
 from kinto_signer import utils
 
 from .support import BaseWebTest, get_user_headers
@@ -127,7 +128,7 @@ class IncludeMeTest(unittest.TestCase):
 class OnCollectionChangedTest(unittest.TestCase):
 
     def setUp(self):
-        patch = mock.patch('kinto_signer.LocalUpdater')
+        patch = mock.patch('kinto_signer.listeners.LocalUpdater')
         self.updater_mocked = patch.start()
         self.addCleanup(patch.stop)
 

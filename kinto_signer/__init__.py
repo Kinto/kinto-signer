@@ -51,8 +51,8 @@ def includeme(config):
 
     reviewers_group = settings.get("signer.reviewers_group", "reviewers")
     editors_group = settings.get("signer.editors_group", "editors")
-    force_review = asbool(settings.get("signer.force_review", "false"))
-    force_groups = asbool(settings.get("signer.force_groups", "false"))
+    force_review = asbool(settings.get("signer.force_review", False))
+    force_groups = asbool(settings.get("signer.force_groups", False))
 
     # Check source and destination resources are configured.
     raw_resources = settings.get('signer.resources')

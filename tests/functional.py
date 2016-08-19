@@ -77,10 +77,7 @@ class BaseTestFunctional(object):
         self.source.create_bucket()
         perms = {"write": ["system.Authenticated"]}
         self.source.create_collection(permissions=perms)
-        # XXX: because of bug https://github.com/Kinto/kinto/issues/776
-        # we can't just add authenticated.
-        principals = ["system.Authenticated",
-                      user_principal(self.editor_client),
+        principals = [user_principal(self.editor_client),
                       user_principal(self.someone_client),
                       user_principal(self.source)]
         create_group(self.source, "editors", members=principals)
@@ -287,6 +284,13 @@ class WorkflowTest(unittest.TestCase):
         with self.assertRaises(KintoException):
             self.elsa_client.patch_collection(data={'status': 'to-sign'})
 
+    def test_review_can_be_cancelled_by_editor(self):
+        create_records(self.client)
+        self.anna_client.patch_collection(data={'status': 'to-review'})
+        self.anna_client.patch_collection(data={'status': 'work-in-progress'})
+        self.anna_client.patch_collection(data={'status': 'to-review'})
+        self.elsa_client.patch_collection(data={'status': 'to-sign'})
+
     def test_review_can_be_cancelled_by_reviewer(self):
         create_records(self.client)
         self.anna_client.patch_collection(data={'status': 'to-review'})
@@ -308,7 +312,3 @@ class WorkflowTest(unittest.TestCase):
         create_records(self.client)
         status = self.client.get_collection()['data']['status']
         assert status == 'work-in-progress'
-
-
-if __name__ == '__main__':
-    unittest.main()

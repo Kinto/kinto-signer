@@ -6,6 +6,8 @@ This document describes changes between each past release.
 0.8.0 (unreleased)
 ------------------
 
+Now requires *kinto >= 3.3*.
+
 **New features**
 
 - The API can now rely on a workflow and can check that users changing collection status

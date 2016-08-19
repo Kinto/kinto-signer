@@ -8,11 +8,13 @@ from kinto_signer.updater import LocalUpdater
 
 
 def raise_invalid(**kwargs):
+    # A ``400`` error response does not natively rollback the transaction.
     transaction.doom()
     raise errors.http_error(httpexceptions.HTTPBadRequest(), **kwargs)
 
 
 def raise_forbidden(**kwargs):
+    # A ``403`` error response does not natively rollback the transaction.
     transaction.doom()
     raise errors.http_error(httpexceptions.HTTPForbidden(), **kwargs)
 
@@ -27,11 +29,6 @@ def sign_collection_data(event, resources):
     and update the destination.
     """
     payload = event.payload
-
-    if 'bucket_id' not in payload:
-        # Safety check for kinto < 3.3 where events have incoherent payloads
-        # on default bucket.
-        return
 
     for impacted in event.impacted_records:
         new_collection = impacted['new']
@@ -73,11 +70,6 @@ def check_collection_status(event, resources, force_groups, force_review,
     """Make sure status changes are allowed.
     """
     payload = event.payload
-
-    if 'bucket_id' not in payload:  # Pragma: no cover
-        # Safety check for kinto < 3.3 where events have incoherent payloads
-        # on default bucket.
-        return
 
     editors_group = "/buckets/{bucket_id}/groups/{group_name}".format(
         group_name=editors_group, **payload)
@@ -141,16 +133,7 @@ def check_collection_status(event, resources, force_groups, force_review,
 
 def check_collection_tracking(event, resources):
     """Make sure tracking fields are not changed manually/removed.
-
-    XXX: Use readonly field notion from kinto.core ?
     """
-    payload = event.payload
-
-    if 'bucket_id' not in payload:  # Pragma: no cover
-        # Safety check for kinto < 3.3 where events have incoherent payloads
-        # on default bucket.
-        return
-
     tracking_fields = ("last_author", "last_editor", "last_reviewer")
 
     for impacted in event.impacted_records:
@@ -169,21 +152,15 @@ def set_work_in_progress_status(event, resources):
     """
     payload = event.payload
 
-    if 'bucket_id' not in payload:  # Pragma: no cover
-        # Safety check for kinto < 3.3 where events have incoherent payloads
-        # on default bucket.
-        return
-
     key = "/buckets/{bucket_id}/collections/{collection_id}".format(**payload)
     resource = resources.get(key)
     if resource is None:
         return
 
     registry = event.request.registry
-    updater = LocalUpdater(
-        signer=registry.signers[key],
-        storage=registry.storage,
-        permission=registry.permission,
-        source=resource['source'],
-        destination=resource['destination'])
+    updater = LocalUpdater(signer=registry.signers[key],
+                           storage=registry.storage,
+                           permission=registry.permission,
+                           source=resource['source'],
+                           destination=resource['destination'])
     updater.update_source_status("work-in-progress", event.request)

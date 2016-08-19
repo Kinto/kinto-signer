@@ -154,7 +154,7 @@ Workflows
 ---------
 
 
-A workflow can be enabled on the source collection ``statu``.
+A workflow can be enabled on the source collection ``status``.
 
 The workflow is basically ``work-in-progress`` → ``to-review`` → ``to-sign`` → ``signed`` and
 makes sure that:
@@ -174,9 +174,9 @@ makes sure that:
 |                                           |                      | ``editors`` group in the source bucket, and the one setting to           |
 |                                           |                      | ``to-sign`` must belong to ``reviewers``.                                |
 +-------------------------------------------+----------------------+--------------------------------------------------------------------------+
-| kinto.signer.editors_group                | ``editors``          |                   location to the signer to use. By default, a local     |
+| kinto.signer.editors_group                | ``editors``          | The group id that is required for changing status to ``to-review``       |
 +-------------------------------------------+----------------------+--------------------------------------------------------------------------+
-| kinto.signer.reviewers_group              | ``reviewers```       | The python dotted location to the signer to use. By default, a local     |
+| kinto.signer.reviewers_group              | ``reviewers```       | The group id that is required for changing status to ``to-sign``         |
 +-------------------------------------------+----------------------+--------------------------------------------------------------------------+
 
 .. warning::

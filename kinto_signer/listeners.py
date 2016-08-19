@@ -61,8 +61,7 @@ def sign_collection_data(event, resources):
 
         elif new_status == "to-review":
             # Track `last_editor`
-            if "last_editor" not in new_collection:  # XXX why recursivity ?
-                updater.update_source_editor(event.request)
+            updater.update_source_editor(event.request)
 
 
 def check_collection_status(event, resources, force_groups, force_review,
@@ -89,6 +88,7 @@ def check_collection_status(event, resources, force_groups, force_review,
             bucket_id=payload["bucket_id"],
             collection_id=new_collection["id"])
 
+        # Skip if resource is not configured.
         if key not in resources:
             continue
 
@@ -139,6 +139,13 @@ def check_collection_tracking(event, resources):
     for impacted in event.impacted_records:
         old_collection = impacted.get("old", {})
         new_collection = impacted["new"]
+
+        # Skip if resource is not configured.
+        key = "/buckets/{bucket_id}/collections/{collection_id}".format(
+            collection_id=new_collection['id'],
+            bucket_id=event.payload['bucket_id'])
+        if key not in resources:
+            continue
 
         for field in tracking_fields:
             old = old_collection.get(field)

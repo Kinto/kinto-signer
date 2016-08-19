@@ -308,8 +308,15 @@ class LocalUpdater(object):
 
         # Update the collection_record
         new_collection = dict(**collection_record)
-        new_collection.pop('last_modified', None)
         new_collection.update(**kwargs)
+
+        # If nothing was changed, do nothing.
+        # (e.g. same last_editor)
+        if new_collection == collection_record:
+            return
+
+        # Remove last_modified to be sure it's bumped.
+        new_collection.pop('last_modified', None)
 
         updated = self.storage.update(
             parent_id=parent_id,

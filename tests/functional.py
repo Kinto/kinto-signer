@@ -236,14 +236,17 @@ class WorkflowTest(unittest.TestCase):
         cls.client = Client(auth=DEFAULT_AUTH, **client_kw)
         cls.elsa_client = Client(auth=('elsa', ''), **client_kw)
         cls.anna_client = Client(auth=('anna', ''), **client_kw)
+        cls.client_principal = user_principal(cls.client)
         cls.elsa_principal = user_principal(cls.elsa_client)
         cls.anna_principal = user_principal(cls.anna_client)
 
     def setUp(self):
         perms = {"write": ["system.Authenticated"]}
         self.client.create_bucket()
-        create_group(self.client, "editors", members=[self.anna_principal])
-        create_group(self.client, "reviewers", members=[self.elsa_principal])
+        create_group(self.client, "editors", members=[self.anna_principal,
+                                                      self.client_principal])
+        create_group(self.client, "reviewers", members=[self.elsa_principal,
+                                                        self.client_principal])
         self.client.create_collection(permissions=perms)
 
     def tearDown(self):
@@ -305,6 +308,19 @@ class WorkflowTest(unittest.TestCase):
         self.elsa_client.patch_collection(data={'status': 'work-in-progress'})
         with self.assertRaises(KintoException):
             self.elsa_client.patch_collection(data={'status': 'to-sign'})
+
+    def test_editors_can_be_different_after_cancelled(self):
+        create_records(self.client)
+        self.client.patch_collection(data={'status': 'to-review'})
+        # Client cannot review since he is the last_editor.
+        with self.assertRaises(KintoException):
+            self.client.patch_collection(data={'status': 'to-sign'})
+        # Someone rejects the review.
+        self.elsa_client.patch_collection(data={'status': 'work-in-progress'})
+        # Anna becomes the last_editor.
+        self.anna_client.patch_collection(data={'status': 'to-review'})
+        # Client can now review because he is not the last_editor.
+        self.client.patch_collection(data={'status': 'to-sign'})
 
     def test_modifying_the_collection_resets_status(self):
         create_records(self.client)

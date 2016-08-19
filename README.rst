@@ -153,7 +153,6 @@ use the following settings:
 Workflows
 ---------
 
-
 A workflow can be enabled on the source collection ``status``.
 
 The workflow is basically ``work-in-progress`` → ``to-review`` → ``to-sign`` → ``signed`` and
@@ -185,6 +184,8 @@ makes sure that:
     (e.g. ``/buckets/staging/groups/editors``).
 
 See `Kinto groups API <http://kinto.readthedocs.io/en/stable/api/1.x/groups.html>`_ for more details about how to define groups.
+
+.. image:: workflow.png
 
 
 Multiple certificates

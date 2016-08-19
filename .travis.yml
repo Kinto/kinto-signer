@@ -7,12 +7,9 @@ env:
     - TOX_ENV=py34
     - TOX_ENV=kinto-master
     - TOX_ENV=flake8
+sudo: false
 install:
     - pip install tox
-before_script:
-  - sudo sed -i "s/fsync/#fsync/" /etc/postgresql/9.4/main/postgresql.conf
-  - sudo /etc/init.d/postgresql restart
-  - psql -c "CREATE DATABASE testdb ENCODING 'UTF8' TEMPLATE template0;" -U postgres
 script:
     - tox -e $TOX_ENV
 matrix:

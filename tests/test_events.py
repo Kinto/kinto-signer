@@ -83,13 +83,21 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         before = len(listener.received)
 
         self._sign()
-        event = [e for e in listener.received[before:]
-                 if e.payload["resource_name"] == "collection" and
-                 e.payload["collection_id"] == "scid" and
-                 e.payload["action"] == "update"][0]
-        self.assertEqual(len(event.impacted_records), 2)
-        self.assertEqual(event.impacted_records[0]["new"]["status"], "to-sign")
-        self.assertEqual(event.impacted_records[1]["new"]["status"], "signed")
+        events = [e for e in listener.received[before:]
+                  if e.payload["resource_name"] == "collection" and
+                  e.payload["collection_id"] == "scid" and
+                  e.payload["action"] == "update"]
+        self.assertEqual(len(events), 2)
+        event_tosign = events[0]
+        self.assertEqual(len(event_tosign.impacted_records), 1)
+        self.assertEqual(event_tosign.impacted_records[0]["new"]["status"],
+                         "to-sign")
+        event_signed = events[1]
+        self.assertEqual(len(event_signed.impacted_records), 1)
+        self.assertEqual(event_signed.impacted_records[0]["old"]["status"],
+                         "to-sign")
+        self.assertEqual(event_signed.impacted_records[0]["new"]["status"],
+                         "signed")
 
     def test_resource_changed_is_triggered_for_destination_collection(self):
         before = len(listener.received)

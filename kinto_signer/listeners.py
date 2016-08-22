@@ -9,6 +9,9 @@ from kinto_signer.updater import LocalUpdater
 from kinto_signer.utils import STATUS
 
 
+_PLUGIN_USERID = "plugin:kinto-signer"
+
+
 def raise_invalid(**kwargs):
     # A ``400`` error response does not natively rollback the transaction.
     transaction.doom()
@@ -79,6 +82,10 @@ def check_collection_status(event, resources, force_groups, force_review,
                                    id=reviewers_group)
 
     current_user_id = event.request.prefixed_userid
+    if current_user_id == _PLUGIN_USERID:
+        # Ignore changes made by plugin.
+        return
+
     current_principals = event.request.effective_principals
 
     for impacted in event.impacted_records:
@@ -97,13 +104,9 @@ def check_collection_status(event, resources, force_groups, force_review,
         if old_status == new_status:
             continue
 
-        # Only these status can be set manually.
-        if new_status in (STATUS.SIGNED,):
-            raise_invalid(message="Cannot set status to '%s'" % new_status)
-
         # 1. None -> work-in-progress
         # 2. work-in-progress -> to-review
-        elif new_status == STATUS.TO_REVIEW:
+        if new_status == STATUS.TO_REVIEW:
             if editors_group not in current_principals and force_groups:
                 raise_forbidden(message="Not in editors group")
 
@@ -126,6 +129,8 @@ def check_collection_status(event, resources, force_groups, force_review,
                 raise_forbidden(message="Editor cannot review")
 
         # 4. to-sign -> signed
+        elif new_status == STATUS.SIGNED:
+            raise_invalid(message="Cannot set status to '%s'" % new_status)
 
         # Nobody can remove the status
         elif new_status is None:
@@ -138,6 +143,9 @@ def check_collection_status(event, resources, force_groups, force_review,
 def check_collection_tracking(event, resources):
     """Make sure tracking fields are not changed manually/removed.
     """
+    if event.request.prefixed_userid == _PLUGIN_USERID:
+        return
+
     tracking_fields = ("last_author", "last_editor", "last_reviewer")
 
     for impacted in event.impacted_records:

@@ -101,7 +101,6 @@ class BaseTestFunctional(object):
 
     def test_groups_and_reviewers_are_forced(self):
         capability = self.source.server_info()['capabilities']['signer']
-        print capability
         assert capability['force_groups']
         assert capability['force_review']
 

@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from kinto.core.events import ACTIONS
 from kinto.core.storage import Filter, Sort
 from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
@@ -85,7 +87,8 @@ class LocalUpdater(object):
         4. Ask the signer for a signature
         5. Send the signature to the destination.
         """
-        before = len(request.get_resource_events())
+        before_events = request.bound_data["resource_events"]
+        request.bound_data["resource_events"] = OrderedDict()
 
         self.create_destination(request)
 
@@ -99,8 +102,9 @@ class LocalUpdater(object):
         self.update_source_status(STATUS.SIGNED, request)
 
         # Re-trigger events from event listener \o/
-        for event in request.get_resource_events()[before:]:
+        for event in request.get_resource_events():
             request.registry.notify(event)
+        request.bound_data["resource_events"] = before_events
 
     def _ensure_resource_exists(self, resource_type, parent_id,
                                 record_id, request):

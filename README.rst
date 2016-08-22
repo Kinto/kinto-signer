@@ -175,7 +175,7 @@ makes sure that:
 +-------------------------------------------+----------------------+--------------------------------------------------------------------------+
 | kinto.signer.editors_group                | ``editors``          | The group id that is required for changing status to ``to-review``       |
 +-------------------------------------------+----------------------+--------------------------------------------------------------------------+
-| kinto.signer.reviewers_group              | ``reviewers```       | The group id that is required for changing status to ``to-sign``         |
+| kinto.signer.reviewers_group              | ``reviewers``        | The group id that is required for changing status to ``to-sign``         |
 +-------------------------------------------+----------------------+--------------------------------------------------------------------------+
 
 .. warning::

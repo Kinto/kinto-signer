@@ -12,11 +12,11 @@ Now requires *kinto >= 3.3*.
 
 - The API can now rely on a workflow and can check that users changing collection status
   belong to some groups (e.g. ``editors``, ``reviewers``).
-- When a change is made is the source collection, its status is switch to
+- When a change is made in the source collection, its status is switched to
   ``work-in-progress``
-- When a collection is modified, the attribute ``last-author`` is set to current userid.
-  When set to ``to-review``, the ``last_editor`` is set, and when set to ``to-sign``
-  the ``last_reviewer`` is set.
+- When a collection is modified, the ``last-author`` attribute is set to the current userid.
+  When set to ``to-review``, the ``last_editor`` value is set, and when set to ``to-sign``
+  the ``last_reviewer`` value is set.
 
 **Bug fixes**
 

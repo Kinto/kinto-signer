@@ -2,7 +2,9 @@ from kinto.core.events import ACTIONS
 from kinto.core.storage import Filter, Sort
 from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
 from kinto.core.utils import COMPARISON, build_request
+
 from kinto_signer.serializer import canonical_json
+from kinto_signer.utils import STATUS
 
 
 def notify_resource_event(request, request_options, matchdict,
@@ -94,7 +96,7 @@ class LocalUpdater(object):
         signature = self.signer.sign(serialized_records)
 
         self.set_destination_signature(signature, request)
-        self.update_source_status("signed", request)
+        self.update_source_status(STATUS.SIGNED, request)
 
         # Re-trigger events from event listener \o/
         for event in request.get_resource_events()[before:]:
@@ -290,10 +292,10 @@ class LocalUpdater(object):
         return self._update_source_attributes(request, **attrs)
 
     def update_source_status(self, status, request):
-        attrs = {'status': status}
-        if status == "work-in-progress":
+        attrs = {'status': status.value}
+        if status == STATUS.WORK_IN_PROGRESS:
             attrs["last_author"] = request.prefixed_userid
-        if status == "signed":
+        if status == STATUS.SIGNED:
             attrs["last_reviewer"] = request.prefixed_userid
         return self._update_source_attributes(request, **attrs)
 

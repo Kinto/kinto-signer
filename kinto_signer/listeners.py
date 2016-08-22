@@ -5,6 +5,7 @@ from kinto import logger
 from pyramid import httpexceptions
 
 from kinto_signer.updater import LocalUpdater
+from kinto_signer.utils import STATUS
 
 
 def raise_invalid(**kwargs):
@@ -51,7 +52,7 @@ def sign_collection_data(event, resources):
                                destination=resource['destination'])
 
         new_status = new_collection.get("status")
-        if new_status == "to-sign":
+        if new_status == STATUS.TO_SIGN:
             # Run signature process (will set `last_reviewer` field).
             try:
                 updater.sign_and_update_destination(event.request)
@@ -59,7 +60,7 @@ def sign_collection_data(event, resources):
                 logger.exception("Could not sign '{0}'".format(key))
                 event.request.response.status = 503
 
-        elif new_status == "to-review":
+        elif new_status == STATUS.TO_REVIEW:
             # Track `last_editor`
             updater.update_source_editor(event.request)
 
@@ -96,26 +97,28 @@ def check_collection_status(event, resources, force_groups, force_review,
             continue
 
         # Only these status can be set manually.
-        if new_status in ("signed",):
+        if new_status in (STATUS.SIGNED,):
             raise_invalid(message="Cannot set status to '%s'" % new_status)
 
         # 1. None -> work-in-progress
         # 2. work-in-progress -> to-review
-        elif new_status == "to-review":
+        elif new_status == STATUS.TO_REVIEW:
             if editors_group not in current_principals and force_groups:
                 raise_forbidden(message="Not in editors group")
 
         # 3. to-review -> work-in-progress
-        elif new_status == "work-in-progress":
+        elif new_status == STATUS.WORK_IN_PROGRESS:
             pass
 
         # 3. to-review -> to-sign
-        elif new_status == "to-sign":
+        elif new_status == STATUS.TO_SIGN:
             # Only allow to-sign from to-review if reviewer and no-editor
             if reviewers_group not in current_principals and force_groups:
                 raise_forbidden(message="Not in reviewers group")
 
-            if old_status not in ("to-review", "signed") and force_review:
+            requires_review = old_status not in (STATUS.TO_REVIEW,
+                                                 STATUS.SIGNED)
+            if requires_review and force_review:
                 raise_invalid(message="Collection not reviewed")
 
             if old_collection.get("last_editor") == current_user_id:
@@ -170,4 +173,4 @@ def set_work_in_progress_status(event, resources):
                            permission=registry.permission,
                            source=resource['source'],
                            destination=resource['destination'])
-    updater.update_source_status("work-in-progress", event.request)
+    updater.update_source_status(STATUS.WORK_IN_PROGRESS, event.request)

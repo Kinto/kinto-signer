@@ -2,8 +2,19 @@ from collections import OrderedDict
 
 from kinto.views import NameGenerator
 
+from enum import Enum
 from pyramid.settings import aslist
 from pyramid.exceptions import ConfigurationError
+
+
+class STATUS(Enum):
+    WORK_IN_PROGRESS = 'work-in-progress'
+    TO_SIGN = 'to-sign'
+    TO_REVIEW = 'to-review'
+    SIGNED = 'signed'
+
+    def __eq__(self, other):
+        return self.value == other or super(STATUS, self).__eq__(other)
 
 
 def parse_resources(raw_resources):

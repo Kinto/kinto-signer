@@ -7,6 +7,7 @@ from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
 from kinto.core.utils import COMPARISON
 
 from kinto_signer.updater import LocalUpdater
+from kinto_signer.utils import STATUS
 
 from .support import DummyRequest
 
@@ -151,7 +152,7 @@ class LocalUpdaterTest(unittest.TestCase):
     def test_update_source_status_modifies_the_source_collection(self):
         self.storage.get.return_value = {'id': 1234, 'last_modified': 1234,
                                          'status': 'to-sign'}
-        self.updater.update_source_status("signed", DummyRequest())
+        self.updater.update_source_status(STATUS.SIGNED, DummyRequest())
 
         self.storage.update.assert_called_with(
             collection_id='collection',

@@ -2,6 +2,7 @@ import transaction
 from kinto.core import errors
 
 from kinto import logger
+from kinto.core.utils import instance_uri
 from pyramid import httpexceptions
 
 from kinto_signer.updater import LocalUpdater
@@ -34,10 +35,9 @@ def sign_collection_data(event, resources):
     for impacted in event.impacted_records:
         new_collection = impacted['new']
 
-        key = "/buckets/{bucket_id}/collections/{collection_id}".format(
-            collection_id=new_collection['id'],
-            bucket_id=payload['bucket_id'])
-
+        key = instance_uri(event.request, "collection",
+                           bucket_id=payload['bucket_id'],
+                           id=new_collection['id'])
         resource = resources.get(key)
 
         # Only sign the configured resources.
@@ -71,10 +71,12 @@ def check_collection_status(event, resources, force_groups, force_review,
     """
     payload = event.payload
 
-    editors_group = "/buckets/{bucket_id}/groups/{group_name}".format(
-        group_name=editors_group, **payload)
-    reviewers_group = "/buckets/{bucket_id}/groups/{group_name}".format(
-        group_name=reviewers_group, **payload)
+    editors_group = instance_uri(event.request, "group",
+                                 bucket_id=payload["bucket_id"],
+                                 id=editors_group)
+    reviewers_group = instance_uri(event.request, "group",
+                                   bucket_id=payload["bucket_id"],
+                                   id=reviewers_group)
 
     current_user_id = event.request.prefixed_userid
     current_principals = event.request.effective_principals
@@ -85,11 +87,10 @@ def check_collection_status(event, resources, force_groups, force_review,
         new_collection = impacted["new"].copy()
         new_status = new_collection.get("status")
 
-        key = "/buckets/{bucket_id}/collections/{collection_id}".format(
-            bucket_id=payload["bucket_id"],
-            collection_id=new_collection["id"])
-
         # Skip if resource is not configured.
+        key = instance_uri(event.request, "collection",
+                           bucket_id=payload["bucket_id"],
+                           id=new_collection["id"])
         if key not in resources:
             continue
 
@@ -144,9 +145,9 @@ def check_collection_tracking(event, resources):
         new_collection = impacted["new"]
 
         # Skip if resource is not configured.
-        key = "/buckets/{bucket_id}/collections/{collection_id}".format(
-            collection_id=new_collection['id'],
-            bucket_id=event.payload['bucket_id'])
+        key = instance_uri(event.request, "collection",
+                           bucket_id=event.payload["bucket_id"],
+                           id=new_collection["id"])
         if key not in resources:
             continue
 
@@ -162,8 +163,12 @@ def set_work_in_progress_status(event, resources):
     """
     payload = event.payload
 
-    key = "/buckets/{bucket_id}/collections/{collection_id}".format(**payload)
+    key = instance_uri(event.request, "collection",
+                       bucket_id=payload["bucket_id"],
+                       id=payload["collection_id"])
     resource = resources.get(key)
+
+    # Skip if resource is not configured.
     if resource is None:
         return
 

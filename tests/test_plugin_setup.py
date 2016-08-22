@@ -153,6 +153,7 @@ class OnCollectionChangedTest(unittest.TestCase):
         evt.request.registry.signers = {
             "/buckets/a/collections/b": mock.sentinel.signer
         }
+        evt.request.route_path.return_value = "/v1/buckets/a/collections/b"
         sign_collection_data(evt, resources=utils.parse_resources("a/b;c/d"))
         self.updater_mocked.assert_called_with(
             signer=mock.sentinel.signer,

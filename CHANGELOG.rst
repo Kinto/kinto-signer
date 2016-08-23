@@ -3,7 +3,7 @@ Changelog
 
 This document describes changes between each past release.
 
-0.8.0 (unreleased)
+0.8.0 (2016-08-23)
 ------------------
 
 Now requires *kinto >= 3.3*.

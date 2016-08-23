@@ -89,9 +89,9 @@ def check_collection_status(event, resources, group_check_enabled,
     user_principals = event.request.effective_principals
 
     for impacted in event.impacted_records:
-        old_collection = impacted.get("old", {}).copy()
+        old_collection = impacted.get("old", {})
         old_status = old_collection.get("status")
-        new_collection = impacted["new"].copy()
+        new_collection = impacted["new"]
         new_status = new_collection.get("status")
 
         # Skip if resource is not configured.
@@ -105,15 +105,15 @@ def check_collection_status(event, resources, group_check_enabled,
             continue
 
         # 1. None -> work-in-progress
+        if new_status == STATUS.WORK_IN_PROGRESS:
+            pass
+
         # 2. work-in-progress -> to-review
-        if new_status == STATUS.TO_REVIEW:
+        elif new_status == STATUS.TO_REVIEW:
             if editors_group not in user_principals and group_check_enabled:
                 raise_forbidden(message="Not in editors group")
 
         # 3. to-review -> work-in-progress
-        elif new_status == STATUS.WORK_IN_PROGRESS:
-            pass
-
         # 3. to-review -> to-sign
         elif new_status == STATUS.TO_SIGN:
             # Only allow to-sign from to-review if reviewer and no-editor

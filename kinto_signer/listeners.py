@@ -68,8 +68,8 @@ def sign_collection_data(event, resources):
             updater.update_source_editor(event.request)
 
 
-def check_collection_status(event, resources, force_groups, force_review,
-                            editors_group, reviewers_group):
+def check_collection_status(event, resources, group_check_enabled,
+                            to_review_enabled, editors_group, reviewers_group):
     """Make sure status changes are allowed.
     """
     payload = event.payload
@@ -86,7 +86,7 @@ def check_collection_status(event, resources, force_groups, force_review,
         # Ignore changes made by plugin.
         return
 
-    current_principals = event.request.effective_principals
+    user_principals = event.request.effective_principals
 
     for impacted in event.impacted_records:
         old_collection = impacted.get("old", {}).copy()
@@ -107,7 +107,7 @@ def check_collection_status(event, resources, force_groups, force_review,
         # 1. None -> work-in-progress
         # 2. work-in-progress -> to-review
         if new_status == STATUS.TO_REVIEW:
-            if editors_group not in current_principals and force_groups:
+            if editors_group not in user_principals and group_check_enabled:
                 raise_forbidden(message="Not in editors group")
 
         # 3. to-review -> work-in-progress
@@ -117,12 +117,12 @@ def check_collection_status(event, resources, force_groups, force_review,
         # 3. to-review -> to-sign
         elif new_status == STATUS.TO_SIGN:
             # Only allow to-sign from to-review if reviewer and no-editor
-            if reviewers_group not in current_principals and force_groups:
+            if reviewers_group not in user_principals and group_check_enabled:
                 raise_forbidden(message="Not in reviewers group")
 
             requires_review = old_status not in (STATUS.TO_REVIEW,
                                                  STATUS.SIGNED)
-            if requires_review and force_review:
+            if requires_review and to_review_enabled:
                 raise_invalid(message="Collection not reviewed")
 
             if old_collection.get("last_editor") == current_user_id:

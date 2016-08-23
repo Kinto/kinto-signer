@@ -27,8 +27,8 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
             "description": "Digital signatures for integrity and authenticity of records.",  # NOQA
             "url": ("https://github.com/Kinto/kinto-signer#kinto-signer"),
             "version": signer_version,
-            "force_review": False,
-            "force_groups": False,
+            "to_review_enabled": False,
+            "group_check_enabled": False,
             "editors_group": "editors",
             "reviewers_group": "reviewers",
             "resources": [

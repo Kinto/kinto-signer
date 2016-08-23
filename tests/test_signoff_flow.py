@@ -160,7 +160,7 @@ class CollectionStatusTest(PostgresWebTest, unittest.TestCase):
 class ForceReviewTest(PostgresWebTest, unittest.TestCase):
     def get_app_settings(self, extras=None):
         settings = super(ForceReviewTest, self).get_app_settings(extras)
-        settings['signer.force_review'] = 'true'
+        settings['signer.to_review_enabled'] = 'true'
         return settings
 
     def test_status_cannot_be_set_to_to_sign_without_review(self):
@@ -269,7 +269,7 @@ class TrackingFieldsTest(PostgresWebTest, unittest.TestCase):
 class UserGroupsTest(PostgresWebTest, unittest.TestCase):
     def get_app_settings(self, extras=None):
         settings = super(UserGroupsTest, self).get_app_settings(extras)
-        settings['signer.force_groups'] = 'true'
+        settings['signer.group_check_enabled'] = 'true'
         return settings
 
     def setUp(self):

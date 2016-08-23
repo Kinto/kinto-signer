@@ -51,8 +51,9 @@ def includeme(config):
 
     reviewers_group = settings.get("signer.reviewers_group", "reviewers")
     editors_group = settings.get("signer.editors_group", "editors")
-    force_review = asbool(settings.get("signer.force_review", False))
-    force_groups = asbool(settings.get("signer.force_groups", False))
+    to_review_enabled = asbool(settings.get("signer.to_review_enabled", False))
+    group_check_enabled = asbool(settings.get("signer.group_check_enabled",
+                                              False))
 
     # Check source and destination resources are configured.
     raw_resources = settings.get('signer.resources')
@@ -75,8 +76,8 @@ def includeme(config):
     config.add_api_capability("signer", message, docs,
                               version=__version__,
                               resources=resources.values(),
-                              force_review=force_review,
-                              force_groups=force_groups,
+                              to_review_enabled=to_review_enabled,
+                              group_check_enabled=group_check_enabled,
                               editors_group=editors_group,
                               reviewers_group=reviewers_group)
 
@@ -89,8 +90,8 @@ def includeme(config):
     config.add_subscriber(
         functools.partial(listeners.check_collection_status,
                           resources=resources,
-                          force_review=force_review,
-                          force_groups=force_groups,
+                          to_review_enabled=to_review_enabled,
+                          group_check_enabled=group_check_enabled,
                           editors_group=editors_group,
                           reviewers_group=reviewers_group),
         ResourceChanged,

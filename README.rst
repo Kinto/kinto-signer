@@ -163,20 +163,20 @@ makes sure that:
 * the user asking for review belongs to a group ``editors`` and
   the one approving the review belongs to ``reviewers``.
 
-+-------------------------------------------+----------------------+--------------------------------------------------------------------------+
-| Setting name                              | Default              | What does it do?                                                         |
-+===========================================+======================+==========================================================================+
-| kinto.signer.force_review                 | ``false``            | If ``true``, the collection ``status`` must be set to ``to-review`` by a |
-|                                           |                      | different user before being set to ``to-sign``.                          |
-+-------------------------------------------+----------------------+--------------------------------------------------------------------------+
-| kinto.signer.force_groups                 | ``false``            | If ``true``, the user setting to ``to-review`` must belong to the        |
-|                                           |                      | ``editors`` group in the source bucket, and the one setting to           |
-|                                           |                      | ``to-sign`` must belong to ``reviewers``.                                |
-+-------------------------------------------+----------------------+--------------------------------------------------------------------------+
-| kinto.signer.editors_group                | ``editors``          | The group id that is required for changing status to ``to-review``       |
-+-------------------------------------------+----------------------+--------------------------------------------------------------------------+
-| kinto.signer.reviewers_group              | ``reviewers``        | The group id that is required for changing status to ``to-sign``         |
-+-------------------------------------------+----------------------+--------------------------------------------------------------------------+
++----------------------------------+---------------+--------------------------------------------------------------------------+
+| Setting name                     | Default       | What does it do?                                                         |
++==================================+===============+==========================================================================+
+| kinto.signer.to_review_enabled   | ``false``     | If ``true``, the collection ``status`` must be set to ``to-review`` by a |
+|                                  |               | different user before being set to ``to-sign``.                          |
++----------------------------------+---------------+--------------------------------------------------------------------------+
+| kinto.signer.group_check_enabled | ``false``     | If ``true``, the user setting to ``to-review`` must belong to the        |
+|                                  |               | ``editors`` group in the source bucket, and the one setting to           |
+|                                  |               | ``to-sign`` must belong to ``reviewers``.                                |
++----------------------------------+---------------+--------------------------------------------------------------------------+
+| kinto.signer.editors_group       | ``editors``   | The group id that is required for changing status to ``to-review``       |
++----------------------------------+---------------+--------------------------------------------------------------------------+
+| kinto.signer.reviewers_group     | ``reviewers`` | The group id that is required for changing status to ``to-sign``         |
++----------------------------------+---------------+--------------------------------------------------------------------------+
 
 .. warning::
 

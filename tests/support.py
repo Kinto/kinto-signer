@@ -32,6 +32,6 @@ class BaseWebTest(CoreWebTest):
         config = configparser.ConfigParser()
         config.read(ini_path)
         settings = dict(config.items('app:main'))
-        settings['signer.force_groups'] = False
-        settings['signer.force_review'] = False
+        settings['signer.group_check_enabled'] = False
+        settings['signer.to_review_enabled'] = False
         return settings

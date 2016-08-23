@@ -32,6 +32,8 @@ When the *source* collection metadata ``status`` is set to ``"to-sign"``, it wil
    obtain form the signature backend
 #. set the *source* metadata ``status`` to ``"signed"``.
 
+A publishing workflow can be enabled (see below).
+
 .. warning::
 
     The current implementation assumes the destination collection will be
@@ -146,6 +148,44 @@ use the following settings:
 +------------------------------------+--------------------------------------------------------------------------+
 | kinto.signer.autograph.hawk_secret | The hawk secret used to issue the requests.                              |
 +------------------------------------+--------------------------------------------------------------------------+
+
+
+Workflows
+---------
+
+A workflow can be enabled on the source collection ``status``.
+
+The workflow is basically ``work-in-progress`` → ``to-review`` → ``to-sign`` → ``signed`` and
+makes sure that:
+
+* the collection is reviewed before being signed
+* the user asking for review is the not the one approving the review
+* the user asking for review belongs to a group ``editors`` and
+  the one approving the review belongs to ``reviewers``.
+
++----------------------------------+---------------+--------------------------------------------------------------------------+
+| Setting name                     | Default       | What does it do?                                                         |
++==================================+===============+==========================================================================+
+| kinto.signer.to_review_enabled   | ``false``     | If ``true``, the collection ``status`` must be set to ``to-review`` by a |
+|                                  |               | different user before being set to ``to-sign``.                          |
++----------------------------------+---------------+--------------------------------------------------------------------------+
+| kinto.signer.group_check_enabled | ``false``     | If ``true``, the user setting to ``to-review`` must belong to the        |
+|                                  |               | ``editors`` group in the source bucket, and the one setting to           |
+|                                  |               | ``to-sign`` must belong to ``reviewers``.                                |
++----------------------------------+---------------+--------------------------------------------------------------------------+
+| kinto.signer.editors_group       | ``editors``   | The group id that is required for changing status to ``to-review``       |
++----------------------------------+---------------+--------------------------------------------------------------------------+
+| kinto.signer.reviewers_group     | ``reviewers`` | The group id that is required for changing status to ``to-sign``         |
++----------------------------------+---------------+--------------------------------------------------------------------------+
+
+.. warning::
+
+    The ``editors`` and ``reviewers`` groups are defined in the **source bucket**
+    (e.g. ``/buckets/staging/groups/editors``).
+
+See `Kinto groups API <http://kinto.readthedocs.io/en/stable/api/1.x/groups.html>`_ for more details about how to define groups.
+
+.. image:: workflow.png
 
 
 Multiple certificates

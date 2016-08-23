@@ -2,64 +2,15 @@ import pkg_resources
 import functools
 
 from kinto.core.events import ACTIONS, ResourceChanged
-from kinto import logger
 from pyramid.exceptions import ConfigurationError
+from pyramid.settings import asbool
 
-from kinto_signer.updater import LocalUpdater
 from kinto_signer.signer import heartbeat
 from kinto_signer import utils
+from kinto_signer import listeners
 
 #: Module version, as defined in PEP-0396.
 __version__ = pkg_resources.get_distribution(__package__).version
-
-
-def on_collection_changed(event, resources):
-    """
-    Listen to resource change events, to check if a new signature is
-    requested.
-
-    When a source collection specified in settings is modified, and its
-    new metadata ``status`` is set to ``"to-sign"``, then sign the data
-    and update the destination.
-    """
-    payload = event.payload
-
-    if 'bucket_id' not in payload:
-        # Safety check for kinto < 3.3 where events have incoherent payloads
-        # on default bucket.
-        return
-
-    for impacted in event.impacted_records:
-        new_collection = impacted['new']
-
-        key = "/buckets/{bucket_id}/collections/{collection_id}".format(
-            collection_id=new_collection['id'],
-            bucket_id=payload['bucket_id'])
-
-        resource = resources.get(key)
-
-        # Only sign the configured resources.
-        if resource is None:
-            continue
-
-        # Only sign when the new collection status is "to-sign".
-        status = new_collection.get("status")
-        if status != "to-sign":
-            continue
-
-        registry = event.request.registry
-        updater = LocalUpdater(
-            signer=registry.signers[key],
-            storage=registry.storage,
-            permission=registry.permission,
-            source=resource['source'],
-            destination=resource['destination'])
-
-        try:
-            updater.sign_and_update_destination(event.request)
-        except Exception:
-            logger.exception("Could not sign '{0}'".format(key))
-            event.request.response.status = 503
 
 
 def _signer_dotted_location(settings, resource):
@@ -98,6 +49,12 @@ def includeme(config):
 
     settings = config.get_settings()
 
+    reviewers_group = settings.get("signer.reviewers_group", "reviewers")
+    editors_group = settings.get("signer.editors_group", "editors")
+    to_review_enabled = asbool(settings.get("signer.to_review_enabled", False))
+    group_check_enabled = asbool(settings.get("signer.group_check_enabled",
+                                              False))
+
     # Check source and destination resources are configured.
     raw_resources = settings.get('signer.resources')
     if raw_resources is None:
@@ -118,11 +75,39 @@ def includeme(config):
     docs = "https://github.com/Kinto/kinto-signer#kinto-signer"
     config.add_api_capability("signer", message, docs,
                               version=__version__,
-                              resources=resources.values())
+                              resources=resources.values(),
+                              to_review_enabled=to_review_enabled,
+                              group_check_enabled=group_check_enabled,
+                              editors_group=editors_group,
+                              reviewers_group=reviewers_group)
 
     config.add_subscriber(
-        functools.partial(on_collection_changed, resources=resources),
+        functools.partial(listeners.set_work_in_progress_status,
+                          resources=resources),
+        ResourceChanged,
+        for_resources=('record',))
+
+    config.add_subscriber(
+        functools.partial(listeners.check_collection_status,
+                          resources=resources,
+                          to_review_enabled=to_review_enabled,
+                          group_check_enabled=group_check_enabled,
+                          editors_group=editors_group,
+                          reviewers_group=reviewers_group),
         ResourceChanged,
         for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
-        for_resources=('collection',)
-    )
+        for_resources=('collection',))
+
+    config.add_subscriber(
+        functools.partial(listeners.check_collection_tracking,
+                          resources=resources),
+        ResourceChanged,
+        for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
+        for_resources=('collection',))
+
+    config.add_subscriber(
+        functools.partial(listeners.sign_collection_data,
+                          resources=resources),
+        ResourceChanged,
+        for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
+        for_resources=('collection',))

@@ -6,6 +6,18 @@ This document describes changes between each past release.
 0.8.0 (unreleased)
 ------------------
 
+Now requires *kinto >= 3.3*.
+
+**New features**
+
+- The API can now rely on a workflow and can check that users changing collection status
+  belong to some groups (e.g. ``editors``, ``reviewers``).
+- When a change is made in the source collection, its status is switched to
+  ``work-in-progress``
+- When a collection is modified, the ``last-author`` attribute is set to the current userid.
+  When set to ``to-review``, the ``last_editor`` value is set, and when set to ``to-sign``
+  the ``last_reviewer`` value is set.
+
 **Bug fixes**
 
 - Fix crash when several collections are created with status: to-sign using

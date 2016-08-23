@@ -1,8 +1,12 @@
+from collections import OrderedDict
+
 from kinto.core.events import ACTIONS
 from kinto.core.storage import Filter, Sort
 from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
 from kinto.core.utils import COMPARISON, build_request
+
 from kinto_signer.serializer import canonical_json
+from kinto_signer.utils import STATUS
 
 
 def notify_resource_event(request, request_options, matchdict,
@@ -83,7 +87,8 @@ class LocalUpdater(object):
         4. Ask the signer for a signature
         5. Send the signature to the destination.
         """
-        before = len(request.get_resource_events())
+        before_events = request.bound_data["resource_events"]
+        request.bound_data["resource_events"] = OrderedDict()
 
         self.create_destination(request)
 
@@ -94,11 +99,12 @@ class LocalUpdater(object):
         signature = self.signer.sign(serialized_records)
 
         self.set_destination_signature(signature, request)
-        self.update_source_status("signed", request)
+        self.update_source_status(STATUS.SIGNED, request)
 
         # Re-trigger events from event listener \o/
-        for event in request.get_resource_events()[before:]:
+        for event in request.get_resource_events():
             request.registry.notify(event)
+        request.bound_data["resource_events"] = before_events
 
     def _ensure_resource_exists(self, resource_type, parent_id,
                                 record_id, request):
@@ -285,7 +291,19 @@ class LocalUpdater(object):
             action=ACTIONS.UPDATE,
             old=collection_record)
 
+    def update_source_editor(self, request):
+        attrs = {'last_editor': request.prefixed_userid}
+        return self._update_source_attributes(request, **attrs)
+
     def update_source_status(self, status, request):
+        attrs = {'status': status.value}
+        if status == STATUS.WORK_IN_PROGRESS:
+            attrs["last_author"] = request.prefixed_userid
+        if status == STATUS.SIGNED:
+            attrs["last_reviewer"] = request.prefixed_userid
+        return self._update_source_attributes(request, **attrs)
+
+    def _update_source_attributes(self, request, **kwargs):
         parent_id = '/buckets/%s' % self.source['bucket']
         collection_id = 'collection'
 
@@ -296,8 +314,15 @@ class LocalUpdater(object):
 
         # Update the collection_record
         new_collection = dict(**collection_record)
+        new_collection.update(**kwargs)
+
+        # If nothing was changed, do nothing.
+        # (e.g. same last_editor)
+        if new_collection == collection_record:
+            return
+
+        # Remove last_modified to be sure it's bumped.
         new_collection.pop('last_modified', None)
-        new_collection['status'] = status
 
         updated = self.storage.update(
             parent_id=parent_id,

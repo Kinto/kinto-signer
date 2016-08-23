@@ -1,4 +1,4 @@
-kinto-client
+kinto-http
 pytest
 mock
 pytest-watch
@@ -7,5 +7,5 @@ pytest-capturelog
 pytest-cover
 pytest-sugar
 tox
-unittest2
 webtest
+kinto[postgresql]

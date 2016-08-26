@@ -181,9 +181,10 @@ class BaseTestFunctional(object):
         assert len(records) == 10  # two of them are deleted.
         last_modified = collection_timestamp(self.destination)
         serialized_records = canonical_json(records, last_modified)
+        # This raises when the signature is invalid.
+        self.signer.verify(serialized_records, signature)
 
     def test_records_delete_all_and_signature(self):
-        # Now delete one record on the source and trigger another signature.
         source_records = self.source.get_records()
         destination_records = self.destination.get_records()
 

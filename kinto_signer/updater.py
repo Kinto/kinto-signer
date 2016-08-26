@@ -100,7 +100,7 @@ class LocalUpdater(object):
 
         records, timestamp = self.get_destination_records()
         serialized_records = canonical_json(records, timestamp)
-        logger.debug("SIGNED", serialized_records)
+        logger.debug(self.source_collection_uri, serialized_records)
         signature = self.signer.sign(serialized_records)
 
         self.set_destination_signature(signature, request)
@@ -166,7 +166,7 @@ class LocalUpdater(object):
         self.permission.replace_object_permissions(
             self.destination_collection_uri, permissions)
 
-    def _get_records(self, rc, last_modified=None, include_deleted=False):
+    def _get_records(self, rc, last_modified=None):
         # If last_modified was specified, only retrieve items since then.
         storage_kwargs = {}
         if last_modified is not None:
@@ -180,12 +180,11 @@ class LocalUpdater(object):
         records, count = self.storage.get_all(
             parent_id=parent_id,
             collection_id='record',
-            include_deleted=include_deleted,
+            include_deleted=True,
             **storage_kwargs)
 
         if len(records) == count == 0:
-            # Do not create the collection_timestamp when we don't
-            # have records.
+            # When the collection empty (no records and no tombstones)
             collection_timestamp = None
         else:
             collection_timestamp = self.storage.collection_timestamp(
@@ -196,12 +195,10 @@ class LocalUpdater(object):
 
     def get_source_records(self, last_modified):
         return self._get_records(self.source,
-                                 last_modified,
-                                 include_deleted=True)
+                                 last_modified)
 
     def get_destination_records(self):
-        return self._get_records(self.destination,
-                                 include_deleted=True)
+        return self._get_records(self.destination)
 
     def push_records_to_destination(self, request):
         __, timestamp = self.get_destination_records()

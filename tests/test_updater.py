@@ -76,6 +76,7 @@ class LocalUpdaterTest(unittest.TestCase):
             sorting=[Sort('last_modified', 1)])
 
     def test_get_destination_records(self):
+        # We want to test get_destination_records with some records.
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
         count = mock.sentinel.count
         self.storage.get_all.return_value = (records, count)

@@ -201,7 +201,7 @@ class BaseTestFunctional(object):
 
         last_modified = collection_timestamp(self.destination)
         serialized_records = canonical_json(destination_records, last_modified)
-        print("VERIFIED", serialized_records)
+        # print("VERIFIED", serialized_records)
 
         data = self.destination.get_collection()
         signature = data['data']['signature']

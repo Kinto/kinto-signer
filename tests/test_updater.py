@@ -94,7 +94,7 @@ class LocalUpdaterTest(unittest.TestCase):
                    return_value=([], 1324))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
         self.patch(self.updater, 'get_source_records',
-                   return_value=(records, '42'))
+                   return_value=(records, 1325))
         self.updater.push_records_to_destination(DummyRequest())
         assert self.storage.update.call_count == 3
 
@@ -113,7 +113,7 @@ class LocalUpdaterTest(unittest.TestCase):
         records.extend([{'id': idx, 'deleted': True, 'last_modified': 42}
                         for idx in range(3, 5)])
         self.patch(self.updater, 'get_source_records',
-                   return_value=(records, '42'))
+                   return_value=(records, 1325))
         self.updater.push_records_to_destination(DummyRequest())
         self.updater.get_source_records.assert_called_with(last_modified=1324)
         assert self.storage.update.call_count == 2
@@ -129,7 +129,7 @@ class LocalUpdaterTest(unittest.TestCase):
         records.extend([{'id': idx, 'deleted': True, 'last_modified': 42}
                        for idx in range(3, 5)])
         self.patch(self.updater, 'get_source_records',
-                   return_value=(records, '42'))
+                   return_value=(records, 1325))
         # Calling the updater should not raise the RecordNotFoundError.
         self.updater.push_records_to_destination(DummyRequest())
 
@@ -138,7 +138,7 @@ class LocalUpdaterTest(unittest.TestCase):
                    return_value=([], None))
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
         self.patch(self.updater, 'get_source_records',
-                   return_value=(records, '42'))
+                   return_value=(records, 1325))
         self.updater.push_records_to_destination(DummyRequest())
         self.updater.get_source_records.assert_called_with(last_modified=None)
         assert self.storage.update.call_count == 3

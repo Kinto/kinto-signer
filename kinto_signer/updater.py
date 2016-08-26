@@ -199,10 +199,10 @@ class LocalUpdater(object):
         __, dest_timestamp = self.get_destination_records()
         new_records, source_timestamp = self.get_source_records(last_modified=dest_timestamp)
 
-        if source_timestamp is not None and dest_timestamp > source_timestamp:
-            raise ValueError("There is no cases where the destination timestamp should "
-                             "be bigger than the source timestamp. Something looks wrong "
-                             "with your storage backend timezone configuration.")
+        if source_timestamp and dest_timestamp and dest_timestamp > source_timestamp:
+            raise ValueError("Destination collection timestamp cannot be higher "
+                             "than source collection timestamp. Check that your "
+                             "storage backend timezone is UTC.")
 
         # Update the destination collection.
         for record in new_records:

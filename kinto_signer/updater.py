@@ -1,3 +1,5 @@
+import logging
+
 from collections import OrderedDict
 
 from kinto.core.events import ACTIONS
@@ -7,6 +9,8 @@ from kinto.core.utils import COMPARISON, build_request
 
 from kinto_signer.serializer import canonical_json
 from kinto_signer.utils import STATUS
+
+logger = logging.getLogger(__name__)
 
 
 def notify_resource_event(request, request_options, matchdict,
@@ -96,6 +100,7 @@ class LocalUpdater(object):
 
         records, timestamp = self.get_destination_records()
         serialized_records = canonical_json(records, timestamp)
+        logger.debug("SIGNED", serialized_records)
         signature = self.signer.sign(serialized_records)
 
         self.set_destination_signature(signature, request)
@@ -178,7 +183,9 @@ class LocalUpdater(object):
             include_deleted=include_deleted,
             **storage_kwargs)
 
-        if count == 0:
+        if len(records) == count == 0:
+            # Do not create the collection_timestamp when we don't
+            # have records.
             collection_timestamp = None
         else:
             collection_timestamp = self.storage.collection_timestamp(
@@ -193,7 +200,8 @@ class LocalUpdater(object):
                                  include_deleted=True)
 
     def get_destination_records(self):
-        return self._get_records(self.destination)
+        return self._get_records(self.destination,
+                                 include_deleted=True)
 
     def push_records_to_destination(self, request):
         __, timestamp = self.get_destination_records()

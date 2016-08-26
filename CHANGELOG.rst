@@ -6,7 +6,10 @@ This document describes changes between each past release.
 0.9.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Warn in case the storage backend timezone is not configured to use UTC (#122)
+- Fix the signature when all records have been deleted from the source (#120)
 
 
 0.8.0 (2016-08-23)

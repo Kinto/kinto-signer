@@ -196,8 +196,14 @@ class LocalUpdater(object):
         return self._get_records(self.destination)
 
     def push_records_to_destination(self, request):
-        __, timestamp = self.get_destination_records()
-        new_records, _ = self.get_source_records(last_modified=timestamp)
+        __, dest_timestamp = self.get_destination_records()
+        new_records, source_timestamp = self.get_source_records(last_modified=dest_timestamp)
+
+        if source_timestamp is not None and dest_timestamp > source_timestamp:
+            raise ValueError("There is no cases where the destination timestamp should "
+                             "be bigger than the source timestamp. Something looks wrong "
+                             "with your storage backend timezone configuration.")
+
         # Update the destination collection.
         for record in new_records:
             storage_kwargs = {

@@ -98,6 +98,14 @@ class LocalUpdaterTest(unittest.TestCase):
         self.updater.push_records_to_destination(DummyRequest())
         assert self.storage.update.call_count == 3
 
+    def test_push_records_to_destination_raises_if_storage_is_misconfigured(self):
+        self.patch(self.updater, 'get_destination_records',
+                   return_value=([], 1324))
+        self.patch(self.updater, 'get_source_records',
+                   return_value=([], 1234))
+        with pytest.raises(ValueError):
+            self.updater.push_records_to_destination(DummyRequest())
+
     def test_push_records_removes_deleted_records(self):
         self.patch(self.updater, 'get_destination_records',
                    return_value=([], 1324))

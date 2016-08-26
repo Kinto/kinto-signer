@@ -178,9 +178,12 @@ class BaseTestFunctional(object):
         assert signature is not None
 
         records = self.destination.get_records(_since=0)  # obtain deleted too
-        assert len(records) == 10  # two of them are deleted.
         last_modified = collection_timestamp(self.destination)
         serialized_records = canonical_json(records, last_modified)
+
+        assert len(records) == 10  # two of them are deleted.
+        assert len([r for r in records if r.get('deleted', False)]) == 2
+
         # This raises when the signature is invalid.
         self.signer.verify(serialized_records, signature)
 

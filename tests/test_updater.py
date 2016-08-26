@@ -51,7 +51,7 @@ class LocalUpdaterTest(unittest.TestCase):
                                       "bucket and collection")
 
     def test_get_source_records_asks_storage_for_records(self):
-        records = mock.sentinel.records
+        records = []
         count = mock.sentinel.count
         self.storage.get_all.return_value = (records, count)
 
@@ -63,7 +63,7 @@ class LocalUpdaterTest(unittest.TestCase):
             sorting=[Sort('last_modified', 1)])
 
     def test_get_source_records_asks_storage_for_last_modified_records(self):
-        records = mock.sentinel.records
+        records = []
         count = mock.sentinel.count
         self.storage.get_all.return_value = (records, count)
 
@@ -76,7 +76,8 @@ class LocalUpdaterTest(unittest.TestCase):
             sorting=[Sort('last_modified', 1)])
 
     def test_get_destination_records(self):
-        records = mock.sentinel.records
+        # We want to test get_destination_records with some records.
+        records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
         count = mock.sentinel.count
         self.storage.get_all.return_value = (records, count)
         self.updater.get_destination_records()
@@ -86,7 +87,7 @@ class LocalUpdaterTest(unittest.TestCase):
         self.storage.get_all.assert_called_with(
             collection_id='record',
             parent_id='/buckets/destbucket/collections/destcollection',
-            include_deleted=False,
+            include_deleted=True,
             sorting=[Sort('last_modified', 1)])
 
     def test_push_records_to_destination(self):

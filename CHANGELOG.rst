@@ -6,7 +6,9 @@ This document describes changes between each past release.
 0.9.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**New features**
+
+- Now sends a StatsD timer with signature duration at ``listeners.signer``
 
 
 0.8.0 (2016-08-23)

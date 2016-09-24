@@ -108,7 +108,7 @@ def includeme(config):
     sign_data_listener = functools.partial(listeners.sign_collection_data,
                                            resources=resources)
     # If StatsD is enabled, monitor execution time of listener.
-    if getattr(config.registry, 'statsd', None):
+    if config.registry.statsd:
         statsd_client = config.registry.statsd
         key = 'listeners.signer'
         sign_data_listener = statsd_client.timer(key)(sign_data_listener)

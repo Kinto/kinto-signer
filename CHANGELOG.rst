@@ -8,7 +8,7 @@ This document describes changes between each past release.
 
 **New features**
 
-- Now sends a StatsD timer with signature duration at ``listeners.signer``
+- Now sends a StatsD timer with signature duration at ``plugins.signer``
 
 
 0.8.0 (2016-08-23)

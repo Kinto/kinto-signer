@@ -110,7 +110,7 @@ def includeme(config):
     # If StatsD is enabled, monitor execution time of listener.
     if config.registry.statsd:
         statsd_client = config.registry.statsd
-        key = 'listeners.signer'
+        key = 'plugins.signer'
         sign_data_listener = statsd_client.timer(key)(sign_data_listener)
 
     config.add_subscriber(

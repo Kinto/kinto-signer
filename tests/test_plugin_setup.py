@@ -135,7 +135,7 @@ class IncludeMeTest(unittest.TestCase):
         }
         with mock.patch('kinto.core.statsd.Client.timer') as mocked:
             self.includeme(settings)
-            mocked.assert_called_with('listeners.signer')
+            mocked.assert_called_with('plugins.signer')
 
 
 class OnCollectionChangedTest(unittest.TestCase):

@@ -6,6 +6,7 @@ pytest-cache
 pytest-capturelog
 pytest-cover
 pytest-sugar
+statsd
 tox
 webtest
 kinto[postgresql]

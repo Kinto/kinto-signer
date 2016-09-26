@@ -124,6 +124,19 @@ class IncludeMeTest(unittest.TestCase):
         assert signer1.public_key == "/path/to/key"
         assert signer2.server_url == "http://localhost"
 
+    def test_a_statsd_timer_is_used_for_signature_if_configured(self):
+        settings = {
+            "statsd_url": "udp://127.0.0.1:8125",
+            "signer.resources": (
+                "/buckets/sb1/collections/sc1;/buckets/db1/collections/dc1"
+            ),
+            "signer.ecdsa.public_key": "/path/to/key",
+            "signer.ecdsa.private_key": "/path/to/private",
+        }
+        with mock.patch('kinto.core.statsd.Client.timer') as mocked:
+            self.includeme(settings)
+            mocked.assert_called_with('plugins.signer')
+
 
 class OnCollectionChangedTest(unittest.TestCase):
 

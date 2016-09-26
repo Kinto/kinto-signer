@@ -105,9 +105,16 @@ def includeme(config):
         for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
         for_resources=('collection',))
 
+    sign_data_listener = functools.partial(listeners.sign_collection_data,
+                                           resources=resources)
+    # If StatsD is enabled, monitor execution time of listener.
+    if config.registry.statsd:
+        statsd_client = config.registry.statsd
+        key = 'plugins.signer'
+        sign_data_listener = statsd_client.timer(key)(sign_data_listener)
+
     config.add_subscriber(
-        functools.partial(listeners.sign_collection_data,
-                          resources=resources),
+        sign_data_listener,
         ResourceChanged,
         for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
         for_resources=('collection',))

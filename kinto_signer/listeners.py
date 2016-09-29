@@ -48,24 +48,38 @@ def sign_collection_data(event, resources):
             continue
 
         registry = event.request.registry
-        updater = LocalUpdater(signer=registry.signers[key],
-                               storage=registry.storage,
-                               permission=registry.permission,
-                               source=resource['source'],
-                               destination=resource['destination'])
+        updater_kwargs = dict(signer=registry.signers[key],
+                              storage=registry.storage,
+                              permission=registry.permission,
+                              source=resource['source'],
+                              destination=resource['destination'])
 
         new_status = new_collection.get("status")
         if new_status == STATUS.TO_SIGN:
             # Run signature process (will set `last_reviewer` field).
-            try:
-                updater.sign_and_update_destination(event.request)
-            except Exception:
-                logger.exception("Could not sign '{0}'".format(key))
-                event.request.response.status = 503
+            updater_kwargs['next_source_status'] = STATUS.SIGNED
 
         elif new_status == STATUS.TO_REVIEW:
-            # Track `last_editor`
-            updater.update_source_editor(event.request)
+            if 'preview' in resource:
+                updater_kwargs['destination'] = resource['preview']
+                updater_kwargs['next_source_status'] = STATUS.TO_REVIEW
+        else:
+            # Nothing to do.
+            return
+
+        updater = LocalUpdater(**updater_kwargs)
+
+        # If no preview collection: just track `last_editor`
+        if new_status == STATUS.TO_REVIEW:
+            if 'preview' not in resource:
+                updater.update_source_editor(event.request)
+                return
+
+        try:
+            updater.sign_and_update_destination(event.request)
+        except Exception:
+            logger.exception("Could not sign '{0}'".format(key))
+            event.request.response.status = 503
 
 
 def check_collection_status(event, resources, group_check_enabled,

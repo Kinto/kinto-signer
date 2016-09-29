@@ -54,7 +54,8 @@ class LocalUpdater(object):
         records from the source and add new items to the destination.
     """
 
-    def __init__(self, source, destination, signer, storage, permission):
+    def __init__(self, source, destination, signer, storage, permission,
+                 next_source_status=STATUS.SIGNED):
 
         def _ensure_resource(resource):
             if not set(resource.keys()).issuperset({'bucket', 'collection'}):
@@ -64,6 +65,7 @@ class LocalUpdater(object):
 
         self.source = _ensure_resource(source)
         self.destination = _ensure_resource(destination)
+        self.next_source_status = next_source_status
         self.signer = signer
         self.storage = storage
         self.permission = permission
@@ -104,7 +106,7 @@ class LocalUpdater(object):
         signature = self.signer.sign(serialized_records)
 
         self.set_destination_signature(signature, request)
-        self.update_source_status(STATUS.SIGNED, request)
+        self.update_source_status(self.next_source_status, request)
 
         # Re-trigger events from event listener \o/
         for event in request.get_resource_events():
@@ -310,6 +312,8 @@ class LocalUpdater(object):
         attrs = {'status': status.value}
         if status == STATUS.WORK_IN_PROGRESS:
             attrs["last_author"] = request.prefixed_userid
+        if status == STATUS.TO_REVIEW:
+            attrs["last_editor"] = request.prefixed_userid
         if status == STATUS.SIGNED:
             attrs["last_reviewer"] = request.prefixed_userid
         return self._update_source_attributes(request, **attrs)

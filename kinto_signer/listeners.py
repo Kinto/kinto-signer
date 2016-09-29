@@ -36,6 +36,11 @@ def sign_collection_data(event, resources):
     """
     payload = event.payload
 
+    current_user_id = event.request.prefixed_userid
+    if current_user_id == _PLUGIN_USERID:
+        # Ignore changes made by plugin.
+        return
+
     for impacted in event.impacted_records:
         new_collection = impacted['new']
 

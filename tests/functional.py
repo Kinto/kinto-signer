@@ -16,9 +16,9 @@ SERVER_URL = "http://localhost:8888/v1"
 DEFAULT_AUTH = ('user', 'p4ssw0rd')
 
 
-def collection_timestamp(client):
+def collection_timestamp(client, **kwargs):
     # XXXX Waiting https://github.com/Kinto/kinto-http.py/issues/77
-    endpoint = client.get_endpoint('records')
+    endpoint = client.get_endpoint('records', **kwargs)
     record_resp, headers = client.session.request('get', endpoint)
     return headers.get('ETag', '').strip('"')
 
@@ -204,7 +204,6 @@ class BaseTestFunctional(object):
 
         last_modified = collection_timestamp(self.destination)
         serialized_records = canonical_json(destination_records, last_modified)
-        # print("VERIFIED", serialized_records)
 
         data = self.destination.get_collection()
         signature = data['data']['signature']
@@ -268,6 +267,9 @@ class WorkflowTest(unittest.TestCase):
         cls.elsa_principal = user_principal(cls.elsa_client)
         cls.anna_principal = user_principal(cls.anna_client)
 
+        private_key = os.path.join(__HERE__, 'config/ecdsa.private.pem')
+        cls.signer = local_ecdsa.ECDSASigner(private_key=private_key)
+
     def setUp(self):
         perms = {"write": ["system.Authenticated"]}
         self.client.create_bucket()
@@ -306,6 +308,21 @@ class WorkflowTest(unittest.TestCase):
         self.anna_client.patch_collection(data={'status': 'to-review'})
         self.elsa_client.patch_collection(data={'status': 'to-review'})
 
+    def test_preview_collection_is_updated_and_signed_on_to_review(self):
+        create_records(self.client)
+        self.anna_client.patch_collection(data={'status': 'to-review'})
+
+        collection = self.client.get_collection(collection="preview")
+        records = self.client.get_records(collection="preview")
+        last_modified = collection_timestamp(self.client, collection="preview")
+        serialized_records = canonical_json(records, last_modified)
+
+        signature = collection['data']['signature']
+        assert signature is not None
+        self.signer.verify(serialized_records, signature)
+
+        assert len(records) == 10
+
     def test_same_editor_cannot_review(self):
         self.anna_client.patch_collection(data={'status': 'to-review'})
         with self.assertRaises(KintoException):
@@ -340,6 +357,10 @@ class WorkflowTest(unittest.TestCase):
     def test_editors_can_be_different_after_cancelled(self):
         create_records(self.client)
         self.client.patch_collection(data={'status': 'to-review'})
+
+        resp = self.client.get_collection()
+        assert resp['data']['last_editor'] == self.client_principal
+
         # Client cannot review since he is the last_editor.
         with self.assertRaises(KintoException):
             self.client.patch_collection(data={'status': 'to-sign'})

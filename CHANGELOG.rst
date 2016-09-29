@@ -9,6 +9,11 @@ This document describes changes between each past release.
 **New features**
 
 - Now sends a StatsD timer with signature duration at ``plugins.signer``
+- Ability to define a *preview* collection that is updated when collection status
+  is set to ``to-review``. In order to enable this feature, define triplets in
+  the ``kinto_signer.ressources`` settings (``{source};{preview};{destination}``)
+  instead of couples, and make sure you have ``kinto_signer.to_review_enabled = true``.
+  See README for more info (fixes #126)
 
 
 0.8.1 (2016-08-26)

@@ -187,7 +187,7 @@ See `Kinto groups API <http://kinto.readthedocs.io/en/stable/api/1.x/groups.html
 
 If the review process is enabled, it is possible to configure a *preview*
 collection, that will be updated and signed when the status is set to ``to-review``.
-This *preview* collection can be used by client to test and validate the changes
+This *preview* collection can be used by clients to test and validate the changes
 before approving them.
 
 If a resources entry contains a semi-column separated **triplet**, then a preview

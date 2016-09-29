@@ -31,6 +31,13 @@ def notify_resource_event(request, request_options, matchdict,
                                       old=old)
 
 
+def _ensure_resource(resource):
+    if not set(resource.keys()).issuperset({'bucket', 'collection'}):
+        msg = "Resources should contain both bucket and collection"
+        raise ValueError(msg)
+    return resource
+
+
 class LocalUpdater(object):
     """Sign items in the source and push them to the destination.
 
@@ -56,32 +63,40 @@ class LocalUpdater(object):
 
     def __init__(self, source, destination, signer, storage, permission,
                  next_source_status=STATUS.SIGNED):
+        self._source = None
+        self._destination = None
 
-        def _ensure_resource(resource):
-            if not set(resource.keys()).issuperset({'bucket', 'collection'}):
-                msg = "Resources should contain both bucket and collection"
-                raise ValueError(msg)
-            return resource
-
-        self.source = _ensure_resource(source)
-        self.destination = _ensure_resource(destination)
+        self.source = source
+        self.destination = destination
         self.next_source_status = next_source_status
         self.signer = signer
         self.storage = storage
         self.permission = permission
 
-        # Define resource IDs.
+    @property
+    def source(self):
+        return self._source
 
+    @source.setter
+    def source(self, source):
+        self._source = _ensure_resource(source)
+        self.source_bucket_uri = '/buckets/%s' % source['bucket']
+        self.source_collection_uri = '/buckets/%s/collections/%s' % (
+            source['bucket'],
+            source['collection'])
+
+    @property
+    def destination(self):
+        return self._destination
+
+    @destination.setter
+    def destination(self, destination):
+        self._destination = _ensure_resource(destination)
         self.destination_bucket_uri = '/buckets/%s' % (
             self.destination['bucket'])
         self.destination_collection_uri = '/buckets/%s/collections/%s' % (
             self.destination['bucket'],
             self.destination['collection'])
-
-        self.source_bucket_uri = '/buckets/%s' % self.source['bucket']
-        self.source_collection_uri = '/buckets/%s/collections/%s' % (
-            self.source['bucket'],
-            self.source['collection'])
 
     def sign_and_update_destination(self, request):
         """Sign the specified collection.

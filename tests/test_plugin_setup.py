@@ -38,6 +38,8 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
                             "collection": "source"}},
                 {"destination": {"bucket": "alice",
                                  "collection": "to"},
+                 "preview": {"bucket": "alice",
+                             "collection": "preview"},
                  "source": {"bucket": "alice",
                             "collection": "from"}},
                 {"destination": {"bucket": "bob",

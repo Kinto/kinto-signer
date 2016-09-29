@@ -31,7 +31,12 @@ def parse_resources(raw_resources):
             raise ConfigurationError(error_msg)
 
         try:
-            source, destination = res.split(';')
+            triplet = res.strip(';').split(';')
+            if len(triplet) == 2:
+                source, destination = triplet
+                preview = None
+            else:
+                source, preview, destination = triplet
         except ValueError:
             raise ConfigurationError(error_msg)
 
@@ -60,4 +65,7 @@ def parse_resources(raw_resources):
             'source': source,
             'destination': destination,
         }
+        if preview is not None:
+            resources[key]['preview'] = _get_resource(preview)
+
     return resources

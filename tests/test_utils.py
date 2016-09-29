@@ -75,6 +75,30 @@ class ParseResourcesTest(unittest.TestCase):
         resources = utils.parse_resources(raw_resources)
         assert len(resources) == 2
 
+    def test_a_preview_collection_is_supported(self):
+        raw_resources = (
+            "/buckets/stage/collections/cid;"
+            "/buckets/preview/collections/cid;"
+            "/buckets/prod/collections/cid;"
+        )
+        resources = utils.parse_resources(raw_resources)
+        assert resources == {
+            '/buckets/stage/collections/cid': {
+                'source': {
+                    'bucket': 'stage',
+                    'collection': 'cid'
+                },
+                'preview': {
+                    'bucket': 'preview',
+                    'collection': 'cid'
+                },
+                'destination': {
+                    'bucket': 'prod',
+                    'collection': 'cid'
+                }
+            }
+        }
+
     def test_resources_should_be_space_separated(self):
         raw_resources = (
             "/buckets/sbid1/collections/scid;/buckets/dbid1/collections/dcid,"

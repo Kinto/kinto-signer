@@ -63,9 +63,9 @@ def sign_collection_data(event, resources):
             elif new_status == STATUS.TO_REVIEW:
                 if 'preview' in resource:
                     # If preview collection: update and sign preview collection
-                    updater.next_source_status = STATUS.TO_REVIEW
                     updater.destination = resource['preview']
-                    updater.sign_and_update_destination(event.request)
+                    updater.sign_and_update_destination(event.request,
+                                                        next_source_status=STATUS.TO_REVIEW)  # NOQA
                 else:
                     # If no preview collection: just track `last_editor`
                     updater.update_source_editor(event.request)

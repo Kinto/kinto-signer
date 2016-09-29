@@ -61,14 +61,12 @@ class LocalUpdater(object):
         records from the source and add new items to the destination.
     """
 
-    def __init__(self, source, destination, signer, storage, permission,
-                 next_source_status=STATUS.SIGNED):
+    def __init__(self, source, destination, signer, storage, permission):
         self._source = None
         self._destination = None
 
         self.source = source
         self.destination = destination
-        self.next_source_status = next_source_status
         self.signer = signer
         self.storage = storage
         self.permission = permission
@@ -98,7 +96,8 @@ class LocalUpdater(object):
             self.destination['bucket'],
             self.destination['collection'])
 
-    def sign_and_update_destination(self, request):
+    def sign_and_update_destination(self, request,
+                                    next_source_status=STATUS.SIGNED):
         """Sign the specified collection.
 
         0. Create the destination bucket / collection
@@ -121,7 +120,7 @@ class LocalUpdater(object):
         signature = self.signer.sign(serialized_records)
 
         self.set_destination_signature(signature, request)
-        self.update_source_status(self.next_source_status, request)
+        self.update_source_status(next_source_status, request)
 
         # Re-trigger events from event listener \o/
         for event in request.get_resource_events():

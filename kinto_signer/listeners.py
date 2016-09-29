@@ -5,7 +5,8 @@ from kinto import logger
 from kinto.core.utils import instance_uri
 from pyramid import httpexceptions
 
-from kinto_signer.updater import LocalUpdater
+from kinto_signer.updater import (LocalUpdater, FIELD_LAST_AUTHOR,
+                                  FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER)
 from kinto_signer.utils import STATUS
 
 
@@ -132,7 +133,7 @@ def check_collection_status(event, resources, group_check_enabled,
             if requires_review and to_review_enabled:
                 raise_invalid(message="Collection not reviewed")
 
-            if old_collection.get("last_editor") == current_user_id:
+            if old_collection.get(FIELD_LAST_EDITOR) == current_user_id:
                 raise_forbidden(message="Editor cannot review")
 
         # 4. to-sign -> signed
@@ -153,7 +154,7 @@ def check_collection_tracking(event, resources):
     if event.request.prefixed_userid == _PLUGIN_USERID:
         return
 
-    tracking_fields = ("last_author", "last_editor", "last_reviewer")
+    tracking_fields = (FIELD_LAST_AUTHOR, FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER)  # NOQA
 
     for impacted in event.impacted_records:
         old_collection = impacted.get("old", {})

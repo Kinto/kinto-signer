@@ -34,8 +34,8 @@ class ParseResourcesTest(unittest.TestCase):
     def test_outnumbered_urls_raises_an_exception(self):
         raw_resources = (
             "/buckets/sbid/scid;"
-            "/buckets/dbid/collections/dcid;:"
-            "/buckets/dbid/collections/dcid;:"
+            "/buckets/dbid/collections/dcid;"
+            "/buckets/dbid/collections/dcid;"
             "/buckets/sbid/scid;")
         with pytest.raises(ConfigurationError):
             utils.parse_resources(raw_resources)

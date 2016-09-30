@@ -89,12 +89,35 @@ def main():
                              collection=args.source_col)
 
     # 0. initialize source bucket/collection (if necessary)
+    server_info = client.server_info()
+    print('Server: {0}'.format(args.server))
+    print('Author: {user[id]}'.format(**client.server_info()))
+    print('Editor: {user[id]}'.format(**editor_client.server_info()))
+    print('Reviewer: {user[id]}'.format(**reviewer_client.server_info()))
     try:
         client.delete_collection()
     except kinto_exceptions.KintoException:
         pass
     client.create_bucket(if_not_exists=True)
     client.create_collection(if_not_exists=True)
+
+    # 0. check that this collection is well configured.
+    signer_capabilities = server_info['capabilities']['signer']
+    to_review_enabled = signer_capabilities.get('to_review_enabled', False)
+    resources = [r for r in signer_capabilities['resources']
+                 if (args.source_bucket, args.source_col) == (r['source']['bucket'], r['source']['collection'])]
+    assert len(resources) > 0, 'Specified source not configured to be signed'
+    resource = resources[0]
+    if to_review_enabled and 'preview' in resource:
+        print('Signoff: {source[bucket]}/{source[collection]} => {preview[bucket]}/{preview[collection]} => {destination[bucket]}/{destination[collection]}'.format(**resource))
+    else:
+        print('Signoff: {source[bucket]}/{source[collection]} => {destination[bucket]}/{destination[collection]}'.format(**resource))
+    if signer_capabilities.get('group_check_enabled', False):
+        print('/!\ Group check is enabled.')
+    if to_review_enabled:
+        print('/!\ Review workflow is enabled.')
+
+    print('_' * 80)
 
     # 1. upload data
     print('Uploading 20 random records')

@@ -54,14 +54,8 @@ def _get_args():
     parser.add_argument('--source-bucket', help='Source bucket',
                         type=str, default=SOURCE_BUCKET)
 
-    parser.add_argument('--dest-bucket', help='Destination bucket',
-                        type=str, default=DEST_BUCKET)
-
     parser.add_argument('--source-col', help='Source collection',
                         type=str, default=SOURCE_COL)
-
-    parser.add_argument('--dest-col', help='Destination collection',
-                        type=str, default=DEST_COL)
 
     return parser.parse_args()
 

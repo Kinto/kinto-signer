@@ -1,9 +1,8 @@
 import random
 from string import hexdigits
 import argparse
-from functools import partial
 
-from kinto_http import Client, exceptions as kinto_exceptions
+from kinto_http import Client
 from kinto_signer.serializer import canonical_json
 from kinto_signer.hasher import compute_hash
 from kinto_signer.signer.local_ecdsa import ECDSASigner
@@ -43,20 +42,20 @@ def _get_args():
     parser.add_argument('--auth', help='Basic Authentication',
                         type=str, default=DEFAULT_AUTH)
 
+    parser.add_argument('--editor-auth', help='Basic Authentication for editor',
+                        type=str, default=None)
+
+    parser.add_argument('--reviewer-auth', help='Basic Authentication for reviewer',
+                        type=str, default=None)
+
     parser.add_argument('--server', help='Kinto Server',
                         type=str, default=DEFAULT_SERVER)
 
     parser.add_argument('--source-bucket', help='Source bucket',
                         type=str, default=SOURCE_BUCKET)
 
-    parser.add_argument('--dest-bucket', help='Destination bucket',
-                        type=str, default=DEST_BUCKET)
-
     parser.add_argument('--source-col', help='Source collection',
                         type=str, default=SOURCE_COL)
-
-    parser.add_argument('--dest-col', help='Destination collection',
-                        type=str, default=DEST_COL)
 
     return parser.parse_args()
 
@@ -64,59 +63,133 @@ def _get_args():
 def main():
     args = _get_args()
 
-    # why do I have to do all of this just to set up auth...
-    def _auth(req, user='', password=''):
-        req.prepare_auth((user, password))
-        return req
-
-    if args.auth is not None:
-        user, password = args.auth.split(':')
-        args.auth = partial(_auth, user=user, password=password)
-
-    client = Client(server_url=args.server, auth=args.auth,
+    client = Client(server_url=args.server, auth=tuple(args.auth.split(':')),
                     bucket=args.source_bucket,
                     collection=args.source_col)
 
+    if args.editor_auth is None:
+        args.editor_auth = args.auth
+
+    if args.reviewer_auth is None:
+        args.reviewer_auth = args.auth
+
+    editor_client = Client(server_url=args.server,
+                           auth=tuple(args.editor_auth.split(':')),
+                           bucket=args.source_bucket,
+                           collection=args.source_col)
+    reviewer_client = Client(server_url=args.server,
+                             auth=tuple(args.reviewer_auth.split(':')),
+                             bucket=args.source_bucket,
+                             collection=args.source_col)
+
     # 0. initialize source bucket/collection (if necessary)
-    try:
-        client.delete_collection()
-    except kinto_exceptions.KintoException:
-        pass
-    client.create_bucket(if_not_exists=True)
+    server_info = client.server_info()
+    editor_id = editor_client.server_info()['user']['id']
+    reviewer_id = reviewer_client.server_info()['user']['id']
+    print('Server: {0}'.format(args.server))
+    print('Author: {user[id]}'.format(**server_info))
+    print('Editor: {0}'.format(editor_id))
+    print('Reviewer: {0}'.format(reviewer_id))
+
+    # 0. check that this collection is well configured.
+    signer_capabilities = server_info['capabilities']['signer']
+    to_review_enabled = signer_capabilities.get('to_review_enabled', False)
+    group_check_enabled = signer_capabilities.get('group_check_enabled', False)
+
+    resources = [r for r in signer_capabilities['resources']
+                 if (args.source_bucket, args.source_col) == (r['source']['bucket'], r['source']['collection'])]
+    assert len(resources) > 0, 'Specified source not configured to be signed'
+    resource = resources[0]
+    if to_review_enabled and 'preview' in resource:
+        print('Signoff: {source[bucket]}/{source[collection]} => {preview[bucket]}/{preview[collection]} => {destination[bucket]}/{destination[collection]}'.format(**resource))
+    else:
+        print('Signoff: {source[bucket]}/{source[collection]} => {destination[bucket]}/{destination[collection]}'.format(**resource))
+    print('Group check: {0}'.format(group_check_enabled))
+    print('Review workflow: {0}'.format(to_review_enabled))
+
+    print('_' * 80)
+
+    client.create_bucket(permissions={'write': ['system.Authenticated']},
+                         if_not_exists=True)
     client.create_collection(if_not_exists=True)
+    client.delete_records()
+    if group_check_enabled:
+        editors_group = signer_capabilities['editors_group']
+        client.create_group(editors_group, data={'members': [editor_id]}, if_not_exists=True)
+        reviewers_group = signer_capabilities['reviewers_group']
+        client.create_group(reviewers_group, data={'members': [reviewer_id]}, if_not_exists=True)
+
+    dest_client = Client(server_url=args.server,
+                         bucket=resource['destination']['bucket'],
+                         collection=resource['destination']['collection'])
+
+    preview_client = None
+    if to_review_enabled and 'preview' in resource:
+        preview_bucket = resource['preview']['bucket']
+        preview_collection = resource['preview']['collection']
+        preview_client = Client(server_url=args.server,
+                                bucket=preview_bucket,
+                                collection=preview_collection)
 
     # 1. upload data
-    print('Uploading 20 random records')
+    print('Author uploads 20 random records')
     records = upload_records(client, 20)
 
-    # 2. ask for a signature by toggling "to-sign"
-    print('Trigger signature')
+    # 2. ask for a signature
+    # 2.1 ask for review (noop on old versions)
+    print('Editor asks for review')
+    data = {"status": "to-review"}
+    editor_client.patch_collection(data=data)
+    # 2.2 check the preview collection (if enabled)
+    if preview_client:
+        print('Check preview collection')
+        records = preview_client.get_records()
+        assert len(records) == 20, "%s != 20 records" % len(records)
+        metadata = preview_client.get_collection()['data']
+        preview_signature = metadata.get('signature')
+        assert preview_signature, 'Preview collection not signed'
+        preview_timestamp = collection_timestamp(preview_client)
+    # 2.3 approve the review
+    print('Reviewer approves and triggers signature')
     data = {"status": "to-sign"}
-    client.patch_collection(data=data)
+    reviewer_client.patch_collection(data=data)
 
     # 3. upload more data
-    print('Create 20 others records')
+    print('Author creates 20 others records')
     upload_records(client, 20)
 
-    print('Update 5 random records')
+    print('Editor updates 5 random records')
     for toupdate in random.sample(records, 5):
-        client.patch_record(dict(newkey=_rand(10), **toupdate))
+        editor_client.patch_record(dict(newkey=_rand(10), **toupdate))
 
-    print('Delete 5 random records')
+    print('Author deletes 5 random records')
     for todelete in random.sample(records, 5):
         client.delete_record(todelete['id'])
 
-    # 4. ask again for a signature by toggling "to-sign"
-    print('Trigger signature')
+    # 4. ask again for a signature
+    # 2.1 ask for review (noop on old versions)
+    print('Editor asks for review')
+    data = {"status": "to-review"}
+    editor_client.patch_collection(data=data)
+    # 2.2 check the preview collection (if enabled)
+    if preview_client:
+        print('Check preview collection')
+        records = preview_client.get_records()
+        assert len(records) == 35, "%s != 35 records" % len(records)
+        diff_since_last = preview_client.get_records(_since=preview_timestamp)
+        assert 20 <= len(diff_since_last) <= 30, 'Changes since last signature is not consistent'
+
+        metadata = preview_client.get_collection()['data']
+        assert preview_signature != metadata['signature'], 'Preview collection not updated'
+
+    # 2.3 approve the review
+    print('Reviewer approves and triggers signature')
     data = {"status": "to-sign"}
-    client.patch_collection(data=data)
+    reviewer_client.patch_collection(data=data)
 
     # 5. wait for the result
 
     # 6. obtain the destination records and serialize canonically.
-
-    dest_client = Client(server_url=args.server, bucket=args.dest_bucket,
-                         collection=args.dest_col)
 
     records = dest_client.get_records()
     assert len(records) == 35, "%s != 35 records" % len(records)

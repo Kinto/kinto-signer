@@ -132,37 +132,64 @@ def main():
                                 collection=preview_collection)
 
     # 1. upload data
-    print('Uploading 20 random records')
+    print('Author uploads 20 random records')
     records = upload_records(client, 20)
 
-    # 2. ask for a signature by toggling "to-sign"
-    print('Trigger signature')
+    # 2. ask for a signature
+    # 2.1 ask for review (noop on old versions)
+    print('Editor asks for review')
+    data = {"status": "to-review"}
+    editor_client.patch_collection(data=data)
+    # 2.2 check the preview collection (if enabled)
+    if preview_client:
+        print('Check preview collection')
+        records = preview_client.get_records()
+        assert len(records) == 20, "%s != 20 records" % len(records)
+        metadata = preview_client.get_collection()['data']
+        preview_signature = metadata.get('signature')
+        assert preview_signature, 'Preview collection not signed'
+        preview_timestamp = collection_timestamp(preview_client)
+    # 2.3 approve the review
+    print('Reviewer approves and triggers signature')
     data = {"status": "to-sign"}
-    client.patch_collection(data=data)
+    reviewer_client.patch_collection(data=data)
 
     # 3. upload more data
-    print('Create 20 others records')
+    print('Author creates 20 others records')
     upload_records(client, 20)
 
-    print('Update 5 random records')
+    print('Editor updates 5 random records')
     for toupdate in random.sample(records, 5):
-        client.patch_record(dict(newkey=_rand(10), **toupdate))
+        editor_client.patch_record(dict(newkey=_rand(10), **toupdate))
 
-    print('Delete 5 random records')
+    print('Author deletes 5 random records')
     for todelete in random.sample(records, 5):
         client.delete_record(todelete['id'])
 
-    # 4. ask again for a signature by toggling "to-sign"
-    print('Trigger signature')
+    # 4. ask again for a signature
+    # 2.1 ask for review (noop on old versions)
+    print('Editor asks for review')
+    data = {"status": "to-review"}
+    editor_client.patch_collection(data=data)
+    # 2.2 check the preview collection (if enabled)
+    if preview_client:
+        print('Check preview collection')
+        records = preview_client.get_records()
+        assert len(records) == 35, "%s != 35 records" % len(records)
+        diff_since_last = preview_client.get_records(_since=preview_timestamp)
+        assert 20 <= len(diff_since_last) <= 30, 'Changes since last signature is not consistent'
+
+        metadata = preview_client.get_collection()['data']
+        assert preview_signature != metadata['signature'], 'Preview collection not updated'
+
+    # 2.3 approve the review
+    print('Reviewer approves and triggers signature')
     data = {"status": "to-sign"}
-    client.patch_collection(data=data)
+    reviewer_client.patch_collection(data=data)
 
     # 5. wait for the result
 
     # 6. obtain the destination records and serialize canonically.
-
-    dest_client = Client(server_url=args.server, bucket=args.dest_bucket,
-                         collection=args.dest_col)
 
     records = dest_client.get_records()
     assert len(records) == 35, "%s != 35 records" % len(records)

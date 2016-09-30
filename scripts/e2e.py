@@ -1,7 +1,6 @@
 import random
 from string import hexdigits
 import argparse
-from functools import partial
 
 from kinto_http import Client, exceptions as kinto_exceptions
 from kinto_signer.serializer import canonical_json
@@ -64,16 +63,7 @@ def _get_args():
 def main():
     args = _get_args()
 
-    # why do I have to do all of this just to set up auth...
-    def _auth(req, user='', password=''):
-        req.prepare_auth((user, password))
-        return req
-
-    if args.auth is not None:
-        user, password = args.auth.split(':')
-        args.auth = partial(_auth, user=user, password=password)
-
-    client = Client(server_url=args.server, auth=args.auth,
+    client = Client(server_url=args.server, auth=tuple(args.auth.split(':')),
                     bucket=args.source_bucket,
                     collection=args.source_col)
 

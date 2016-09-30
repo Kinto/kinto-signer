@@ -32,9 +32,12 @@ class PostgresWebTest(BaseWebTest):
         resp = self.app.get("/", headers=self.other_headers)
         self.other_userid = resp.json["user"]["id"]
 
+        # Source bucket
         self.app.put_json("/buckets/alice",
                           {"permissions": {"write": ["system.Authenticated"]}},
                           headers=self.headers)
+
+        # Editors and reviewers group
         self.app.put_json("/buckets/alice/groups/editors",
                           {"data": {"members": [self.userid,
                                                 self.other_userid]}},
@@ -43,6 +46,8 @@ class PostgresWebTest(BaseWebTest):
                           {"data": {"members": [self.userid,
                                                 self.other_userid]}},
                           headers=self.headers)
+
+        # Source collection with 2 records
         self.app.put_json(self.source_collection, headers=self.headers)
         self.app.post_json(self.source_collection + "/records",
                            {"data": {"title": "hello"}},
@@ -315,3 +320,32 @@ class UserGroupsTest(PostgresWebTest, unittest.TestCase):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
                             headers=self.reviewer_headers)
+
+
+class PreviewCollectionTest(PostgresWebTest, unittest.TestCase):
+    def get_app_settings(self, extras=None):
+        settings = super(PreviewCollectionTest, self).get_app_settings(extras)
+
+        self.preview_collection = "/buckets/preview/collections/pcid"
+
+        settings['signer.to_review_enabled'] = 'true'
+        settings['kinto.signer.resources'] = '%s;%s;%s' % (
+            self.source_collection,
+            self.preview_collection,
+            self.destination_collection)
+        return settings
+
+    def test_the_preview_collection_does_not_exist_at_first(self):
+        self.app.get(self.preview_collection, headers=self.headers, status=403)
+
+    def test_the_preview_collection_is_updated_and_signed(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+
+        resp = self.app.get(self.preview_collection, headers=self.headers)
+        assert 'signature' in resp.json['data']
+
+        resp = self.app.get(self.preview_collection + '/records',
+                            headers=self.headers)
+        assert len(resp.json['data']) == 2

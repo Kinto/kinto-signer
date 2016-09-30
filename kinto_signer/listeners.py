@@ -5,7 +5,8 @@ from kinto import logger
 from kinto.core.utils import instance_uri
 from pyramid import httpexceptions
 
-from kinto_signer.updater import LocalUpdater
+from kinto_signer.updater import (LocalUpdater, FIELD_LAST_AUTHOR,
+                                  FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER)
 from kinto_signer.utils import STATUS
 
 
@@ -35,6 +36,11 @@ def sign_collection_data(event, resources):
     """
     payload = event.payload
 
+    current_user_id = event.request.prefixed_userid
+    if current_user_id == _PLUGIN_USERID:
+        # Ignore changes made by plugin.
+        return
+
     for impacted in event.impacted_records:
         new_collection = impacted['new']
 
@@ -54,18 +60,25 @@ def sign_collection_data(event, resources):
                                source=resource['source'],
                                destination=resource['destination'])
 
-        new_status = new_collection.get("status")
-        if new_status == STATUS.TO_SIGN:
-            # Run signature process (will set `last_reviewer` field).
-            try:
+        try:
+            new_status = new_collection.get("status")
+            if new_status == STATUS.TO_SIGN:
+                # Run signature process (will set `last_reviewer` field).
                 updater.sign_and_update_destination(event.request)
-            except Exception:
-                logger.exception("Could not sign '{0}'".format(key))
-                event.request.response.status = 503
 
-        elif new_status == STATUS.TO_REVIEW:
-            # Track `last_editor`
-            updater.update_source_editor(event.request)
+            elif new_status == STATUS.TO_REVIEW:
+                if 'preview' in resource:
+                    # If preview collection: update and sign preview collection
+                    updater.destination = resource['preview']
+                    updater.sign_and_update_destination(event.request,
+                                                        next_source_status=STATUS.TO_REVIEW)  # NOQA
+                else:
+                    # If no preview collection: just track `last_editor`
+                    updater.update_source_editor(event.request)
+
+        except Exception:
+            logger.exception("Could not sign '{0}'".format(key))
+            event.request.response.status = 503
 
 
 def check_collection_status(event, resources, group_check_enabled,
@@ -125,7 +138,7 @@ def check_collection_status(event, resources, group_check_enabled,
             if requires_review and to_review_enabled:
                 raise_invalid(message="Collection not reviewed")
 
-            if old_collection.get("last_editor") == current_user_id:
+            if old_collection.get(FIELD_LAST_EDITOR) == current_user_id:
                 raise_forbidden(message="Editor cannot review")
 
         # 4. to-sign -> signed
@@ -146,7 +159,7 @@ def check_collection_tracking(event, resources):
     if event.request.prefixed_userid == _PLUGIN_USERID:
         return
 
-    tracking_fields = ("last_author", "last_editor", "last_reviewer")
+    tracking_fields = (FIELD_LAST_AUTHOR, FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER)  # NOQA
 
     for impacted in event.impacted_records:
         old_collection = impacted.get("old", {})

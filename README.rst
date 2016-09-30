@@ -185,6 +185,20 @@ makes sure that:
 
 See `Kinto groups API <http://kinto.readthedocs.io/en/stable/api/1.x/groups.html>`_ for more details about how to define groups.
 
+If the review process is enabled, it is possible to configure a *preview*
+collection, that will be updated and signed when the status is set to ``to-review``.
+This *preview* collection can be used by clients to test and validate the changes
+before approving them.
+
+If a resources entry contains a semi-column separated **triplet**, then a preview
+collection will be enabled.
+
+.. code-block:: ini
+
+  kinto.signer.resources =
+      /buckets/staging/collections/articles;/buckets/preview/collections/articles;/buckets/blog/collections/articles
+
+
 .. image:: workflow.png
 
 
@@ -344,6 +358,12 @@ To generate a new keypair, you can use the following command::
 
 Running the tests
 =================
+
+In order to contribute and run the full functional test suite locally you need
+to have the Go language executables (e.g. `sudo apt-get install golang`)
+and a ``testdb`` PostgreSQL database like for the Kinto server.
+
+The rest of installation and setup process is taken care of automatically.
 
 To run the unit tests::
 

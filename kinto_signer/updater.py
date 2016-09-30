@@ -13,6 +13,13 @@ from kinto_signer.utils import STATUS
 logger = logging.getLogger(__name__)
 
 
+FIELD_ID = 'id'
+FIELD_LAST_MODIFIED = 'last_modified'
+FIELD_LAST_AUTHOR = 'last_author'
+FIELD_LAST_EDITOR = 'last_editor'
+FIELD_LAST_REVIEWER = 'last_reviewer'
+
+
 def notify_resource_event(request, request_options, matchdict,
                           resource_name, parent_id, record, action, old=None):
     """Private helper that triggers resource events when the updater modifies
@@ -25,10 +32,17 @@ def notify_resource_event(request, request_options, matchdict,
     fakerequest.authn_type = "plugin"
     fakerequest.current_resource_name = resource_name
     fakerequest.notify_resource_event(parent_id=parent_id,
-                                      timestamp=record['last_modified'],
+                                      timestamp=record[FIELD_LAST_MODIFIED],
                                       data=record,
                                       action=action,
                                       old=old)
+
+
+def _ensure_resource(resource):
+    if not set(resource.keys()).issuperset({'bucket', 'collection'}):
+        msg = "Resources should contain both bucket and collection"
+        raise ValueError(msg)
+    return resource
 
 
 class LocalUpdater(object):
@@ -55,33 +69,42 @@ class LocalUpdater(object):
     """
 
     def __init__(self, source, destination, signer, storage, permission):
+        self._source = None
+        self._destination = None
 
-        def _ensure_resource(resource):
-            if not set(resource.keys()).issuperset({'bucket', 'collection'}):
-                msg = "Resources should contain both bucket and collection"
-                raise ValueError(msg)
-            return resource
-
-        self.source = _ensure_resource(source)
-        self.destination = _ensure_resource(destination)
+        self.source = source
+        self.destination = destination
         self.signer = signer
         self.storage = storage
         self.permission = permission
 
-        # Define resource IDs.
+    @property
+    def source(self):
+        return self._source
 
+    @source.setter
+    def source(self, source):
+        self._source = _ensure_resource(source)
+        self.source_bucket_uri = '/buckets/%s' % source['bucket']
+        self.source_collection_uri = '/buckets/%s/collections/%s' % (
+            source['bucket'],
+            source['collection'])
+
+    @property
+    def destination(self):
+        return self._destination
+
+    @destination.setter
+    def destination(self, destination):
+        self._destination = _ensure_resource(destination)
         self.destination_bucket_uri = '/buckets/%s' % (
             self.destination['bucket'])
         self.destination_collection_uri = '/buckets/%s/collections/%s' % (
             self.destination['bucket'],
             self.destination['collection'])
 
-        self.source_bucket_uri = '/buckets/%s' % self.source['bucket']
-        self.source_collection_uri = '/buckets/%s/collections/%s' % (
-            self.source['bucket'],
-            self.source['collection'])
-
-    def sign_and_update_destination(self, request):
+    def sign_and_update_destination(self, request,
+                                    next_source_status=STATUS.SIGNED):
         """Sign the specified collection.
 
         0. Create the destination bucket / collection
@@ -100,11 +123,11 @@ class LocalUpdater(object):
 
         records, timestamp = self.get_destination_records()
         serialized_records = canonical_json(records, timestamp)
-        logger.debug(self.source_collection_uri, serialized_records)
+        logger.debug(self.source_collection_uri + ":\t" + serialized_records)
         signature = self.signer.sign(serialized_records)
 
         self.set_destination_signature(signature, request)
-        self.update_source_status(STATUS.SIGNED, request)
+        self.update_source_status(next_source_status, request)
 
         # Re-trigger events from event listener \o/
         for event in request.get_resource_events():
@@ -117,7 +140,7 @@ class LocalUpdater(object):
             created = self.storage.create(
                 collection_id=resource_type,
                 parent_id=parent_id,
-                record={'id': record_id})
+                record={FIELD_ID: record_id})
         except UnicityError:
             created = None
         return created
@@ -134,7 +157,7 @@ class LocalUpdater(object):
             notify_resource_event(request,
                                   {'method': 'PUT',
                                    'path': self.destination_bucket_uri},
-                                  matchdict={'id': self.destination['bucket']},
+                                  matchdict={FIELD_ID: self.destination['bucket']},
                                   resource_name="bucket",
                                   parent_id='',
                                   record=created,
@@ -151,7 +174,7 @@ class LocalUpdater(object):
                                    'path': self.destination_collection_uri},
                                   matchdict={
                                       'bucket_id': self.destination['bucket'],
-                                      'id': self.destination['collection']
+                                      FIELD_ID: self.destination['collection']
                                   },
                                   resource_name="collection",
                                   parent_id=self.destination_bucket_uri,
@@ -170,11 +193,11 @@ class LocalUpdater(object):
         # If last_modified was specified, only retrieve items since then.
         storage_kwargs = {}
         if last_modified is not None:
-            gt_last_modified = Filter('last_modified', last_modified,
+            gt_last_modified = Filter(FIELD_LAST_MODIFIED, last_modified,
                                       COMPARISON.GT)
             storage_kwargs['filters'] = [gt_last_modified, ]
 
-        storage_kwargs['sorting'] = [Sort('last_modified', 1)]
+        storage_kwargs['sorting'] = [Sort(FIELD_LAST_MODIFIED, 1)]
         parent_id = "/buckets/{bucket}/collections/{collection}".format(**rc)
 
         records, count = self.storage.get_all(
@@ -216,7 +239,7 @@ class LocalUpdater(object):
                 "collection_id": 'record',
             }
             try:
-                before = self.storage.get(object_id=record['id'],
+                before = self.storage.get(object_id=record[FIELD_ID],
                                           **storage_kwargs)
             except RecordNotFoundError:
                 before = None
@@ -225,8 +248,8 @@ class LocalUpdater(object):
             if deleted:
                 try:
                     pushed = self.storage.delete(
-                        object_id=record['id'],
-                        last_modified=record['last_modified'],
+                        object_id=record[FIELD_ID],
+                        last_modified=record[FIELD_LAST_MODIFIED],
                         **storage_kwargs
                     )
                     action = ACTIONS.DELETE
@@ -242,7 +265,7 @@ class LocalUpdater(object):
                     action = ACTIONS.CREATE
                 else:
                     pushed = self.storage.update(
-                        object_id=record['id'],
+                        object_id=record[FIELD_ID],
                         record=record,
                         **storage_kwargs)
                     action = ACTIONS.UPDATE
@@ -250,7 +273,7 @@ class LocalUpdater(object):
             matchdict = {
                 'bucket_id': self.destination['bucket'],
                 'collection_id': self.destination['collection'],
-                'id': record['id']
+                FIELD_ID: record[FIELD_ID]
             }
             record_uri = ('/buckets/{bucket_id}'
                           '/collections/{collection_id}'
@@ -278,7 +301,7 @@ class LocalUpdater(object):
 
         # Update the collection_record
         new_collection = dict(**collection_record)
-        new_collection.pop('last_modified', None)
+        new_collection.pop(FIELD_LAST_MODIFIED, None)
         new_collection['signature'] = signature
 
         updated = self.storage.update(
@@ -303,15 +326,17 @@ class LocalUpdater(object):
             old=collection_record)
 
     def update_source_editor(self, request):
-        attrs = {'last_editor': request.prefixed_userid}
+        attrs = {FIELD_LAST_EDITOR: request.prefixed_userid}
         return self._update_source_attributes(request, **attrs)
 
     def update_source_status(self, status, request):
         attrs = {'status': status.value}
         if status == STATUS.WORK_IN_PROGRESS:
-            attrs["last_author"] = request.prefixed_userid
+            attrs[FIELD_LAST_AUTHOR] = request.prefixed_userid
+        if status == STATUS.TO_REVIEW:
+            attrs[FIELD_LAST_EDITOR] = request.prefixed_userid
         if status == STATUS.SIGNED:
-            attrs["last_reviewer"] = request.prefixed_userid
+            attrs[FIELD_LAST_REVIEWER] = request.prefixed_userid
         return self._update_source_attributes(request, **attrs)
 
     def _update_source_attributes(self, request, **kwargs):

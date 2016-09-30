@@ -42,6 +42,12 @@ def _get_args():
     parser.add_argument('--auth', help='Basic Authentication',
                         type=str, default=DEFAULT_AUTH)
 
+    parser.add_argument('--editor-auth', help='Basic Authentication for editor',
+                        type=str, default=None)
+
+    parser.add_argument('--reviewer-auth', help='Basic Authentication for reviewer',
+                        type=str, default=None)
+
     parser.add_argument('--server', help='Kinto Server',
                         type=str, default=DEFAULT_SERVER)
 
@@ -66,6 +72,21 @@ def main():
     client = Client(server_url=args.server, auth=tuple(args.auth.split(':')),
                     bucket=args.source_bucket,
                     collection=args.source_col)
+
+    if args.editor_auth is None:
+        args.editor_auth = args.auth
+
+    if args.reviewer_auth is None:
+        args.reviewer_auth = args.auth
+
+    editor_client = Client(server_url=args.server,
+                           auth=tuple(args.editor_auth.split(':')),
+                           bucket=args.source_bucket,
+                           collection=args.source_col)
+    reviewer_client = Client(server_url=args.server,
+                             auth=tuple(args.reviewer_auth.split(':')),
+                             bucket=args.source_bucket,
+                             collection=args.source_col)
 
     # 0. initialize source bucket/collection (if necessary)
     try:

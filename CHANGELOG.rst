@@ -6,7 +6,9 @@ This document describes changes between each past release.
 0.10.0 (unreleased)
 -------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Do not check that editor is different than reviewer if *review* is not enabled (fixes #131)
 
 
 0.9.0 (2016-09-30)

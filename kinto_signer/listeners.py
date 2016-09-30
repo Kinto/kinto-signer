@@ -138,7 +138,7 @@ def check_collection_status(event, resources, group_check_enabled,
             if requires_review and to_review_enabled:
                 raise_invalid(message="Collection not reviewed")
 
-            if old_collection.get(FIELD_LAST_EDITOR) == current_user_id:
+            if to_review_enabled and old_collection.get(FIELD_LAST_EDITOR) == current_user_id:  # NOQA
                 raise_forbidden(message="Editor cannot review")
 
         # 4. to-sign -> signed

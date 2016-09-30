@@ -2,7 +2,7 @@ import random
 from string import hexdigits
 import argparse
 
-from kinto_http import Client, exceptions as kinto_exceptions
+from kinto_http import Client
 from kinto_signer.serializer import canonical_json
 from kinto_signer.hasher import compute_hash
 from kinto_signer.signer.local_ecdsa import ECDSASigner
@@ -84,20 +84,18 @@ def main():
 
     # 0. initialize source bucket/collection (if necessary)
     server_info = client.server_info()
+    editor_id = editor_client.server_info()['user']['id']
+    reviewer_id = reviewer_client.server_info()['user']['id']
     print('Server: {0}'.format(args.server))
-    print('Author: {user[id]}'.format(**client.server_info()))
-    print('Editor: {user[id]}'.format(**editor_client.server_info()))
-    print('Reviewer: {user[id]}'.format(**reviewer_client.server_info()))
-    try:
-        client.delete_collection()
-    except kinto_exceptions.KintoException:
-        pass
-    client.create_bucket(if_not_exists=True)
-    client.create_collection(if_not_exists=True)
+    print('Author: {user[id]}'.format(**server_info))
+    print('Editor: {0}'.format(editor_id))
+    print('Reviewer: {0}'.format(reviewer_id))
 
     # 0. check that this collection is well configured.
     signer_capabilities = server_info['capabilities']['signer']
     to_review_enabled = signer_capabilities.get('to_review_enabled', False)
+    group_check_enabled = signer_capabilities.get('group_check_enabled', False)
+
     resources = [r for r in signer_capabilities['resources']
                  if (args.source_bucket, args.source_col) == (r['source']['bucket'], r['source']['collection'])]
     assert len(resources) > 0, 'Specified source not configured to be signed'
@@ -106,12 +104,32 @@ def main():
         print('Signoff: {source[bucket]}/{source[collection]} => {preview[bucket]}/{preview[collection]} => {destination[bucket]}/{destination[collection]}'.format(**resource))
     else:
         print('Signoff: {source[bucket]}/{source[collection]} => {destination[bucket]}/{destination[collection]}'.format(**resource))
-    if signer_capabilities.get('group_check_enabled', False):
-        print('/!\ Group check is enabled.')
-    if to_review_enabled:
-        print('/!\ Review workflow is enabled.')
+    print('Group check: {0}'.format(group_check_enabled))
+    print('Review workflow: {0}'.format(to_review_enabled))
 
     print('_' * 80)
+
+    client.create_bucket(permissions={'write': ['system.Authenticated']},
+                         if_not_exists=True)
+    client.create_collection(if_not_exists=True)
+    client.delete_records()
+    if group_check_enabled:
+        editors_group = signer_capabilities['editors_group']
+        client.create_group(editors_group, data={'members': [editor_id]}, if_not_exists=True)
+        reviewers_group = signer_capabilities['reviewers_group']
+        client.create_group(reviewers_group, data={'members': [reviewer_id]}, if_not_exists=True)
+
+    dest_client = Client(server_url=args.server,
+                         bucket=resource['destination']['bucket'],
+                         collection=resource['destination']['collection'])
+
+    preview_client = None
+    if to_review_enabled and 'preview' in resource:
+        preview_bucket = resource['preview']['bucket']
+        preview_collection = resource['preview']['collection']
+        preview_client = Client(server_url=args.server,
+                                bucket=preview_bucket,
+                                collection=preview_collection)
 
     # 1. upload data
     print('Uploading 20 random records')

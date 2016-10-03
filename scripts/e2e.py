@@ -112,8 +112,10 @@ def main():
 
     print('_' * 80)
 
-    client.create_bucket(permissions={'write': ['system.Authenticated']},
-                         if_not_exists=True)
+    bucket = client.create_bucket(if_not_exists=True)
+    client.patch_bucket(permissions={'write': [editor_id, reviewer_id] + bucket['permissions']['write']},
+                        if_match=bucket['data']['last_modified'], safe=True)
+
     client.create_collection(if_not_exists=True)
 
     if args.reset:

@@ -115,7 +115,7 @@ Here is an example of what a configuration could look like:
 +---------------------------------+--------------------------------------------------------------------------+
 | kinto.signer.signer_backend     | The python dotted location to the signer to use. By default, a local     |
 |                                 | ECDSA signer will be used. Choices are either                            |
-|                                 | ``kinto_signer.signer.local_ecdsa`` or ``kinto_signer.signer.autograph`` |
+|                                 | ``kinto.signer.signer.local_ecdsa`` or ``kinto.signer.signer.autograph`` |
 |                                 | Have a look at the sections below for more information.                  |
 +---------------------------------+--------------------------------------------------------------------------+
 

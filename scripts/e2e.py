@@ -143,8 +143,8 @@ def main():
     # 2.2 check the preview collection (if enabled)
     if preview_client:
         print('Check preview collection')
-        records = preview_client.get_records()
-        assert len(records) == 20, "%s != 20 records" % len(records)
+        preview_records = preview_client.get_records()
+        assert len(preview_records) == 20, "%s != 20 records" % len(preview_records)
         metadata = preview_client.get_collection()['data']
         preview_signature = metadata.get('signature')
         assert preview_signature, 'Preview collection not signed'
@@ -174,10 +174,10 @@ def main():
     # 2.2 check the preview collection (if enabled)
     if preview_client:
         print('Check preview collection')
-        records = preview_client.get_records()
-        assert len(records) == 35, "%s != 35 records" % len(records)
+        preview_records = preview_client.get_records()
+        assert len(preview_records) == 35, "%s != 35 records" % len(preview_records)
         diff_since_last = preview_client.get_records(_since=preview_timestamp)
-        assert 20 <= len(diff_since_last) <= 30, 'Changes since last signature is not consistent'
+        assert 20 <= len(diff_since_last) <= 30, 'Changes since last signature are not consistent'
 
         metadata = preview_client.get_collection()['data']
         assert preview_signature != metadata['signature'], 'Preview collection not updated'

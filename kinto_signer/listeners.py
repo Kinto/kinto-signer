@@ -71,7 +71,7 @@ def sign_collection_data(event, resources):
                     # If preview collection: update and sign preview collection
                     updater.destination = resource['preview']
                     updater.sign_and_update_destination(event.request,
-                                                        next_source_status=STATUS.TO_REVIEW)  # NOQA
+                                                        next_source_status=STATUS.TO_REVIEW)
                 else:
                     # If no preview collection: just track `last_editor`
                     updater.update_source_editor(event.request)
@@ -138,7 +138,7 @@ def check_collection_status(event, resources, group_check_enabled,
             if requires_review and to_review_enabled:
                 raise_invalid(message="Collection not reviewed")
 
-            if old_collection.get(FIELD_LAST_EDITOR) == current_user_id:
+            if to_review_enabled and old_collection.get(FIELD_LAST_EDITOR) == current_user_id:
                 raise_forbidden(message="Editor cannot review")
 
         # 4. to-sign -> signed
@@ -159,7 +159,7 @@ def check_collection_tracking(event, resources):
     if event.request.prefixed_userid == _PLUGIN_USERID:
         return
 
-    tracking_fields = (FIELD_LAST_AUTHOR, FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER)  # NOQA
+    tracking_fields = (FIELD_LAST_AUTHOR, FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER)
 
     for impacted in event.impacted_records:
         old_collection = impacted.get("old", {})

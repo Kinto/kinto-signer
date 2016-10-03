@@ -194,6 +194,25 @@ class ForceReviewTest(PostgresWebTest, unittest.TestCase):
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
+    def test_editor_cannot_be_reviewer(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers,
+                            status=403)
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "to-review"
+
+        # Try again as someone else
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.other_headers)
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+
 
 class TrackingFieldsTest(PostgresWebTest, unittest.TestCase):
 
@@ -219,22 +238,14 @@ class TrackingFieldsTest(PostgresWebTest, unittest.TestCase):
         assert resp.json["data"]["status"] == "signed"
         assert resp.json["data"]["last_reviewer"] == self.userid
 
-    def test_editor_cannot_be_reviewer(self):
+    def test_editor_can_be_reviewer(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
                             headers=self.headers)
 
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
-                            headers=self.headers,
-                            status=403)
-        resp = self.app.get(self.source_collection, headers=self.headers)
-        assert resp.json["data"]["status"] == "to-review"
-
-        # Try again as someone else
-        self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-sign"}},
-                            headers=self.other_headers)
+                            headers=self.headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 

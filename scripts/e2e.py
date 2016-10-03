@@ -57,6 +57,9 @@ def _get_args():
     parser.add_argument('--source-col', help='Source collection',
                         type=str, default=SOURCE_COL)
 
+    parser.add_argument('--reset', help='Reset collection data',
+                        type=bool, default=False)
+
     return parser.parse_args()
 
 
@@ -112,7 +115,14 @@ def main():
     client.create_bucket(permissions={'write': ['system.Authenticated']},
                          if_not_exists=True)
     client.create_collection(if_not_exists=True)
-    client.delete_records()
+
+    if args.reset:
+        client.delete_records()
+        existing = 0
+    else:
+        existing_records = client.get_records()
+        existing = len(existing_records)
+
     if group_check_enabled:
         editors_group = signer_capabilities['editors_group']
         client.create_group(editors_group, data={'members': [editor_id]}, if_not_exists=True)
@@ -144,7 +154,8 @@ def main():
     if preview_client:
         print('Check preview collection')
         preview_records = preview_client.get_records()
-        assert len(preview_records) == 20, "%s != 20 records" % len(preview_records)
+        expected = existing + 20
+        assert len(preview_records) == expected, '%s != %s records' % (len(preview_records), expected)
         metadata = preview_client.get_collection()['data']
         preview_signature = metadata.get('signature')
         assert preview_signature, 'Preview collection not signed'
@@ -166,6 +177,8 @@ def main():
     for todelete in random.sample(records, 5):
         client.delete_record(todelete['id'])
 
+    expected = existing + 20 + 20 - 5
+
     # 4. ask again for a signature
     # 2.1 ask for review (noop on old versions)
     print('Editor asks for review')
@@ -175,9 +188,11 @@ def main():
     if preview_client:
         print('Check preview collection')
         preview_records = preview_client.get_records()
-        assert len(preview_records) == 35, "%s != 35 records" % len(preview_records)
+        assert len(preview_records) == expected, '%s != %s records' % (len(preview_records), expected)
+        # Diff size is 20 + 5 if updated records are also all deleted,
+        # or 30 if deletions and updates apply to different records.
         diff_since_last = preview_client.get_records(_since=preview_timestamp)
-        assert 20 <= len(diff_since_last) <= 30, 'Changes since last signature are not consistent'
+        assert 25 <= len(diff_since_last) <= 30, 'Changes since last signature are not consistent'
 
         metadata = preview_client.get_collection()['data']
         assert preview_signature != metadata['signature'], 'Preview collection not updated'
@@ -192,7 +207,7 @@ def main():
     # 6. obtain the destination records and serialize canonically.
 
     records = dest_client.get_records()
-    assert len(records) == 35, "%s != 35 records" % len(records)
+    assert len(records) == expected, '%s != %s records' % (len(records), expected)
     timestamp = collection_timestamp(dest_client)
     serialized = canonical_json(records, timestamp)
     print('Hash is %r' % compute_hash(serialized))

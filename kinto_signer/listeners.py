@@ -3,6 +3,7 @@ from kinto.core import errors
 
 from kinto import logger
 from kinto.core.utils import instance_uri
+from kinto.core.errors import ERRORS
 from pyramid import httpexceptions
 
 from kinto_signer.updater import (LocalUpdater, FIELD_LAST_AUTHOR,
@@ -10,18 +11,21 @@ from kinto_signer.updater import (LocalUpdater, FIELD_LAST_AUTHOR,
 from kinto_signer.utils import STATUS
 
 
+ERRNO_FORBIDDEN_OPERATION = 123
 _PLUGIN_USERID = "plugin:kinto-signer"
 
 
 def raise_invalid(**kwargs):
     # A ``400`` error response does not natively rollback the transaction.
     transaction.doom()
+    kwargs.update(errno=ERRORS.INVALID_POSTED_DATA)
     raise errors.http_error(httpexceptions.HTTPBadRequest(), **kwargs)
 
 
 def raise_forbidden(**kwargs):
     # A ``403`` error response does not natively rollback the transaction.
     transaction.doom()
+    kwargs.update(errno=ERRNO_FORBIDDEN_OPERATION)
     raise errors.http_error(httpexceptions.HTTPForbidden(), **kwargs)
 
 

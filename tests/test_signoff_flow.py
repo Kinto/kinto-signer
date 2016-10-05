@@ -78,10 +78,11 @@ class PostgresWebTest(BaseWebTest):
 class CollectionStatusTest(PostgresWebTest, unittest.TestCase):
 
     def test_status_cannot_be_set_to_unknown_value(self):
-        self.app.patch_json(self.source_collection,
-                            {"data": {"status": "married"}},
-                            headers=self.headers,
-                            status=400)
+        resp = self.app.patch_json(self.source_collection,
+                                   {"data": {"status": "married"}},
+                                   headers=self.headers,
+                                   status=400)
+        assert resp.json["errno"] == 109
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "work-in-progress"
 
@@ -311,10 +312,13 @@ class UserGroupsTest(PostgresWebTest, unittest.TestCase):
                           headers=self.headers)
 
     def test_only_editors_can_ask_to_review(self):
-        self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-review"}},
-                            headers=self.reviewer_headers,
-                            status=403)
+        resp = self.app.patch_json(self.source_collection,
+                                   {"data": {"status": "to-review"}},
+                                   headers=self.reviewer_headers,
+                                   status=403)
+        assert "Not in editors group" in resp.json["message"]
+        assert resp.json["errno"] == 123
+
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
                             headers=self.editor_headers)
@@ -324,10 +328,13 @@ class UserGroupsTest(PostgresWebTest, unittest.TestCase):
                             {"data": {"status": "to-review"}},
                             headers=self.editor_headers)
 
-        self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-sign"}},
-                            headers=self.editor_headers,
-                            status=403)
+        resp = self.app.patch_json(self.source_collection,
+                                   {"data": {"status": "to-sign"}},
+                                   headers=self.editor_headers,
+                                   status=403)
+        assert "Not in reviewers group" in resp.json["message"]
+        assert resp.json["errno"] == 123
+
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
                             headers=self.reviewer_headers)

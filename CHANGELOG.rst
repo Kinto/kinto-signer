@@ -6,7 +6,10 @@ This document describes changes between each past release.
 0.10.0 (unreleased)
 -------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Fix decoration of listener when StatsD is enabled (fixes #138)
+  Related to https://github.com/jsocol/pystatsd/issues/85
 
 
 0.9.1 (2016-10-03)

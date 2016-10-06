@@ -317,7 +317,7 @@ class UserGroupsTest(PostgresWebTest, unittest.TestCase):
                                    headers=self.reviewer_headers,
                                    status=403)
         assert "Not in editors group" in resp.json["message"]
-        assert resp.json["errno"] == 123
+        assert resp.json["errno"] == 121  # forbidden
 
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
@@ -333,7 +333,7 @@ class UserGroupsTest(PostgresWebTest, unittest.TestCase):
                                    headers=self.editor_headers,
                                    status=403)
         assert "Not in reviewers group" in resp.json["message"]
-        assert resp.json["errno"] == 123
+        assert resp.json["errno"] == 121  # forbidden
 
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},

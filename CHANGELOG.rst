@@ -10,6 +10,7 @@ This document describes changes between each past release.
 
 - Fix decoration of listener when StatsD is enabled (fixes #138)
   Related to https://github.com/jsocol/pystatsd/issues/85
+- Use a dedicated ``errno`` in 403 responses when operation is forbidden (fixes #135)
 
 
 0.9.1 (2016-10-03)

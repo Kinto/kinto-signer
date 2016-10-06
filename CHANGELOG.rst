@@ -6,7 +6,9 @@ This document describes changes between each past release.
 0.10.0 (unreleased)
 -------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Make sure that collection editor can retrigger a signature (fixes #136)
 
 
 0.9.1 (2016-10-03)

@@ -3,6 +3,7 @@ import unittest
 import mock
 
 from kinto.core.testing import FormattedErrorMixin
+from kinto.core.errors import ERRORS
 from .support import BaseWebTest, get_user_headers
 
 
@@ -85,7 +86,7 @@ class CollectionStatusTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCa
                                    status=400)
         self.assertFormattedError(response=resp,
                                   code=400,
-                                  errno=109,
+                                  errno=ERRORS.INVALID_POSTED_DATA,
                                   error="Bad Request",
                                   message="Invalid status 'married'")
         resp = self.app.get(self.source_collection, headers=self.headers)
@@ -323,7 +324,7 @@ class UserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCase):
                                    status=403)
         self.assertFormattedError(response=resp,
                                   code=403,
-                                  errno=121,
+                                  errno=ERRORS.FORBIDDEN,
                                   error="Forbidden",
                                   message="Not in editors group")
 
@@ -342,7 +343,7 @@ class UserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCase):
                                    status=403)
         self.assertFormattedError(response=resp,
                                   code=403,
-                                  errno=121,
+                                  errno=ERRORS.FORBIDDEN,
                                   error="Forbidden",
                                   message="Not in reviewers group")
 

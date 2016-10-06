@@ -3,6 +3,7 @@ import unittest
 import mock
 import pytest
 from kinto import main as kinto_main
+from kinto.core.events import ResourceChanged
 from pyramid import testing
 from pyramid.exceptions import ConfigurationError
 from requests import exceptions as requests_exceptions
@@ -135,9 +136,19 @@ class IncludeMeTest(unittest.TestCase):
             "signer.ecdsa.public_key": "/path/to/key",
             "signer.ecdsa.private_key": "/path/to/private",
         }
-        with mock.patch('kinto.core.statsd.Client.timer') as mocked:
-            self.includeme(settings)
-            mocked.assert_called_with('plugins.signer')
+        config = self.includeme(settings)
+
+        payload = dict(resource_name='collection',
+                       action='update',
+                       bucket_id='foo')
+        event = ResourceChanged(payload=payload,
+                                impacted_records=[],
+                                request=mock.MagicMock())
+        statsd_client = config.registry.statsd._client
+        with mock.patch.object(statsd_client, 'timing') as mocked:
+            config.registry.notify(event)
+            timers = set(c[0][0] for c in mocked.call_args_list)
+            assert 'plugins.signer' in timers
 
 
 class OnCollectionChangedTest(unittest.TestCase):

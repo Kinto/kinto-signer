@@ -2,6 +2,7 @@ import unittest
 
 import mock
 
+from kinto.core.testing import FormattedErrorMixin
 from .support import BaseWebTest, get_user_headers
 
 
@@ -75,14 +76,18 @@ class PostgresWebTest(BaseWebTest):
         return settings
 
 
-class CollectionStatusTest(PostgresWebTest, unittest.TestCase):
+class CollectionStatusTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCase):
 
     def test_status_cannot_be_set_to_unknown_value(self):
         resp = self.app.patch_json(self.source_collection,
                                    {"data": {"status": "married"}},
                                    headers=self.headers,
                                    status=400)
-        assert resp.json["errno"] == 109
+        self.assertFormattedError(response=resp,
+                                  code=400,
+                                  errno=109,
+                                  error="Bad Request",
+                                  message="Invalid status 'married'")
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "work-in-progress"
 
@@ -283,7 +288,7 @@ class TrackingFieldsTest(PostgresWebTest, unittest.TestCase):
                               status=400)
 
 
-class UserGroupsTest(PostgresWebTest, unittest.TestCase):
+class UserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCase):
     def get_app_settings(self, extras=None):
         settings = super(UserGroupsTest, self).get_app_settings(extras)
         settings['signer.group_check_enabled'] = 'true'
@@ -316,8 +321,11 @@ class UserGroupsTest(PostgresWebTest, unittest.TestCase):
                                    {"data": {"status": "to-review"}},
                                    headers=self.reviewer_headers,
                                    status=403)
-        assert "Not in editors group" in resp.json["message"]
-        assert resp.json["errno"] == 121  # forbidden
+        self.assertFormattedError(response=resp,
+                                  code=403,
+                                  errno=121,
+                                  error="Forbidden",
+                                  message="Not in editors group")
 
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
@@ -332,8 +340,11 @@ class UserGroupsTest(PostgresWebTest, unittest.TestCase):
                                    {"data": {"status": "to-sign"}},
                                    headers=self.editor_headers,
                                    status=403)
-        assert "Not in reviewers group" in resp.json["message"]
-        assert resp.json["errno"] == 121  # forbidden
+        self.assertFormattedError(response=resp,
+                                  code=403,
+                                  errno=121,
+                                  error="Forbidden",
+                                  message="Not in reviewers group")
 
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},

@@ -387,7 +387,8 @@ class SpecificUserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.Test
 
         settings['signer.group_check_enabled'] = 'false'
         settings['signer.alice_cid1_group_check_enabled'] = 'true'
-        settings['signer.alice_cid1_editors_group'] = 'customgroup'
+        settings['signer.alice_cid1_editors_group'] = 'editeurs'
+        settings['signer.alice_cid1_reviewers_group'] = 'revoyeurs'
         return settings
 
     def setUp(self):
@@ -396,24 +397,48 @@ class SpecificUserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.Test
         self.app.put_json(self.source_collection1, headers=self.headers)
         self.app.put_json(self.source_collection2, headers=self.headers)
 
-        self.editor_headers = get_user_headers('edith:her')
+        self.someone_headers = get_user_headers('sam:wan')
+
+        self.editor_headers = get_user_headers('emo:billier')
+        resp = self.app.get("/", headers=self.editor_headers)
+        self.editor = resp.json["user"]["id"]
+
+        self.app.put_json("/buckets/alice/groups/editeurs",
+                          {"data": {"members": [self.editor]}},
+                          headers=self.headers)
 
     def test_editors_can_ask_to_review_if_not_specificly_configured(self):
         self.app.patch_json(self.source_collection2,
                             {"data": {"status": "to-review"}},
-                            headers=self.editor_headers,
+                            headers=self.someone_headers,
                             status=200)
 
     def test_only_specific_editors_can_ask_to_review(self):
         resp = self.app.patch_json(self.source_collection1,
                                    {"data": {"status": "to-review"}},
+                                   headers=self.someone_headers,
+                                   status=403)
+        self.assertFormattedError(response=resp,
+                                  code=403,
+                                  errno=ERRORS.FORBIDDEN,
+                                  error="Forbidden",
+                                  message="Not in editeurs group")
+
+    def test_only_reviewers_can_ask_to_sign(self):
+        r = self.app.patch_json(self.source_collection1,
+                            {"data": {"status": "to-review"}},
+                            headers=self.editor_headers)
+        print r.json
+
+        resp = self.app.patch_json(self.source_collection1,
+                                   {"data": {"status": "to-sign"}},
                                    headers=self.editor_headers,
                                    status=403)
         self.assertFormattedError(response=resp,
                                   code=403,
                                   errno=ERRORS.FORBIDDEN,
                                   error="Forbidden",
-                                  message="Not in customgroup group")
+                                  message="Not in revoyeurs group")
 
 
 class PreviewCollectionTest(PostgresWebTest, unittest.TestCase):

@@ -90,13 +90,6 @@ def check_collection_status(event, resources, group_check_enabled,
     """
     payload = event.payload
 
-    editors_group = instance_uri(event.request, "group",
-                                 bucket_id=payload["bucket_id"],
-                                 id=editors_group)
-    reviewers_group = instance_uri(event.request, "group",
-                                   bucket_id=payload["bucket_id"],
-                                   id=reviewers_group)
-
     current_user_id = event.request.prefixed_userid
     if current_user_id == _PLUGIN_USERID:
         # Ignore changes made by plugin.
@@ -119,9 +112,16 @@ def check_collection_status(event, resources, group_check_enabled,
             continue
 
         _to_review_enabled = resource.get("to_review_enabled", to_review_enabled)
-        _editors_group = resource.get("editors_group", editors_group)
-        _reviewers_group = resource.get("reviewers_group", reviewers_group)
         _group_check_enabled = resource.get("group_check_enabled", group_check_enabled)
+
+        _editors_group = resource.get("editors_group", editors_group)
+        editors_group_uri = instance_uri(event.request, "group",
+                                         bucket_id=payload["bucket_id"],
+                                         id=_editors_group)
+        _reviewers_group = resource.get("reviewers_group", reviewers_group)
+        reviewers_group_uri = instance_uri(event.request, "group",
+                                           bucket_id=payload["bucket_id"],
+                                           id=_reviewers_group)
 
         if old_status == new_status:
             continue
@@ -132,14 +132,14 @@ def check_collection_status(event, resources, group_check_enabled,
 
         # 2. work-in-progress -> to-review
         elif new_status == STATUS.TO_REVIEW:
-            if _editors_group not in user_principals and _group_check_enabled:
+            if editors_group_uri not in user_principals and _group_check_enabled:
                 raise_forbidden(message="Not in %s group" % _editors_group)
 
         # 3. to-review -> work-in-progress
         # 3. to-review -> to-sign
         elif new_status == STATUS.TO_SIGN:
             # Only allow to-sign from to-review if reviewer and no-editor
-            if _reviewers_group not in user_principals and _group_check_enabled:
+            if reviewers_group_uri not in user_principals and _group_check_enabled:
                 raise_forbidden(message="Not in %s group" % _reviewers_group)
 
             requires_review = old_status not in (STATUS.TO_REVIEW,

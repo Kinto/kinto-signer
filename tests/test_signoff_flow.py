@@ -425,11 +425,9 @@ class SpecificUserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.Test
                                   message="Not in editeurs group")
 
     def test_only_reviewers_can_ask_to_sign(self):
-        r = self.app.patch_json(self.source_collection1,
+        self.app.patch_json(self.source_collection1,
                             {"data": {"status": "to-review"}},
                             headers=self.editor_headers)
-        print r.json
-
         resp = self.app.patch_json(self.source_collection1,
                                    {"data": {"status": "to-sign"}},
                                    headers=self.editor_headers,

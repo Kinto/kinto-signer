@@ -69,14 +69,14 @@ def includeme(config):
         signer_module = config.maybe_dotted(dotted_location)
         backend = signer_module.load_from_settings(settings, prefix)
         config.registry.signers[key] = backend
+
         # Load the setttings associated to each resource.
         prefix = "{source[bucket]}_{source[collection]}".format(**resource)
-        specifics = {}
-        specifics["reviewers_group"] = settings.get("signer.%s_reviewers_group" % prefix)
-        specifics["editors_group"] = settings.get("signer.%s_editors_group" % prefix)
-        specifics["to_review_enabled"] = settings.get("signer.%s_to_review_enabled" % prefix)
-        specifics["group_check_enabled"] = settings.get("signer.%s_group_check_enabled" % prefix)
-        resource.update({k: v for k, v in specifics.items() if v is not None})
+        for setting in ("reviewers_group", "editors_group",
+                        "to_review_enabled", "group_check_enabled"):
+            value = settings.get("signer.%s_%s" % (prefix, setting))
+            if value is not None:
+                resource[setting] = value
 
     # Expose the capabilities in the root endpoint.
     message = "Digital signatures for integrity and authenticity of records."

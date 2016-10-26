@@ -49,12 +49,6 @@ def includeme(config):
 
     settings = config.get_settings()
 
-    reviewers_group = settings.get("signer.reviewers_group", "reviewers")
-    editors_group = settings.get("signer.editors_group", "editors")
-    to_review_enabled = asbool(settings.get("signer.to_review_enabled", False))
-    group_check_enabled = asbool(settings.get("signer.group_check_enabled",
-                                              False))
-
     # Check source and destination resources are configured.
     raw_resources = settings.get('signer.resources')
     if raw_resources is None:
@@ -62,13 +56,27 @@ def includeme(config):
         raise ConfigurationError(error_msg)
     resources = utils.parse_resources(raw_resources)
 
-    # Load the signers associated to each resource.
+    reviewers_group = settings.get("signer.reviewers_group", "reviewers")
+    editors_group = settings.get("signer.editors_group", "editors")
+    to_review_enabled = asbool(settings.get("signer.to_review_enabled", False))
+    group_check_enabled = asbool(settings.get("signer.group_check_enabled",
+                                              False))
+
     config.registry.signers = {}
     for key, resource in resources.items():
+        # Load the signers associated to each resource.
         dotted_location, prefix = _signer_dotted_location(settings, resource)
         signer_module = config.maybe_dotted(dotted_location)
         backend = signer_module.load_from_settings(settings, prefix)
         config.registry.signers[key] = backend
+
+        # Load the setttings associated to each resource.
+        prefix = "{source[bucket]}_{source[collection]}".format(**resource)
+        for setting in ("reviewers_group", "editors_group",
+                        "to_review_enabled", "group_check_enabled"):
+            value = settings.get("signer.%s_%s" % (prefix, setting))
+            if value is not None:
+                resource[setting] = value
 
     # Expose the capabilities in the root endpoint.
     message = "Digital signatures for integrity and authenticity of records."

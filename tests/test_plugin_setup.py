@@ -19,6 +19,12 @@ from .support import BaseWebTest, get_user_headers
 
 class HelloViewTest(BaseWebTest, unittest.TestCase):
 
+    def get_app_settings(self, extras=None):
+        settings = super(HelloViewTest, self).get_app_settings(extras)
+        settings['signer.alice_source_to_review_enabled'] = 'true'
+        settings['signer.alice_source_reviewers_group'] = 'revoyeurs'
+        return settings
+
     def test_capability_is_exposed(self):
         self.maxDiff = None
         resp = self.app.get('/')
@@ -32,21 +38,26 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
             "group_check_enabled": False,
             "editors_group": "editors",
             "reviewers_group": "reviewers",
-            "resources": [
-                {"destination": {"bucket": "alice",
-                                 "collection": "destination"},
-                 "source": {"bucket": "alice",
-                            "collection": "source"}},
-                {"destination": {"bucket": "alice",
-                                 "collection": "to"},
-                 "preview": {"bucket": "alice",
-                             "collection": "preview"},
-                 "source": {"bucket": "alice",
-                            "collection": "from"}},
-                {"destination": {"bucket": "bob",
-                                 "collection": "destination"},
-                 "source": {"bucket": "bob",
-                            "collection": "source"}}]
+            "resources": [{
+                "destination": {"bucket": "alice",
+                                "collection": "destination"},
+                "source": {"bucket": "alice",
+                           "collection": "source"},
+                "reviewers_group": "revoyeurs",
+                "to_review_enabled": True
+            }, {
+                "destination": {"bucket": "alice",
+                                "collection": "to"},
+                "preview": {"bucket": "alice",
+                            "collection": "preview"},
+                "source": {"bucket": "alice",
+                           "collection": "from"}
+            }, {
+                "destination": {"bucket": "bob",
+                                "collection": "destination"},
+                "source": {"bucket": "bob",
+                           "collection": "source"}
+            }]
         }
         self.assertEqual(expected, capabilities['signer'])
 

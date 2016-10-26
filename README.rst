@@ -185,6 +185,16 @@ makes sure that:
 
 See `Kinto groups API <http://kinto.readthedocs.io/en/stable/api/1.x/groups.html>`_ for more details about how to define groups.
 
+The above settings can be set or overriden by collection using the ``<bucket_id>_<collection_id>_`` prefix.
+For example:
+
+.. code-block:: ini
+
+    kinto.signer.staging_certificates_group_check_enabled = true
+    kinto.signer.staging_certificates_to_review_enabled = true
+    kinto.signer.staging_certificates_editors_group = certificates-editors
+    kinto.signer.staging_certificates_reviewers_group = certificates-reviewers
+
 If the review process is enabled, it is possible to configure a *preview*
 collection, that will be updated and signed when the status is set to ``to-review``.
 This *preview* collection can be used by clients to test and validate the changes

@@ -6,7 +6,10 @@ This document describes changes between each past release.
 0.10.0 (unreleased)
 -------------------
 
-- Nothing changed yet.
+**New features**
+
+- Add ability to configure group names and enable review/group check by collection
+  (fixes #145)
 
 
 0.9.2 (2016-10-06)

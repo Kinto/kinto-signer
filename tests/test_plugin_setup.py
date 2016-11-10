@@ -135,6 +135,23 @@ class IncludeMeTest(unittest.TestCase):
         assert signer1.public_key == "/path/to/key"
         assert signer2.server_url == "http://localhost"
 
+    def test_falls_back_to_global_settings_if_not_defined(self):
+        settings = {
+            "signer.resources": "/buckets/sb1/collections/sc1;/buckets/db1/collections/dc1",
+            "signer.signer_backend": "kinto_signer.signer.autograph",
+            "signer.autograph.server_url": "http://localhost",
+            "signer.sb1.autograph.hawk_id": "bob",
+            "signer.sb1.autograph.hawk_secret": "a-secret",
+            "signer.sb1_sc1.autograph.hawk_id": "alice",
+            "signer.sb1_sc1.autograph.hawk_secret": "a-secret",
+        }
+        config = self.includeme(settings)
+        signer1, signer2 = config.registry.signers.values()
+        assert isinstance(signer1, AutographSigner)
+        assert isinstance(signer2, AutographSigner)
+        assert signer1.hawk_id == "alice"
+        assert signer2.hawk_id == "bob"
+
     def test_a_statsd_timer_is_used_for_signature_if_configured(self):
         settings = {
             "statsd_url": "udp://127.0.0.1:8125",

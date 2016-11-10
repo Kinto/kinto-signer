@@ -74,7 +74,8 @@ def includeme(config):
         prefix = "{source[bucket]}_{source[collection]}".format(**resource)
         for setting in ("reviewers_group", "editors_group",
                         "to_review_enabled", "group_check_enabled"):
-            value = settings.get("signer.%s_%s" % (prefix, setting))
+            value = settings.get("signer.%s.%s" % (prefix, setting),
+                                 settings.get("signer.%s_%s" % (prefix, setting)))
             if value is not None:
                 resource[setting] = value
 

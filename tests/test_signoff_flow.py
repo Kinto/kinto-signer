@@ -386,9 +386,9 @@ class SpecificUserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.Test
             self.source_collection2.replace("alice", "destination"))
 
         settings['signer.group_check_enabled'] = 'false'
-        settings['signer.alice_cid1_group_check_enabled'] = 'true'
-        settings['signer.alice_cid1_editors_group'] = 'editeurs'
-        settings['signer.alice_cid1_reviewers_group'] = 'revoyeurs'
+        settings['signer.alice_cid1.group_check_enabled'] = 'true'
+        settings['signer.alice_cid1.editors_group'] = 'editeurs'
+        settings['signer.alice_cid1.reviewers_group'] = 'revoyeurs'
         return settings
 
     def setUp(self):

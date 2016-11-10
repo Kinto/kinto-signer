@@ -6,7 +6,9 @@ This document describes changes between each past release.
 1.1.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Fix consistency of setting names for per-collection workflows configuration (fixes #149)
 
 
 1.0.0 (2016-10-26)

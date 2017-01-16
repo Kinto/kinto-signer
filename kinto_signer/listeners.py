@@ -8,6 +8,7 @@ from pyramid import httpexceptions
 
 from kinto_signer.updater import (LocalUpdater, FIELD_LAST_AUTHOR,
                                   FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER)
+from kinto_signer import events as signer_events
 from kinto_signer.utils import STATUS
 
 
@@ -81,6 +82,10 @@ def sign_collection_data(event, resources):
                 else:
                     # If no preview collection: just track `last_editor`
                     updater.update_source_editor(event.request)
+
+                # Notify request of review.
+                review_event = signer_events.ReviewRequested()
+                event.request.registry.notify(review_event)
 
         except Exception:
             logger.exception("Could not sign '{0}'".format(key))

@@ -1,0 +1,2 @@
+class ReviewRequested(object):
+    pass

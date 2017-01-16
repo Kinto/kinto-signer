@@ -1,6 +1,10 @@
 import os
 import unittest
 
+from pyramid.config import Configurator
+
+from kinto_signer.events import ReviewRequested
+
 from .support import BaseWebTest
 
 
@@ -169,3 +173,53 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         self.assertEqual(events[0].payload["action"], "delete")
         self.assertEqual(events[0].payload["uri"],
                          self.destination_collection + "/records/xyz")
+
+
+class SignoffEventsTest(BaseWebTest, unittest.TestCase):
+    def make_app(self, settings=None, config=None):
+        self.appConfig = Configurator(settings=self.get_app_settings(settings))
+
+        def on_review_request(event):
+            self.events.append(event)
+
+        self.appConfig.add_subscriber(on_review_request, ReviewRequested)
+
+        return super(SignoffEventsTest, self).make_app(settings,
+                                                       config=self.appConfig)
+
+    def get_app_settings(self, extras=None):
+        settings = super(SignoffEventsTest, self).get_app_settings(extras)
+
+        self.source_collection = "/buckets/alice/collections/scid"
+        self.destination_collection = "/buckets/destination/collections/dcid"
+
+        settings['kinto.signer.resources'] = '%s;%s' % (
+            self.source_collection,
+            self.destination_collection)
+
+        settings['kinto.signer.signer_backend'] = ('kinto_signer.signer.'
+                                                   'local_ecdsa')
+        settings['signer.ecdsa.private_key'] = os.path.join(
+            here, 'config', 'ecdsa.private.pem')
+        return settings
+
+    def setUp(self):
+        super(SignoffEventsTest, self).setUp()
+
+        self.events = []
+
+        self.app.put_json("/buckets/alice", headers=self.headers)
+        self.app.put_json(self.source_collection, headers=self.headers)
+        self.app.post_json(self.source_collection + "/records",
+                           {"data": {"title": "hello"}},
+                           headers=self.headers)
+        self.app.post_json(self.source_collection + "/records",
+                           {"data": {"title": "bonjour"}},
+                           headers=self.headers)
+        self.events = []
+
+    def test_review_requested_is_triggered(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+        assert len(self.events) == 1

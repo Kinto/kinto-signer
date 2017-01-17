@@ -44,7 +44,10 @@ def sign_collection_data(event, resources):
         # Ignore changes made by plugin.
         return
 
-    for impacted in event.impacted_records:
+    # Prevent recursivity, since the following operations will alter the current collection.
+    impacted_records = tuple(event.impacted_records)
+
+    for impacted in impacted_records:
         new_collection = impacted['new']
 
         key = instance_uri(event.request, "collection",

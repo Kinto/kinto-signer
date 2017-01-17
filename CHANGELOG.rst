@@ -3,12 +3,13 @@ Changelog
 
 This document describes changes between each past release.
 
-1.1.0 (unreleased)
+1.1.1 (2017-01-17)
 ------------------
 
 **Bug fixes**
 
 - Fix consistency of setting names for per-collection workflows configuration (fixes #149)
+- Remove recursivity of events when requesting review (#158)
 
 
 1.0.0 (2016-10-26)

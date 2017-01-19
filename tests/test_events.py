@@ -1,9 +1,10 @@
 import os
 import unittest
 
+from kinto.core import events as kinto_events
 from pyramid.config import Configurator
 
-from kinto_signer.events import ReviewRequested
+from kinto_signer import events as signer_events
 
 from .support import BaseWebTest
 
@@ -182,7 +183,9 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         def on_review_request(event):
             self.events.append(event)
 
-        self.appConfig.add_subscriber(on_review_request, ReviewRequested)
+        self.appConfig.add_subscriber(on_review_request, signer_events.ReviewRequested)
+        self.appConfig.add_subscriber(on_review_request, signer_events.ReviewRejected)
+        self.appConfig.add_subscriber(on_review_request, signer_events.ReviewApproved)
 
         return super(SignoffEventsTest, self).make_app(settings,
                                                        config=self.appConfig)
@@ -205,9 +208,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
 
     def setUp(self):
         super(SignoffEventsTest, self).setUp()
-
         self.events = []
-
         self.app.put_json("/buckets/alice", headers=self.headers)
         self.app.put_json(self.source_collection, headers=self.headers)
         self.app.post_json(self.source_collection + "/records",
@@ -216,10 +217,47 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         self.app.post_json(self.source_collection + "/records",
                            {"data": {"title": "bonjour"}},
                            headers=self.headers)
-        self.events = []
 
-    def test_review_requested_is_triggered(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
                             headers=self.headers)
-        assert len(self.events) == 1
+
+    def test_review_requested_is_triggered(self):
+        assert isinstance(self.events[-1], signer_events.ReviewRequested)
+
+    def test_events_have_details_attributes(self):
+        e = self.events[-1]
+        assert e.request.path == '/' + self.api_prefix + self.source_collection
+        assert e.payload['uri'] == self.source_collection
+        assert e.impacted_records[0]['new']['id'] == 'scid'
+        assert e.resource['source']['bucket'] == 'alice'
+        assert isinstance(e.original_event, kinto_events.ResourceChanged)
+
+    def test_review_rejected_is_triggered(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "work-in-progress"}},
+                            headers=self.headers)
+        assert isinstance(self.events[-1], signer_events.ReviewRejected)
+
+    def test_review_rejected_is_not_triggered_if_not_waiting_review(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
+        self.events = []
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "work-in-progress"}},
+                            headers=self.headers)
+        assert len(self.events) == 0
+
+    def test_review_rejected_is_not_triggered_when_modified_indirectly(self):
+        self.events = []
+        self.app.post_json(self.source_collection + "/records",
+                           {"data": {"title": "hello"}},
+                           headers=self.headers)
+        assert len(self.events) == 0
+
+    def test_review_approved_is_triggered(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
+        assert isinstance(self.events[-1], signer_events.ReviewApproved)

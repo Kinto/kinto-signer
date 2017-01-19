@@ -46,32 +46,37 @@ def sign_collection_data(event, resources):
         return
 
     # Prevent recursivity, since the following operations will alter the current collection.
-    impacted_records = tuple(event.impacted_records)
+    impacted_records = list(event.impacted_records)
 
     for impacted in impacted_records:
         new_collection = impacted['new']
+        old_collection = impacted.get('old', {})
 
-        key = instance_uri(event.request, "collection",
+        uri = instance_uri(event.request, "collection",
                            bucket_id=payload['bucket_id'],
                            id=new_collection['id'])
-        resource = resources.get(key)
+        resource = resources.get(uri)
 
         # Only sign the configured resources.
         if resource is None:
             continue
 
         registry = event.request.registry
-        updater = LocalUpdater(signer=registry.signers[key],
+        updater = LocalUpdater(signer=registry.signers[uri],
                                storage=registry.storage,
                                permission=registry.permission,
                                source=resource['source'],
                                destination=resource['destination'])
 
+        review_event_cls = None
         try:
             new_status = new_collection.get("status")
+            old_status = old_collection.get("status")
+
             if new_status == STATUS.TO_SIGN:
                 # Run signature process (will set `last_reviewer` field).
                 updater.sign_and_update_destination(event.request)
+                review_event_cls = signer_events.ReviewApproved
 
             elif new_status == STATUS.TO_REVIEW:
                 if 'preview' in resource:
@@ -82,14 +87,23 @@ def sign_collection_data(event, resources):
                 else:
                     # If no preview collection: just track `last_editor`
                     updater.update_source_editor(event.request)
+                review_event_cls = signer_events.ReviewRequested
 
-                # Notify request of review.
-                review_event = signer_events.ReviewRequested()
-                event.request.registry.notify(review_event)
+            elif old_status == STATUS.TO_REVIEW and new_status == STATUS.WORK_IN_PROGRESS:
+                review_event_cls = signer_events.ReviewRejected
 
         except Exception:
-            logger.exception("Could not sign '{0}'".format(key))
+            logger.exception("Could not sign '{0}'".format(uri))
             event.request.response.status = 503
+
+        # Notify request of review.
+        if review_event_cls:
+            review_event = review_event_cls(request=event.request,
+                                            payload=payload,
+                                            impacted_records=impacted_records,
+                                            resource=resource,
+                                            original_event=event)
+            event.request.registry.notify(review_event)
 
 
 def check_collection_status(event, resources, group_check_enabled,

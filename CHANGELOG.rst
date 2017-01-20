@@ -6,6 +6,10 @@ This document describes changes between each past release.
 1.2.0 (unreleased)
 ------------------
 
+**Bug fixes**
+
+- Do not always reset destination permissions
+
 **New features**
 
 - Kinto Admin UI fields like ``displayFields`` ``attachment`` and ``sort`` are copied

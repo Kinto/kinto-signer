@@ -106,7 +106,17 @@ def sign_collection_data(event, resources):
                                             impacted_records=[impacted],
                                             resource=resource,
                                             original_event=event)
-            event.request.registry.notify(review_event)
+            event.request.bound_data.setdefault('kinto_signer.events', []).append(review_event)
+
+
+def send_review_events(event):
+    """Send accumulated review events for this request. This listener is bound to the
+    ``AfterResourceChanged`` event so that review events are sent only if the transaction
+    was committed.
+    """
+    review_events = event.request.bound_data.pop('kinto_signer.events', [])
+    for review_event in review_events:
+        event.request.registry.notify(review_event)
 
 
 def check_collection_status(event, resources, group_check_enabled,

@@ -1,3 +1,4 @@
+import mock
 import os
 import unittest
 
@@ -262,3 +263,16 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
                             {"data": {"status": "to-sign"}},
                             headers=self.headers)
         assert isinstance(self.events[-1], signer_events.ReviewApproved)
+
+    def test_event_is_not_sent_if_rolledback(self):
+        patch = mock.patch('kinto_signer.signer.local_ecdsa.ECDSASigner.sign',
+                           side_effect=ValueError('boom'))
+        self.addCleanup(patch.stop)
+        patch.start()
+
+        self.events = []
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers,
+                            status=503)
+        assert len(self.events) == 0

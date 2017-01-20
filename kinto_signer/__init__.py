@@ -1,7 +1,7 @@
 import pkg_resources
 import functools
 
-from kinto.core.events import ACTIONS, ResourceChanged
+from kinto.core.events import ACTIONS, ResourceChanged, AfterResourceChanged
 from pyramid.exceptions import ConfigurationError
 from pyramid.settings import asbool
 
@@ -133,3 +133,5 @@ def includeme(config):
         ResourceChanged,
         for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
         for_resources=('collection',))
+
+    config.add_subscriber(listeners.send_review_events, AfterResourceChanged)

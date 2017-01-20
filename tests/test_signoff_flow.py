@@ -466,3 +466,14 @@ class PreviewCollectionTest(PostgresWebTest, unittest.TestCase):
         resp = self.app.get(self.preview_collection + '/records',
                             headers=self.headers)
         assert len(resp.json['data']) == 2
+
+    def test_the_preview_collection_receives_kinto_admin_ui_attributes(self):
+        self.app.patch_json(self.source_collection, {
+            "data": {
+                "status": "to-review",
+                "displayFields": ["age"]
+            }},
+            headers=self.headers)
+
+        resp = self.app.get(self.preview_collection, headers=self.headers)
+        assert resp.json['data']['displayFields'] == ['age']

@@ -6,7 +6,9 @@ This document describes changes between each past release.
 1.2.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Do not always reset destination permissions
 
 
 1.1.1 (2017-01-17)

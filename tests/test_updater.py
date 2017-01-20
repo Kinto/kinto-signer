@@ -144,9 +144,10 @@ class LocalUpdaterTest(unittest.TestCase):
         self.updater.get_source_records.assert_called_with(last_modified=None)
         assert self.storage.update.call_count == 3
 
-    def test_set_destination_signature_modifies_the_source_collection(self):
+    def test_set_destination_signature_modifies_the_destination_collection(self):
         self.storage.get.return_value = {'id': 1234, 'last_modified': 1234}
         self.updater.set_destination_signature(mock.sentinel.signature,
+                                               {},
                                                DummyRequest())
 
         self.storage.update.assert_called_with(
@@ -156,6 +157,23 @@ class LocalUpdaterTest(unittest.TestCase):
             record={
                 'id': 1234,
                 'signature': mock.sentinel.signature
+            })
+
+    def test_set_destination_signature_copies_kinto_admin_ui_fields(self):
+        self.storage.get.return_value = {'id': 1234, 'sort': '-age', 'last_modified': 1234}
+        self.updater.set_destination_signature(mock.sentinel.signature,
+                                               {'displayFields': ['name'], 'sort': 'size'},
+                                               DummyRequest())
+
+        self.storage.update.assert_called_with(
+            collection_id='collection',
+            object_id='destcollection',
+            parent_id='/buckets/destbucket',
+            record={
+                'id': 1234,
+                'signature': mock.sentinel.signature,
+                'sort': '-age',
+                'displayFields': ['name']
             })
 
     def test_update_source_status_modifies_the_source_collection(self):
@@ -210,7 +228,7 @@ class LocalUpdaterTest(unittest.TestCase):
                    return_value=([], '0'))
         self.patch(self.updater, 'push_records_to_destination')
         self.patch(self.updater, 'set_destination_signature')
-        self.updater.sign_and_update_destination(DummyRequest())
+        self.updater.sign_and_update_destination(DummyRequest(), {'id': 'source'})
 
         assert self.updater.get_destination_records.call_count == 1
         assert self.updater.push_records_to_destination.call_count == 1

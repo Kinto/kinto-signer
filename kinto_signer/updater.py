@@ -103,7 +103,7 @@ class LocalUpdater(object):
             self.destination['bucket'],
             self.destination['collection'])
 
-    def sign_and_update_destination(self, request,
+    def sign_and_update_destination(self, request, source,
                                     next_source_status=STATUS.SIGNED):
         """Sign the specified collection.
 
@@ -126,7 +126,7 @@ class LocalUpdater(object):
         logger.debug(self.source_collection_uri + ":\t" + serialized_records)
         signature = self.signer.sign(serialized_records)
 
-        self.set_destination_signature(signature, request)
+        self.set_destination_signature(signature, source, request)
         self.update_source_status(next_source_status, request)
 
         # Re-trigger events from event listener \o/
@@ -135,12 +135,13 @@ class LocalUpdater(object):
         request.bound_data["resource_events"] = before_events
 
     def _ensure_resource_exists(self, resource_type, parent_id,
-                                record_id, request):
+                                record_id, request, **attributes):
+        attributes.update({FIELD_ID: record_id})
         try:
             created = self.storage.create(
                 collection_id=resource_type,
                 parent_id=parent_id,
-                record={FIELD_ID: record_id})
+                record=attributes)
         except UnicityError:
             created = None
         return created
@@ -289,7 +290,7 @@ class LocalUpdater(object):
                 action=action,
                 old=before)
 
-    def set_destination_signature(self, signature, request):
+    def set_destination_signature(self, signature, source_attributes, request):
         # Push the new signature to the destination collection.
         parent_id = '/buckets/%s' % self.destination['bucket']
         collection_id = 'collection'
@@ -303,6 +304,10 @@ class LocalUpdater(object):
         new_collection = dict(**collection_record)
         new_collection.pop(FIELD_LAST_MODIFIED, None)
         new_collection['signature'] = signature
+        # Copy some Kinto-Admin UI attributes from source to destination.
+        for attr in ('sort', 'displayFields', 'attachment'):
+            if attr in source_attributes:
+                new_collection.setdefault(attr, source_attributes[attr])
 
         updated = self.storage.update(
             parent_id=parent_id,

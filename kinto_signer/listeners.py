@@ -8,6 +8,7 @@ from pyramid import httpexceptions
 
 from kinto_signer.updater import (LocalUpdater, FIELD_LAST_AUTHOR,
                                   FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER)
+from kinto_signer import events as signer_events
 from kinto_signer.utils import STATUS
 
 
@@ -45,32 +46,37 @@ def sign_collection_data(event, resources):
         return
 
     # Prevent recursivity, since the following operations will alter the current collection.
-    impacted_records = tuple(event.impacted_records)
+    impacted_records = list(event.impacted_records)
 
     for impacted in impacted_records:
         new_collection = impacted['new']
+        old_collection = impacted.get('old', {})
 
-        key = instance_uri(event.request, "collection",
+        uri = instance_uri(event.request, "collection",
                            bucket_id=payload['bucket_id'],
                            id=new_collection['id'])
-        resource = resources.get(key)
+        resource = resources.get(uri)
 
         # Only sign the configured resources.
         if resource is None:
             continue
 
         registry = event.request.registry
-        updater = LocalUpdater(signer=registry.signers[key],
+        updater = LocalUpdater(signer=registry.signers[uri],
                                storage=registry.storage,
                                permission=registry.permission,
                                source=resource['source'],
                                destination=resource['destination'])
 
+        review_event_cls = None
         try:
             new_status = new_collection.get("status")
+            old_status = old_collection.get("status")
+
             if new_status == STATUS.TO_SIGN:
                 # Run signature process (will set `last_reviewer` field).
                 updater.sign_and_update_destination(event.request)
+                review_event_cls = signer_events.ReviewApproved
 
             elif new_status == STATUS.TO_REVIEW:
                 if 'preview' in resource:
@@ -81,10 +87,36 @@ def sign_collection_data(event, resources):
                 else:
                     # If no preview collection: just track `last_editor`
                     updater.update_source_editor(event.request)
+                review_event_cls = signer_events.ReviewRequested
+
+            elif old_status == STATUS.TO_REVIEW and new_status == STATUS.WORK_IN_PROGRESS:
+                review_event_cls = signer_events.ReviewRejected
 
         except Exception:
-            logger.exception("Could not sign '{0}'".format(key))
+            logger.exception("Could not sign '{0}'".format(uri))
             event.request.response.status = 503
+
+        # Notify request of review.
+        if review_event_cls:
+            payload = payload.copy()
+            payload["uri"] = uri
+            payload["collection_id"] = new_collection['id']
+            review_event = review_event_cls(request=event.request,
+                                            payload=payload,
+                                            impacted_records=[impacted],
+                                            resource=resource,
+                                            original_event=event)
+            event.request.bound_data.setdefault('kinto_signer.events', []).append(review_event)
+
+
+def send_review_events(event):
+    """Send accumulated review events for this request. This listener is bound to the
+    ``AfterResourceChanged`` event so that review events are sent only if the transaction
+    was committed.
+    """
+    review_events = event.request.bound_data.pop('kinto_signer.events', [])
+    for review_event in review_events:
+        event.request.registry.notify(review_event)
 
 
 def check_collection_status(event, resources, group_check_enabled,

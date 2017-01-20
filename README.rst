@@ -322,6 +322,28 @@ The *destination* collection metadata now contains the signature:
    }
 
 
+Events
+======
+
+Pyramid events are sent for each review step of the validation workflow.
+
+Events have the following attributes:
+
+* ``request``: current Pyramid request object
+* ``payload``: same as ``kinto.core.events.ResourceChanged``
+* ``impacted_records``: same as ``kinto.core.events.ResourceChanged``
+* ``resource``: dict with details about source, preview and destination collection
+                (as in capability).
+* ``original_event``: original ``ResourceChanged`` event that was caught to
+                      detect step change in review workflow.
+
+The following events are thrown:
+
+* ``kinto_signer.events.ReviewRequested``
+* ``kinto_signer.events.ReviewRejected``
+* ``kinto_signer.events.ReviewApproved``
+
+
 Validating the signature
 ========================
 

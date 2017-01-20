@@ -98,9 +98,12 @@ def sign_collection_data(event, resources):
 
         # Notify request of review.
         if review_event_cls:
+            payload = payload.copy()
+            payload["uri"] = uri
+            payload["collection_id"] = new_collection['id']
             review_event = review_event_cls(request=event.request,
                                             payload=payload,
-                                            impacted_records=impacted_records,
+                                            impacted_records=[impacted],
                                             resource=resource,
                                             original_event=event)
             event.request.registry.notify(review_event)

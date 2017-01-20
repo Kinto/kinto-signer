@@ -229,6 +229,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         e = self.events[-1]
         assert e.request.path == '/' + self.api_prefix + self.source_collection
         assert e.payload['uri'] == self.source_collection
+        assert e.payload['collection_id'] == 'scid'
         assert e.impacted_records[0]['new']['id'] == 'scid'
         assert e.resource['source']['bucket'] == 'alice'
         assert isinstance(e.original_event, kinto_events.ResourceChanged)

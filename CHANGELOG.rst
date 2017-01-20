@@ -3,7 +3,7 @@ Changelog
 
 This document describes changes between each past release.
 
-1.2.0 (unreleased)
+1.2.0 (2017-01-20)
 ------------------
 
 **Bug fixes**
@@ -12,8 +12,10 @@ This document describes changes between each past release.
 
 **New features**
 
+- Pyramid events are sent for each review step of the validation workflow (fixes #157)
 - Kinto Admin UI fields like ``displayFields`` ``attachment`` and ``sort`` are copied
   from the source to the preview and destination collections (if not set) (fixes #161)
+
 
 1.1.1 (2017-01-17)
 ------------------

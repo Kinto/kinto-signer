@@ -10,6 +10,10 @@ This document describes changes between each past release.
 
 - Do not always reset destination permissions
 
+**New features**
+
+- Kinto Admin UI fields like ``displayFields`` ``attachment`` and ``sort`` are copied
+  from the source to the preview and destination collections (if not set) (fixes #161)
 
 1.1.1 (2017-01-17)
 ------------------

@@ -29,7 +29,7 @@ build-requirements:
 	$(VIRTUALENV) $(TEMPDIR)
 	$(TEMPDIR)/bin/pip install -U pip
 	$(TEMPDIR)/bin/pip install -Ue .
-	$(TEMPDIR)/bin/pip freeze > requirements.txt
+	$(TEMPDIR)/bin/pip freeze | grep -v -- '-e' > requirements.txt
 
 tests-once: install-dev
 	$(VENV)/bin/py.test --cov-report term-missing --cov-fail-under 100 --cov kinto_signer

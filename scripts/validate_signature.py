@@ -30,17 +30,17 @@ def main(args=None):
     # 3. Serialize
     serialized = canonical_json(records, timestamp)
 
-    # 3. Compute the hash
+    # 4. Compute the hash
     computed_hash = compute_hash(serialized)
 
-    # 4. Grab the signature
+    # 5. Grab the signature
     signature = dest_col['data']['signature']
 
-    # 5. Grab the public key
+    # 6. Grab the public key
     with open('pub', 'w') as f:
         f.write(signature['public_key'])
 
-    # 6. Verify the signature matches the hash
+    # 7. Verify the signature matches the hash
     signer = ECDSASigner(public_key='pub')
     try:
         signer.verify(serialized, signature)
@@ -49,7 +49,7 @@ def main(args=None):
         print('Signature KO. Computed hash: %s' % computed_hash)
         raise
 
-    # XXX 7. Verify that the public key is correct wrt the x5u chain
+    # XXX 8. Verify that the public key is correct wrt the x5u chain
 
 
 if __name__ == '__main__':

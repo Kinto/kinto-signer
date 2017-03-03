@@ -208,7 +208,7 @@ def main():
 
     # 6. obtain the destination records and serialize canonically.
 
-    records = dest_client.get_records()
+    records = list(dest_client.get_records())
     assert len(records) == expected, '%s != %s records' % (len(records), expected)
     timestamp = collection_timestamp(dest_client)
     serialized = canonical_json(records, timestamp)

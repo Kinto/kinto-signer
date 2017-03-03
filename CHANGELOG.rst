@@ -3,10 +3,12 @@ Changelog
 
 This document describes changes between each past release.
 
-1.3.0 (unreleased)
+1.3.0 (2017-03-03)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Update e2e.py to be robust against kinto_client returning an iterator in Python 3. (#165)
 
 
 1.2.0 (2017-01-20)

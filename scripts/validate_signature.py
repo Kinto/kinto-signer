@@ -24,7 +24,7 @@ def main(args=None):
     dest_col = client.get_collection()
 
     # 2. Grab records
-    records = client.get_records(_sort='-last_modified')
+    records = list(client.get_records(_sort='-last_modified'))
     timestamp = client.get_records_timestamp()
 
     # 3. Serialize

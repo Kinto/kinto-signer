@@ -10,8 +10,8 @@ Kinto signer
     :target: https://coveralls.io/github/Kinto/kinto-signer?branch=master
 
 **Kinto signer** is a `Kinto <https://kinto.readthedocs.io>`_ plugin
-that introduces `digital signatures <https://en.wikipedia.org/wiki/Digital_signature>`_
-in order to guarantee integrity and authenticity of collections of records.
+that signs records with a `content signatures <https://github.com/mozilla-services/autograph/blob/master/signer/contentsignature/README.rst>`_
+to guarantee their integrity and authenticity.
 
 
 How does it work?
@@ -52,7 +52,7 @@ with the P-384 strength.
 * The signature is produced with ECDSA on P-384 using SHA-384.
 * The signature is returned as encoded using URL-safe variant of base-64.
 
-See `Internet-Draft for P-384/ECDSA <https://github.com/martinthomson/content-signature/pull/2/files>`_
+See `Content Signature <https://github.com/mozilla-services/autograph/blob/master/signer/contentsignature/README.rst>`_
 
 The content signature is validated in Firefox using the `Personal Security Manager <https://developer.mozilla.org/en/docs/Mozilla/Projects/PSM>`_.
 
@@ -305,13 +305,9 @@ The *destination* collection metadata now contains the signature:
            "id": "collection1",
            "last_modified": 1460558496510,
            "signature": {
-               "hash_algorithm": "sha384",
                "public_key": "MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE4k3FmG7dFoOt3Tuzl76abTRtK8sb/r/ibCSeVKa96RbrOX2ciscz/TT8wfqBYS/8cN4zMe1+f7wRmkNrCUojZR1ZKmYM2BeiUOMlMoqk2O7+uwsn1DwNQSYP58TkvZt6",
                "ref": "939wa3q3s3vn20rddhq8lb5ie",
-               "signature": "oGkEfZOegNeYxHjDkc_TnUixX4BzESOzxd2OMn63rKBZL9FR3gjrRj7tmu8BWpnuWSLdH_aIjBsKsq4Dmg7XdDczeg86owSl5L-UYtKW3g4B4Yrh-yJZZFhchRbmZea6",
-               "signature_encoding": "rs_base64url"
-               "content-signature": "x5u=https://bucket.example.net/appkey1.pem;p384ecdsa=Nv-EJ1D0fanElBGP4ZZmV6zu_b4DuCP3H7xawlLrcR7to3aKzqfZknVXOi94G_w8-wdKlysVWmhuDMqJqPcJV7ZudbhypJpj7kllWdPvMRZkoWXSfYLaoLMc8VQEqZcb",
-               "x5u": "https://bucket.example.net/appkey1.pem",
+               "signature": "x5u=https://bucket.example.net/appkey1.pem;p384ecdsa=Nv-EJ1D0fanElBGP4ZZmV6zu_b4DuCP3H7xawlLrcR7to3aKzqfZknVXOi94G_w8-wdKlysVWmhuDMqJqPcJV7ZudbhypJpj7kllWdPvMRZkoWXSfYLaoLMc8VQEqZcb"
            }
        },
        "permissions": {

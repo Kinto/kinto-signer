@@ -21,13 +21,10 @@ class AutographSigner(SignerBase):
         b64_payload = base64.b64encode(payload)
         url = urljoin(self.server_url, '/sign/data')
         resp = requests.post(url, auth=self.auth, json=[{
-            "input": b64_payload.decode('utf-8'),
-            "template": "content-signature",
-            "hashwith": "sha384"
+            "input": b64_payload.decode('utf-8')
         }])
         resp.raise_for_status()
         signature_bundle = resp.json()[0]
-        signature_bundle.setdefault('signature_encoding', 'rs_base64url')
         return signature_bundle
 
 

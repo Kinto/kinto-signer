@@ -134,4 +134,4 @@ def includeme(config):
         for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
         for_resources=('collection',))
 
-    config.add_subscriber(listeners.send_review_events, AfterResourceChanged)
+    config.add_subscriber(listeners.send_signer_events, AfterResourceChanged)

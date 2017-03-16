@@ -35,7 +35,7 @@ def create_records(client):
 
 
 def flush_server(server_url):
-    flush_url = urljoin(server_url, '/__flush__')
+    flush_url = urljoin(server_url, '/v1/__flush__')
     resp = requests.post(flush_url)
     resp.raise_for_status()
 
@@ -49,6 +49,7 @@ def fetch_history(client):
     url = client.get_endpoint("bucket") + "/history"
     body, headers = client.session.request("GET", url)
     return body['data']
+
 
 def create_group(client, name, members):
     endpoint = client.get_endpoint('collections')
@@ -306,33 +307,36 @@ class HistoryTest(unittest.TestCase):
         collection_entries = [e for e in entries
                               if e['resource_name'] == 'collection'
                               and e['collection_id'] == 'source']
-        # create collection
-        # status: work-in-progress
-        # status: to-review
-        # status: to-sign
-        # status: signed
-        assert len(collection_entries) == 5
+        assert len(collection_entries) == 6
 
+        # create collection
         assert collection_entries[0]['action'] == 'create'
         assert 'basicauth:' in collection_entries[0]['user_id']
 
+        # status: work-in-progress
         assert collection_entries[1]['target']['data']['status'] == 'work-in-progress'
         assert 'kinto-signer' in collection_entries[1]['user_id']
+        assert collection_entries[3]['target']['data']['status'] == 'to-review'
 
+        # status: to-review (by user)
         assert collection_entries[2]['target']['data']['status'] == 'to-review'
+        assert 'last_editor' not in collection_entries[2]['target']['data']
         assert 'basicauth:' in collection_entries[2]['user_id']
 
-        # XXX BUG
-        # assert collection_entries[3]['target']['data']['status'] == 'to-sign'
-        # assert 'basicauth:' in collection_entries[3]['user_id']
-        assert collection_entries[3]['target']['data']['status'] == 'signed'
+        # update of last_editor (by plugin)
+        assert collection_entries[3]['target']['data']['status'] == 'to-review'
+        assert 'basicauth:' in collection_entries[3]['target']['data']['last_editor']
         assert 'kinto-signer' in collection_entries[3]['user_id']
 
-        # XXX BUG
-        # assert collection_entries[4]['target']['data']['status'] == 'signed'
-        # assert 'kinto-signer' in collection_entries[4]['user_id']
+        # status: to-sign
         assert collection_entries[4]['target']['data']['status'] == 'to-sign'
+        assert 'last_reviewer' not in collection_entries[4]['target']['data']
         assert 'basicauth:' in collection_entries[4]['user_id']
+
+        # status: signed (by plugin)
+        assert collection_entries[5]['target']['data']['status'] == 'signed'
+        assert 'basicauth:' in collection_entries[5]['target']['data']['last_reviewer']
+        assert 'kinto-signer' in collection_entries[5]['user_id']
 
 
 class WorkflowTest(unittest.TestCase):

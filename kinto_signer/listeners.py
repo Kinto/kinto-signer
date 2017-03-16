@@ -86,7 +86,8 @@ def sign_collection_data(event, resources):
                                                         next_source_status=STATUS.TO_REVIEW)
                 else:
                     # If no preview collection: just track `last_editor`
-                    updater.update_source_editor(event.request)
+                    with updater.send_events(event.request):
+                        updater.update_source_editor(event.request)
                 review_event_cls = signer_events.ReviewRequested
 
             elif old_status == STATUS.TO_REVIEW and new_status == STATUS.WORK_IN_PROGRESS:
@@ -109,7 +110,7 @@ def sign_collection_data(event, resources):
             event.request.bound_data.setdefault('kinto_signer.events', []).append(review_event)
 
 
-def send_review_events(event):
+def send_signer_events(event):
     """Send accumulated review events for this request. This listener is bound to the
     ``AfterResourceChanged`` event so that review events are sent only if the transaction
     was committed.

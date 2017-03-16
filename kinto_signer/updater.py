@@ -130,12 +130,16 @@ class LocalUpdater(object):
 
     @contextmanager
     def send_events(self, request):
+        # Backup resource events generated until now and set it to empty dict.
         before_events = request.bound_data["resource_events"]
         request.bound_data["resource_events"] = OrderedDict()
         yield
-        # Re-trigger events from event listener \o/
-        for event in request.get_resource_events():
-            request.registry.notify(event)
+        # The resource events we gathered during listeners and hooks of kinto-signer
+        # can now be added to ``kinto_signer.events`` which will be sent later
+        # in ``listeners.send_signer_events()``.
+        new_events = request.get_resource_events()
+        request.bound_data.setdefault('kinto_signer.events', []).extend(new_events)
+        # Restore backup.
         request.bound_data["resource_events"] = before_events
 
     def _ensure_resource_exists(self, resource_type, parent_id,

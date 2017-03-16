@@ -6,7 +6,9 @@ This document describes changes between each past release.
 1.3.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Fixed inconsistencies in ``ResourceChanged`` produced by Kinto signer (fixes #169)
 
 
 1.2.0 (2017-01-20)

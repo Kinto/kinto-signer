@@ -48,8 +48,8 @@ maintainer-clean: distclean
 	rm -fr .venv/ .tox/ dist/ build/
 
 run-kinto:
-	$(VENV)/bin/kinto --ini tests/config/signer.ini migrate
-	$(VENV)/bin/kinto --ini tests/config/signer.ini start
+	$(VENV)/bin/kinto migrate --ini tests/config/signer.ini
+	$(VENV)/bin/kinto start --ini tests/config/signer.ini
 
 install-autograph: $(VENV)/bin/autograph
 

@@ -316,10 +316,8 @@ class HistoryTest(unittest.TestCase):
         assert collection_entries[0]['action'] == 'create'
         assert 'basicauth:' in collection_entries[0]['user_id']
 
-        # XXX BUG
-        # assert collection_entries[1]['target']['data']['status'] == 'work-in-progress'
-        # assert 'kinto-signer' in collection_entries[1]['user_id']
-        assert collection_entries[1]['target']['data']['status'] == 'to-review'
+        assert collection_entries[1]['target']['data']['status'] == 'work-in-progress'
+        assert 'kinto-signer' in collection_entries[1]['user_id']
 
         assert collection_entries[2]['target']['data']['status'] == 'to-review'
         assert 'basicauth:' in collection_entries[2]['user_id']

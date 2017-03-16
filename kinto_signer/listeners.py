@@ -1,7 +1,6 @@
 import transaction
-from kinto.core import errors
-
 from kinto import logger
+from kinto.core import errors
 from kinto.core.utils import instance_uri
 from kinto.core.errors import ERRORS
 from pyramid import httpexceptions
@@ -245,4 +244,5 @@ def set_work_in_progress_status(event, resources):
                            permission=registry.permission,
                            source=resource['source'],
                            destination=resource['destination'])
-    updater.update_source_status(STATUS.WORK_IN_PROGRESS, event.request)
+    with updater.send_events(event.request):
+        updater.update_source_status(STATUS.WORK_IN_PROGRESS, event.request)

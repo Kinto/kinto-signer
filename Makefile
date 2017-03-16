@@ -1,4 +1,4 @@
-VIRTUALENV = virtualenv
+VIRTUALENV = virtualenv --python python3
 VENV := $(shell echo $${VIRTUAL_ENV-$$PWD/.venv})
 PYTHON = $(VENV)/bin/python
 DEV_STAMP = $(VENV)/.dev_env_installed.stamp
@@ -48,6 +48,7 @@ maintainer-clean: distclean
 	rm -fr .venv/ .tox/ dist/ build/
 
 run-kinto:
+	$(VENV)/bin/python --version
 	$(VENV)/bin/kinto migrate --ini tests/config/signer.ini
 	$(VENV)/bin/kinto start --ini tests/config/signer.ini
 

@@ -1,4 +1,4 @@
-VIRTUALENV = virtualenv
+VIRTUALENV = virtualenv --python python3
 VENV := $(shell echo $${VIRTUAL_ENV-$$PWD/.venv})
 PYTHON = $(VENV)/bin/python
 DEV_STAMP = $(VENV)/.dev_env_installed.stamp
@@ -13,7 +13,7 @@ OBJECTS = .venv .coverage
 all: install
 install: $(INSTALL_STAMP)
 $(INSTALL_STAMP): $(PYTHON) setup.py
-	$(PYTHON) setup.py develop
+	$(VENV)/bin/pip install -e .
 	touch $(INSTALL_STAMP)
 
 install-dev: $(INSTALL_STAMP) $(DEV_STAMP)
@@ -23,7 +23,8 @@ $(DEV_STAMP): $(PYTHON) dev-requirements.txt
 
 virtualenv: $(PYTHON)
 $(PYTHON):
-	virtualenv $(VENV)
+	$(VIRTUALENV) $(VENV)
+	$(VENV)/bin/pip install -U pip
 
 build-requirements:
 	$(VIRTUALENV) $(TEMPDIR)
@@ -47,9 +48,10 @@ distclean: clean
 maintainer-clean: distclean
 	rm -fr .venv/ .tox/ dist/ build/
 
-run-kinto:
-	$(VENV)/bin/kinto --ini tests/config/signer.ini migrate
-	$(VENV)/bin/kinto --ini tests/config/signer.ini start
+run-kinto: install-dev
+	$(VENV)/bin/python --version
+	$(VENV)/bin/kinto migrate --ini tests/config/signer.ini
+	$(VENV)/bin/kinto start --ini tests/config/signer.ini
 
 install-autograph: $(VENV)/bin/autograph
 

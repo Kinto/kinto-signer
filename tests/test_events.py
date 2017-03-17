@@ -85,6 +85,40 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         self.assertEqual(len(event.impacted_records), 1)
         self.assertEqual(event.payload['user_id'], "plugin:kinto-signer")
 
+    def test_resource_changed_is_triggered_for_work_in_progress(self):
+        events = [e for e in listener.received
+                  if e.payload["resource_name"] == "collection" and
+                  e.payload["collection_id"] == "scid" and
+                  e.payload["action"] == "update"]
+
+        self.assertEqual(events[-1].payload["user_id"], "plugin:kinto-signer")
+        self.assertEqual(events[-1].impacted_records[0]["new"]["status"],
+                         "work-in-progress")
+        self.assertIsNone(events[-1].impacted_records[0]["old"].get("status"))
+        self.assertIn("basicauth:", events[-1].impacted_records[0]["new"]["last_author"])
+        self.assertIsNone(events[-1].impacted_records[0]["old"].get("last_author"))
+
+    def test_resource_changed_is_triggered_for_to_review(self):
+        before = len(listener.received)
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+
+        events = [e for e in listener.received[before:]
+                  if e.payload["resource_name"] == "collection" and
+                  e.payload["collection_id"] == "scid" and
+                  e.payload["action"] == "update"]
+
+        self.assertEqual(len(events), 2)
+        self.assertIn("basicauth:", events[0].payload["user_id"])
+        self.assertEqual(events[0].impacted_records[0]["new"]["status"], "to-review")
+        self.assertNotIn("last_editor", events[0].impacted_records[0]["new"])
+
+        self.assertEqual(events[1].payload["user_id"], "plugin:kinto-signer")
+        self.assertIn("basicauth:", events[1].impacted_records[0]["new"]["last_editor"])
+        self.assertEqual(events[1].impacted_records[0]["old"]["status"], "to-review")
+
     def test_resource_changed_is_triggered_for_source_collection(self):
         before = len(listener.received)
 
@@ -104,6 +138,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
                          "to-sign")
         self.assertEqual(event_signed.impacted_records[0]["new"]["status"],
                          "signed")
+        self.assertGreater(event_signed.payload['timestamp'], event_tosign.payload['timestamp'])
 
     def test_resource_changed_is_triggered_for_destination_collection(self):
         before = len(listener.received)

@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import logging
 
 from collections import OrderedDict
@@ -114,24 +115,31 @@ class LocalUpdater(object):
         4. Ask the signer for a signature
         5. Send the signature to the destination.
         """
+        with self.send_events(request):
+            self.create_destination(request)
+
+            self.push_records_to_destination(request)
+
+            records, timestamp = self.get_destination_records()
+            serialized_records = canonical_json(records, timestamp)
+            logger.debug(self.source_collection_uri + ":\t" + serialized_records)
+            signature = self.signer.sign(serialized_records)
+
+            self.set_destination_signature(signature, source, request)
+            self.update_source_status(next_source_status, request)
+
+    @contextmanager
+    def send_events(self, request):
+        # Backup resource events generated until now and set it to empty dict.
         before_events = request.bound_data["resource_events"]
         request.bound_data["resource_events"] = OrderedDict()
-
-        self.create_destination(request)
-
-        self.push_records_to_destination(request)
-
-        records, timestamp = self.get_destination_records()
-        serialized_records = canonical_json(records, timestamp)
-        logger.debug(self.source_collection_uri + ":\t" + serialized_records)
-        signature = self.signer.sign(serialized_records)
-
-        self.set_destination_signature(signature, source, request)
-        self.update_source_status(next_source_status, request)
-
-        # Re-trigger events from event listener \o/
-        for event in request.get_resource_events():
-            request.registry.notify(event)
+        yield
+        # The resource events we gathered during listeners and hooks of kinto-signer
+        # can now be added to ``kinto_signer.events`` which will be sent later
+        # in ``listeners.send_signer_events()``.
+        new_events = request.get_resource_events()
+        request.bound_data.setdefault('kinto_signer.events', []).extend(new_events)
+        # Restore backup.
         request.bound_data["resource_events"] = before_events
 
     def _ensure_resource_exists(self, resource_type, parent_id,

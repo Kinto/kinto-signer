@@ -35,9 +35,28 @@ def create_records(client):
 
 
 def flush_server(server_url):
-    flush_url = urljoin(server_url, '/__flush__')
+    flush_url = urljoin(server_url, '/v1/__flush__')
     resp = requests.post(flush_url)
     resp.raise_for_status()
+
+
+def trigger_signature(editor_client, reviewer_client=None):
+    editor_client.patch_collection(data={'status': 'to-review'})
+    reviewer_client.patch_collection(data={'status': 'to-sign'})
+
+
+def fetch_history(client):
+    url = client.get_endpoint("bucket") + "/history"
+    body, headers = client.session.request("GET", url)
+    return body['data']
+
+
+def create_group(client, name, members):
+    endpoint = client.get_endpoint('collections')
+    endpoint = endpoint.replace('/collections', '/groups/%s' % name)
+    data = {"members": members}
+    resp, headers = client.session.request('put', endpoint, data)
+    return resp
 
 
 class BaseTestFunctional(object):
@@ -91,13 +110,8 @@ class BaseTestFunctional(object):
 
         time.sleep(0.1)
 
-        self.trigger_signature()
-
-    def trigger_signature(self, reviewer_client=None):
-        self.editor_client.patch_collection(data={'status': 'to-review'})
-        if reviewer_client is None:
-            reviewer_client = self.source
-        reviewer_client.patch_collection(data={'status': 'to-sign'})
+        trigger_signature(editor_client=self.editor_client,
+                          reviewer_client=self.source)
 
     def test_groups_and_reviewers_are_forced(self):
         capability = self.source.server_info()['capabilities']['signer']
@@ -129,7 +143,8 @@ class BaseTestFunctional(object):
 
         time.sleep(0.1)
 
-        self.trigger_signature()
+        trigger_signature(editor_client=self.editor_client,
+                          reviewer_client=self.source)
         data = self.destination.get_collection()
         signature = data['data']['signature']
         assert signature is not None
@@ -152,7 +167,8 @@ class BaseTestFunctional(object):
 
         time.sleep(0.1)
 
-        self.trigger_signature()
+        trigger_signature(editor_client=self.editor_client,
+                          reviewer_client=self.source)
         data = self.destination.get_collection()
         signature = data['data']['signature']
         assert signature is not None
@@ -171,7 +187,8 @@ class BaseTestFunctional(object):
 
         time.sleep(0.1)
 
-        self.trigger_signature()
+        trigger_signature(editor_client=self.editor_client,
+                          reviewer_client=self.source)
 
         data = self.destination.get_collection()
         signature = data['data']['signature']
@@ -195,7 +212,8 @@ class BaseTestFunctional(object):
 
         self.source.delete_records()
 
-        self.trigger_signature()
+        trigger_signature(editor_client=self.editor_client,
+                          reviewer_client=self.source)
 
         source_records = self.source.get_records()
         destination_records = self.destination.get_records()
@@ -218,7 +236,8 @@ class BaseTestFunctional(object):
 
         self.source.create_record(data={"pim": "pam"})
         # Trigger a signature as someone else.
-        self.trigger_signature(reviewer_client=self.someone_client)
+        trigger_signature(editor_client=self.editor_client,
+                          reviewer_client=self.someone_client)
 
         collection = self.destination.get_collection()
         after = collection['data']['signature']
@@ -243,12 +262,81 @@ class BobFunctionalTest(BaseTestFunctional, unittest.TestCase):
     destination_collection = "destination"
 
 
-def create_group(client, name, members):
-    endpoint = client.get_endpoint('collections')
-    endpoint = endpoint.replace('/collections', '/groups/%s' % name)
-    data = {"members": members}
-    resp, headers = client.session.request('put', endpoint, data)
-    return resp
+class HistoryTest(unittest.TestCase):
+    server_url = SERVER_URL
+    private_key = os.path.join(__HERE__, 'config/ecdsa.private.pem')
+    source_bucket = "alice"
+    source_collection = "source"
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.signer = local_ecdsa.ECDSASigner(private_key=cls.private_key)
+        cls.source = Client(
+            server_url=cls.server_url,
+            auth=DEFAULT_AUTH,
+            bucket=cls.source_bucket,
+            collection=cls.source_collection)
+        cls.editor_client = Client(
+            server_url=cls.server_url,
+            auth=("editor", ""),
+            bucket=cls.source_bucket,
+            collection=cls.source_collection)
+
+    def tearDown(self):
+        # Delete all the created objects.
+        flush_server(self.server_url)
+
+    def setUp(self):
+        # Give the permission to write in collection to anybody
+        self.source.create_bucket()
+        principals = [user_principal(self.editor_client),
+                      user_principal(self.source)]
+        create_group(self.source, "editors", members=principals)
+        create_group(self.source, "reviewers", members=principals)
+
+        perms = {"write": ["system.Authenticated"]}
+        self.source.create_collection(permissions=perms)
+        self.source.create_record({'hola': 'mundo'})
+        trigger_signature(editor_client=self.editor_client,
+                          reviewer_client=self.source)
+
+    def test_history_entries_contain_signer_actions(self):
+        entries = fetch_history(self.source)
+        entries.reverse()
+        collection_entries = [e for e in entries
+                              if e['resource_name'] == 'collection'
+                              and e['collection_id'] == 'source']
+        assert len(collection_entries) == 6
+
+        # create collection
+        assert collection_entries[0]['action'] == 'create'
+        assert 'basicauth:' in collection_entries[0]['user_id']
+
+        # status: work-in-progress
+        assert collection_entries[1]['target']['data']['status'] == 'work-in-progress'
+        assert 'kinto-signer' in collection_entries[1]['user_id']
+        assert collection_entries[3]['target']['data']['status'] == 'to-review'
+
+        # status: to-review (by user)
+        assert collection_entries[2]['target']['data']['status'] == 'to-review'
+        assert 'last_editor' not in collection_entries[2]['target']['data']
+        assert 'basicauth:' in collection_entries[2]['user_id']
+
+        # update of last_editor (by plugin)
+        assert collection_entries[3]['target']['data']['status'] == 'to-review'
+        assert 'basicauth:' in collection_entries[3]['target']['data']['last_editor']
+        assert 'kinto-signer' in collection_entries[3]['user_id']
+
+        # status: to-sign
+        assert collection_entries[4]['target']['data']['status'] == 'to-sign'
+        assert 'last_reviewer' not in collection_entries[4]['target']['data']
+        assert 'basicauth:' in collection_entries[4]['user_id']
+
+        # status: signed (by plugin)
+        assert collection_entries[5]['target']['data']['status'] == 'signed'
+        assert 'basicauth:' in collection_entries[5]['target']['data']['last_reviewer']
+        assert 'kinto-signer' in collection_entries[5]['user_id']
 
 
 class WorkflowTest(unittest.TestCase):

@@ -1,6 +1,7 @@
+dist: trusty
 language: python
 python: 3.5
-
+cache: pip
 addons:
   postgresql: "9.5"
 env:
@@ -36,9 +37,10 @@ matrix:
         - .venv/bin/pip install -U https://github.com/Kinto/kinto/zipball/master
         - make run-autograph &
         - make run-kinto &
-    - python: 3.5
+    - python: 3.6
       env:
-        - TOX_ENV=py35
+        - TOX_ENV=py36
+
 after_success:
     # Report coverage results to coveralls.io
     - pip install coveralls

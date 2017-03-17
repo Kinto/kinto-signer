@@ -13,7 +13,7 @@ OBJECTS = .venv .coverage
 all: install
 install: $(INSTALL_STAMP)
 $(INSTALL_STAMP): $(PYTHON) setup.py
-	$(PYTHON) setup.py develop
+	$(VENV)/bin/pip install -e .
 	touch $(INSTALL_STAMP)
 
 install-dev: $(INSTALL_STAMP) $(DEV_STAMP)
@@ -24,6 +24,7 @@ $(DEV_STAMP): $(PYTHON) dev-requirements.txt
 virtualenv: $(PYTHON)
 $(PYTHON):
 	$(VIRTUALENV) $(VENV)
+	$(VENV)/bin/pip install -U pip
 
 build-requirements:
 	$(VIRTUALENV) $(TEMPDIR)
@@ -47,7 +48,7 @@ distclean: clean
 maintainer-clean: distclean
 	rm -fr .venv/ .tox/ dist/ build/
 
-run-kinto:
+run-kinto: install-dev
 	$(VENV)/bin/python --version
 	$(VENV)/bin/kinto migrate --ini tests/config/signer.ini
 	$(VENV)/bin/kinto start --ini tests/config/signer.ini

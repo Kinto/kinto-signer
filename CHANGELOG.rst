@@ -8,7 +8,8 @@ This document describes changes between each past release.
 
 **Bug fixes**
 
-- Fixed inconsistencies in ``ResourceChanged`` produced by Kinto signer (fixes #169)
+- Allow ``canonical_json`` to work with iterators. (#167)
+- Fixed inconsistencies in ``ResourceChanged`` produced by Kinto signer (#169)
 
 
 1.3.0 (2017-03-03)

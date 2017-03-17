@@ -8,6 +8,13 @@ from kinto_signer.serializer import canonical_json
 #
 
 
+def test_supports_records_as_iterators():
+    records = iter([
+        {'bar': 'baz', 'last_modified': '45678', 'id': '1'},
+    ])
+    canonical_json(records, '45678')
+
+
 def test_provides_records_in_data_along_last_modified():
     records = [
         {'bar': 'baz', 'last_modified': '45678', 'id': '1'},

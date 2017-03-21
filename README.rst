@@ -343,6 +343,12 @@ The following events are thrown:
 * ``kinto_signer.events.ReviewRejected``
 * ``kinto_signer.events.ReviewApproved``
 
+.. important::
+
+    The events are sent within the request's transaction. In other words, any
+    database change that occurs in subscribers will be committed or rolledback
+    depending of the overall response status.
+
 
 Validating the signature
 ========================

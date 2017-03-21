@@ -6,7 +6,10 @@ This document describes changes between each past release.
 1.3.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Send kinto-signer before committing since some database may have to be performed
+  in the subscribers (#172)
 
 
 1.3.1 (2017-03-17)

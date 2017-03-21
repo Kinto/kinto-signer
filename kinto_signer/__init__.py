@@ -1,8 +1,10 @@
 import pkg_resources
 import functools
 
-from kinto.core.events import ACTIONS, ResourceChanged, AfterResourceChanged
+import transaction
+from kinto.core.events import ACTIONS, ResourceChanged
 from pyramid.exceptions import ConfigurationError
+from pyramid.events import NewRequest
 from pyramid.settings import asbool
 
 from kinto_signer.signer import heartbeat
@@ -134,4 +136,16 @@ def includeme(config):
         for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
         for_resources=('collection',))
 
-    config.add_subscriber(listeners.send_signer_events, AfterResourceChanged)
+    def on_new_request(event):
+        """Send the kinto-signer events in the before commit hook.
+        This allows database operations done in subscribers to be automatically
+        committed or rolledback.
+        """
+        # Since there is one transaction per batch, ignore subrequests.
+        if hasattr(event.request, 'parent'):
+            return
+        current = transaction.get()
+        current.addBeforeCommitHook(listeners.send_signer_events,
+                                    args=(event,))
+
+    config.add_subscriber(on_new_request, NewRequest)

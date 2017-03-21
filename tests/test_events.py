@@ -216,12 +216,18 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
     def make_app(self, settings=None, config=None):
         self.appConfig = Configurator(settings=self.get_app_settings(settings))
 
-        def on_review_request(event):
+        def on_review_received(event):
+            event.request.registry.storage.create(collection_id='custom',
+                                                  parent_id='',
+                                                  record={'pi': 3.14})
+
+        def on_signer_event(event):
             self.events.append(event)
 
-        self.appConfig.add_subscriber(on_review_request, signer_events.ReviewRequested)
-        self.appConfig.add_subscriber(on_review_request, signer_events.ReviewRejected)
-        self.appConfig.add_subscriber(on_review_request, signer_events.ReviewApproved)
+        self.appConfig.add_subscriber(on_review_received, signer_events.ReviewRequested)
+        self.appConfig.add_subscriber(on_signer_event, signer_events.ReviewRequested)
+        self.appConfig.add_subscriber(on_signer_event, signer_events.ReviewRejected)
+        self.appConfig.add_subscriber(on_signer_event, signer_events.ReviewApproved)
 
         return super(SignoffEventsTest, self).make_app(settings,
                                                        config=self.appConfig)
@@ -311,3 +317,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
                             headers=self.headers,
                             status=503)
         assert len(self.events) == 0
+
+    def test_database_changes_in_subscribers_are_committed(self):
+        _, count = self.storage.get_all(collection_id='custom', parent_id='')
+        assert count == 1

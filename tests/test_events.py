@@ -305,6 +305,16 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
                             headers=self.headers)
         assert isinstance(self.events[-1], signer_events.ReviewApproved)
 
+    def test_review_approved_is_not_triggered_on_resign(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
+        self.events = []
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
+        assert len(self.events) == 0
+
     def test_event_is_not_sent_if_rolledback(self):
         patch = mock.patch('kinto_signer.signer.local_ecdsa.ECDSASigner.sign',
                            side_effect=ValueError('boom'))

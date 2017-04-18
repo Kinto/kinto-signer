@@ -75,7 +75,8 @@ def sign_collection_data(event, resources):
             if new_status == STATUS.TO_SIGN:
                 # Run signature process (will set `last_reviewer` field).
                 updater.sign_and_update_destination(event.request, source=new_collection)
-                review_event_cls = signer_events.ReviewApproved
+                if old_status != STATUS.SIGNED:
+                    review_event_cls = signer_events.ReviewApproved
 
             elif new_status == STATUS.TO_REVIEW:
                 if 'preview' in resource:

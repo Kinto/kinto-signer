@@ -6,7 +6,9 @@ This document describes changes between each past release.
 1.4.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Do not send ``ReviewApproved`` event when signing a collection that is already signed (fixes #174)
 
 
 1.3.2 (2017-03-21)

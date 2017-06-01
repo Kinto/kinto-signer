@@ -31,7 +31,7 @@ def upload_records(client, num):
     records = []
     for i in range(num):
         data = {'one': _rand(1000)}
-        record = client.create_record(data)
+        record = client.create_record(data=data)
         records.append(record['data'])
     return records
 
@@ -127,9 +127,10 @@ def main():
 
     if group_check_enabled:
         editors_group = signer_capabilities['editors_group']
-        client.create_group(editors_group, data={'members': [editor_id]}, if_not_exists=True)
+        client.create_group(id=editors_group, data={'members': [editor_id]}, if_not_exists=True)
         reviewers_group = signer_capabilities['reviewers_group']
-        client.create_group(reviewers_group, data={'members': [reviewer_id]}, if_not_exists=True)
+        client.create_group(id=reviewers_group, data={'members': [reviewer_id]},
+                            if_not_exists=True)
 
     dest_client = Client(server_url=args.server,
                          bucket=resource['destination']['bucket'],
@@ -173,11 +174,11 @@ def main():
 
     print('Editor updates 5 random records')
     for toupdate in random.sample(records, 5):
-        editor_client.patch_record(dict(newkey=_rand(10), **toupdate))
+        editor_client.patch_record(data=dict(newkey=_rand(10), **toupdate))
 
     print('Author deletes 5 random records')
     for todelete in random.sample(records, 5):
-        client.delete_record(todelete['id'])
+        client.delete_record(id=todelete['id'])
 
     expected = existing + 20 + 20 - 5
 

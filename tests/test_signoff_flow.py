@@ -58,8 +58,9 @@ class PostgresWebTest(BaseWebTest):
                            {"data": {"title": "bonjour"}},
                            headers=self.headers)
 
-    def get_app_settings(self, extras=None):
-        settings = super(PostgresWebTest, self).get_app_settings(extras)
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
 
         settings['storage_backend'] = 'kinto.core.storage.postgresql'
         db = "postgres://postgres:postgres@localhost/testdb"
@@ -68,12 +69,12 @@ class PostgresWebTest(BaseWebTest):
         settings['permission_url'] = db
         settings['cache_backend'] = 'kinto.core.cache.memory'
 
-        self.source_collection = "/buckets/alice/collections/scid"
-        self.destination_collection = "/buckets/destination/collections/dcid"
+        cls.source_collection = "/buckets/alice/collections/scid"
+        cls.destination_collection = "/buckets/destination/collections/dcid"
 
         settings['kinto.signer.resources'] = '%s;%s' % (
-            self.source_collection,
-            self.destination_collection)
+            cls.source_collection,
+            cls.destination_collection)
         return settings
 
 
@@ -170,8 +171,9 @@ class CollectionStatusTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCa
 
 
 class ForceReviewTest(PostgresWebTest, unittest.TestCase):
-    def get_app_settings(self, extras=None):
-        settings = super(ForceReviewTest, self).get_app_settings(extras)
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
         settings['signer.to_review_enabled'] = 'true'
         return settings
 
@@ -310,8 +312,9 @@ class TrackingFieldsTest(PostgresWebTest, unittest.TestCase):
 
 
 class UserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCase):
-    def get_app_settings(self, extras=None):
-        settings = super(UserGroupsTest, self).get_app_settings(extras)
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
         settings['signer.group_check_enabled'] = 'true'
         return settings
 
@@ -373,17 +376,18 @@ class UserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCase):
 
 
 class SpecificUserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCase):
-    def get_app_settings(self, extras=None):
-        settings = super(SpecificUserGroupsTest, self).get_app_settings(extras)
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
 
-        self.source_collection1 = "/buckets/alice/collections/cid1"
-        self.source_collection2 = "/buckets/alice/collections/cid2"
+        cls.source_collection1 = "/buckets/alice/collections/cid1"
+        cls.source_collection2 = "/buckets/alice/collections/cid2"
 
         settings['kinto.signer.resources'] = "%s;%s %s;%s" % (
-            self.source_collection1,
-            self.source_collection1.replace("alice", "destination"),
-            self.source_collection2,
-            self.source_collection2.replace("alice", "destination"))
+            cls.source_collection1,
+            cls.source_collection1.replace("alice", "destination"),
+            cls.source_collection2,
+            cls.source_collection2.replace("alice", "destination"))
 
         settings['signer.group_check_enabled'] = 'false'
         settings['signer.alice_cid1.group_check_enabled'] = 'true'
@@ -440,16 +444,17 @@ class SpecificUserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.Test
 
 
 class PreviewCollectionTest(PostgresWebTest, unittest.TestCase):
-    def get_app_settings(self, extras=None):
-        settings = super(PreviewCollectionTest, self).get_app_settings(extras)
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
 
-        self.preview_collection = "/buckets/preview/collections/pcid"
+        cls.preview_collection = "/buckets/preview/collections/pcid"
 
         settings['signer.to_review_enabled'] = 'true'
         settings['kinto.signer.resources'] = '%s;%s;%s' % (
-            self.source_collection,
-            self.preview_collection,
-            self.destination_collection)
+            cls.source_collection,
+            cls.preview_collection,
+            cls.destination_collection)
         return settings
 
     def test_the_preview_collection_does_not_exist_at_first(self):

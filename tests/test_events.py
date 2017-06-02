@@ -29,15 +29,16 @@ def load_from_config(config, prefix):
 
 
 class ResourceEventsTest(BaseWebTest, unittest.TestCase):
-    def get_app_settings(self, extras=None):
-        settings = super(ResourceEventsTest, self).get_app_settings(extras)
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
 
-        self.source_collection = "/buckets/alice/collections/scid"
-        self.destination_collection = "/buckets/destination/collections/dcid"
+        cls.source_collection = "/buckets/alice/collections/scid"
+        cls.destination_collection = "/buckets/destination/collections/dcid"
 
         settings['kinto.signer.resources'] = '%s;%s' % (
-            self.source_collection,
-            self.destination_collection)
+            cls.source_collection,
+            cls.destination_collection)
 
         settings['kinto.signer.signer_backend'] = ('kinto_signer.signer.'
                                                    'local_ecdsa')
@@ -49,7 +50,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         return settings
 
     def setUp(self):
-        super(ResourceEventsTest, self).setUp()
+        super().setUp()
         self.app.put_json("/buckets/alice", headers=self.headers)
         self.app.put_json(self.source_collection, headers=self.headers)
         self.app.post_json(self.source_collection + "/records",
@@ -213,8 +214,25 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
 
 
 class SignoffEventsTest(BaseWebTest, unittest.TestCase):
-    def make_app(self, settings=None, config=None):
-        self.appConfig = Configurator(settings=self.get_app_settings(settings))
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
+
+        cls.source_collection = "/buckets/alice/collections/scid"
+        cls.destination_collection = "/buckets/destination/collections/dcid"
+
+        settings['kinto.signer.resources'] = '%s;%s' % (
+            cls.source_collection,
+            cls.destination_collection)
+
+        settings['kinto.signer.signer_backend'] = ('kinto_signer.signer.'
+                                                   'local_ecdsa')
+        settings['signer.ecdsa.private_key'] = os.path.join(
+            here, 'config', 'ecdsa.private.pem')
+        return settings
+
+    def setup_app(self, settings=None, config=None):
+        self.appConfig = Configurator(settings=SignoffEventsTest.get_app_settings(settings))
 
         def on_review_received(event):
             event.request.registry.storage.create(collection_id='custom',
@@ -229,27 +247,12 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         self.appConfig.add_subscriber(on_signer_event, signer_events.ReviewRejected)
         self.appConfig.add_subscriber(on_signer_event, signer_events.ReviewApproved)
 
-        return super(SignoffEventsTest, self).make_app(settings,
-                                                       config=self.appConfig)
-
-    def get_app_settings(self, extras=None):
-        settings = super(SignoffEventsTest, self).get_app_settings(extras)
-
-        self.source_collection = "/buckets/alice/collections/scid"
-        self.destination_collection = "/buckets/destination/collections/dcid"
-
-        settings['kinto.signer.resources'] = '%s;%s' % (
-            self.source_collection,
-            self.destination_collection)
-
-        settings['kinto.signer.signer_backend'] = ('kinto_signer.signer.'
-                                                   'local_ecdsa')
-        settings['signer.ecdsa.private_key'] = os.path.join(
-            here, 'config', 'ecdsa.private.pem')
-        return settings
+        return SignoffEventsTest.make_app(settings,  config=self.appConfig)
 
     def setUp(self):
-        super(SignoffEventsTest, self).setUp()
+        self.app = self.setup_app()
+
+        super().setUp()
         self.events = []
         self.app.put_json("/buckets/alice", headers=self.headers)
         self.app.put_json(self.source_collection, headers=self.headers)

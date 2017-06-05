@@ -138,8 +138,8 @@ class BaseTestFunctional(object):
 
     def test_destination_creation_and_new_records_signature(self):
         # Create some records and trigger another signature.
-        self.source.create_record({'newdata': 'hello'})
-        self.source.create_record({'newdata': 'bonjour'})
+        self.source.create_record(data={'newdata': 'hello'})
+        self.source.create_record(data={'newdata': 'bonjour'})
 
         time.sleep(0.1)
 
@@ -160,10 +160,10 @@ class BaseTestFunctional(object):
         # Update some records and trigger another signature.
         updated = self.source_records[5].copy()
         updated['newdata'] = 'bump'
-        self.source.update_record(updated)
+        self.source.update_record(data=updated)
         updated = self.source_records[0].copy()
         updated['newdata'] = 'hoop'
-        self.source.update_record(updated)
+        self.source.update_record(data=updated)
 
         time.sleep(0.1)
 
@@ -182,8 +182,8 @@ class BaseTestFunctional(object):
 
     def test_records_deletion_and_signature(self):
         # Now delete one record on the source and trigger another signature.
-        self.source.delete_record(self.source_records[1]['id'])
-        self.source.delete_record(self.source_records[5]['id'])
+        self.source.delete_record(id=self.source_records[1]['id'])
+        self.source.delete_record(id=self.source_records[5]['id'])
 
         time.sleep(0.1)
 
@@ -297,7 +297,7 @@ class HistoryTest(unittest.TestCase):
 
         perms = {"write": ["system.Authenticated"]}
         self.source.create_collection(permissions=perms)
-        self.source.create_record({'hola': 'mundo'})
+        self.source.create_record(data={'hola': 'mundo'})
         trigger_signature(editor_client=self.editor_client,
                           reviewer_client=self.source)
 
@@ -400,7 +400,7 @@ class WorkflowTest(unittest.TestCase):
         create_records(self.client)
         self.anna_client.patch_collection(data={'status': 'to-review'})
 
-        collection = self.client.get_collection(collection="preview")
+        collection = self.client.get_collection(id="preview")
         records = self.client.get_records(collection="preview")
         last_modified = collection_timestamp(self.client, collection="preview")
         serialized_records = canonical_json(records, last_modified)

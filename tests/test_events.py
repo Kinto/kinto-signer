@@ -251,6 +251,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
 
     def setUp(self):
         self.app = self.setup_app()
+        self.storage = self.app.app.registry.storage
 
         super().setUp()
         self.events = []

@@ -7,7 +7,7 @@ functools32==3.2.3.post2
 futures==3.0.5
 iso8601==0.1.11
 jsonschema==2.5.1
-kinto==5.1.0
+kinto==7.1.0
 mohawk==0.3.3
 PasteDeploy==1.5.2
 pyramid==1.7.3

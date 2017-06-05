@@ -414,5 +414,5 @@ class LocalUpdater(object):
                             collection_paths
                         ]
                     },
-                    'CallerReference': timestamp
+                    'CallerReference': str(timestamp)
                 })

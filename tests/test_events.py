@@ -214,6 +214,8 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
 
 
 class SignoffEventsTest(BaseWebTest, unittest.TestCase):
+    events = []
+
     @classmethod
     def get_app_settings(cls, extras=None):
         settings = super().get_app_settings(extras)
@@ -231,8 +233,9 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
             here, 'config', 'ecdsa.private.pem')
         return settings
 
-    def setup_app(self, settings=None, config=None):
-        self.appConfig = Configurator(settings=SignoffEventsTest.get_app_settings(settings))
+    @classmethod
+    def make_app(cls, settings=None, config=None):
+        config = Configurator(settings=cls.get_app_settings())
 
         def on_review_received(event):
             event.request.registry.storage.create(collection_id='custom',
@@ -240,21 +243,18 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
                                                   record={'pi': 3.14})
 
         def on_signer_event(event):
-            self.events.append(event)
+            cls.events.append(event)
 
-        self.appConfig.add_subscriber(on_review_received, signer_events.ReviewRequested)
-        self.appConfig.add_subscriber(on_signer_event, signer_events.ReviewRequested)
-        self.appConfig.add_subscriber(on_signer_event, signer_events.ReviewRejected)
-        self.appConfig.add_subscriber(on_signer_event, signer_events.ReviewApproved)
+        config.add_subscriber(on_review_received, signer_events.ReviewRequested)
+        config.add_subscriber(on_signer_event, signer_events.ReviewRequested)
+        config.add_subscriber(on_signer_event, signer_events.ReviewRejected)
+        config.add_subscriber(on_signer_event, signer_events.ReviewApproved)
 
-        return SignoffEventsTest.make_app(settings,  config=self.appConfig)
+        return super().make_app(config=config)
 
     def setUp(self):
-        self.app = self.setup_app()
-        self.storage = self.app.app.registry.storage
+        del self.events[:]
 
-        super().setUp()
-        self.events = []
         self.app.put_json("/buckets/alice", headers=self.headers)
         self.app.put_json(self.source_collection, headers=self.headers)
         self.app.post_json(self.source_collection + "/records",
@@ -290,14 +290,14 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
                             headers=self.headers)
-        self.events = []
+        del self.events[:]
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "work-in-progress"}},
                             headers=self.headers)
         assert len(self.events) == 0
 
     def test_review_rejected_is_not_triggered_when_modified_indirectly(self):
-        self.events = []
+        del self.events[:]
         self.app.post_json(self.source_collection + "/records",
                            {"data": {"title": "hello"}},
                            headers=self.headers)
@@ -313,7 +313,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
                             headers=self.headers)
-        self.events = []
+        del self.events[:]
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
                             headers=self.headers)
@@ -325,7 +325,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         self.addCleanup(patch.stop)
         patch.start()
 
-        self.events = []
+        del self.events[:]
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
                             headers=self.headers,

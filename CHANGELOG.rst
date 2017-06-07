@@ -3,10 +3,13 @@ Changelog
 
 This document describes changes between each past release.
 
-1.4.0 (unreleased)
+1.4.0 (2017-06-07)
 ------------------
 
-- Nothing changed yet.
+**Internal changes**
+
+- Upgrade to kinto-http 9.0
+- Upgrade to kinto 7.1
 
 
 1.3.3 (2017-04-18)

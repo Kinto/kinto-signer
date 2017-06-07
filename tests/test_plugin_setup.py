@@ -19,8 +19,9 @@ from .support import BaseWebTest, get_user_headers
 
 class HelloViewTest(BaseWebTest, unittest.TestCase):
 
-    def get_app_settings(self, extras=None):
-        settings = super(HelloViewTest, self).get_app_settings(extras)
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
         settings['signer.alice_source.to_review_enabled'] = 'true'
         settings['signer.alice_source.reviewers_group'] = 'revoyeurs'
         return settings

@@ -50,7 +50,6 @@ matrix:
       install:
         - pip install --user virtualenv tox
         - make install
-        - mv tests/config/signer-master.ini tests/config/signer.ini
         - .venv/bin/pip install -U https://github.com/Kinto/kinto/zipball/master
         - make run-autograph &
         - make run-kinto &

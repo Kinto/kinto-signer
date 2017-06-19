@@ -3,10 +3,15 @@ Changelog
 
 This document describes changes between each past release.
 
-1.5.0 (unreleased)
+1.5.0 (2017-06-19)
 ------------------
 
-- Nothing changed yet.
+- Add support for CloudFront path cache invalidation. (#178)
+
+.. code-block:: ini
+
+    # Configure the cloudfront distribution related to the server cache.
+    kinto.signer.distribution_id = E2XLCI5EUWMRON
 
 
 1.4.0 (2017-06-07)

@@ -127,6 +127,7 @@ class LocalUpdater(object):
 
             self.set_destination_signature(signature, source, request)
             self.update_source_status(next_source_status, request)
+            self.invalidate_cloudfront_cache(request, timestamp)
 
     @contextmanager
     def send_events(self, request):
@@ -393,3 +394,25 @@ class LocalUpdater(object):
             record=updated,
             action=ACTIONS.UPDATE,
             old=collection_record)
+
+    def invalidate_cloudfront_cache(self, request, timestamp):
+        collection_paths = "/v1/%s*" % self.destination_collection_uri
+        distribution_id = request.registry.settings.get('signer.distribution_id')
+
+        if distribution_id:
+            # Create a boto client
+            import boto3
+            client = boto3.client('cloudfront')
+
+            # Invalidate
+            client.create_invalidation(
+                DistributionId=distribution_id,
+                InvalidationBatch={
+                    'Paths': {
+                        'Quantity': 1,
+                        'Items': [
+                            collection_paths
+                        ]
+                    },
+                    'CallerReference': str(timestamp)
+                })

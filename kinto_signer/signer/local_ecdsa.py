@@ -4,7 +4,6 @@ import ecdsa
 import hashlib
 import six
 from ecdsa import NIST384p, SigningKey, VerifyingKey
-from re import search
 
 from .base import SignerBase
 from .exceptions import BadSignatureError
@@ -51,14 +50,20 @@ class ECDSASigner(SignerBase):
             payload = payload.encode('utf-8')
 
         payload = self.prefix + payload
-
         private_key = self.load_private_key()
+        public_key = self.load_public_key()
         signature = private_key.sign(payload,
                                      hashfunc=hashlib.sha384,
                                      sigencode=ecdsa.util.sigencode_string)
-        enc_signature = base64.b64encode(signature).decode('utf-8')
+        x5u = ''
+        enc_signature = base64.urlsafe_b64encode(signature).decode('utf-8')
+        public_key = base64.urlsafe_b64encode(public_key.to_string()).decode('utf-8')
         return {
-            'signature': 'x5u=%s;p384ecdsa=%s' % (x5u, enc_signature)
+            'signature': enc_signature,
+            'x5u': x5u,
+            'public_key': public_key,
+            'content-signature': 'x5u=%s;p384ecdsa=%s' % (x5u, enc_signature),
+            'type': 'contentsignature'
         }
 
     def verify(self, payload, signature_bundle):
@@ -72,12 +77,7 @@ class ECDSASigner(SignerBase):
         if isinstance(signature, six.text_type):  # pragma: nocover
             signature = signature.encode('utf-8')
 
-        try:
-            signature_data = search('(x5u|keyid)=(.+?);p384ecdsa=(.+?)', signature).group(3)
-        except AttributeError:
-            msg = 'Invalid signature format: %s' % signature
-            raise ValueError(msg)
-        signature_bytes = base64.urlsafe_b64decode(signature_data)
+        signature_bytes = base64.urlsafe_b64decode(signature)
 
         public_key = self.load_public_key()
         try:

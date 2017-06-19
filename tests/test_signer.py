@@ -85,30 +85,6 @@ class ECDSASignerTest(unittest.TestCase):
                 "Text not matching with the sig.",
                 signature_bundle)
 
-    def test_unsupported_hash_algorithm_raises(self):
-        signature_bundle = {
-            'signature': SIGNATURE,
-            'hash_algorithm': 'sha256',
-            'signature_encoding': 'rs_base64'}
-
-        with pytest.raises(ValueError) as excinfo:
-            self.signer.verify(
-                "Text not matching with the sig.",
-                signature_bundle)
-        assert str(excinfo.value) == "Unsupported hash_algorithm: sha256"
-
-    def test_unsupported_signature_encoding_raises(self):
-        signature_bundle = {
-            'signature': SIGNATURE,
-            'hash_algorithm': 'sha384',
-            'signature_encoding': 'base64'}
-
-        with pytest.raises(ValueError) as excinfo:
-            self.signer.verify(
-                "Text not matching with the sig.",
-                signature_bundle)
-        assert str(excinfo.value) == "Unsupported signature_encoding: base64"
-
     def test_signer_returns_a_base64_string(self):
         signature = self.signer.sign("this is some text")['signature']
         hexa_regexp = (
@@ -170,9 +146,7 @@ class AutographSignerTest(unittest.TestCase):
         requests.post.assert_called_with(
             'http://localhost:8000/sign/data',
             auth=self.signer.auth,
-            json=[{'hashwith': 'sha384',
-                   'input': 'dGVzdCBkYXRh',
-                   'template': 'content-signature'}])
+            json=[{'input': 'dGVzdCBkYXRh'}])
         assert signature_bundle['signature'] == SIGNATURE
 
     @mock.patch('kinto_signer.signer.autograph.AutographSigner')

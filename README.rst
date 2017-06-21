@@ -305,12 +305,9 @@ The *destination* collection metadata now contains the signature:
            "id": "collection1",
            "last_modified": 1460558496510,
            "signature": {
-               "public_key": "MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE4k3FmG7dFoOt3Tuzl76abTRtK8sb/r/ibCSeVKa96RbrOX2ciscz/TT8wfqBYS/8cN4zMe1+f7wRmkNrCUojZR1ZKmYM2BeiUOMlMoqk2O7+uwsn1DwNQSYP58TkvZt6",
-               "ref": "939wa3q3s3vn20rddhq8lb5ie",
-               "algorithm": "p384ecdsa",
+               "mode": "p384ecdsa",
                "x5u": "https://bucket.example.net/appkey1.pem",
-               "signature": "Nv-EJ1D0fanElBGP4ZZmV6zu_b4DuCP3H7xawlLrcR7to3aKzqfZknVXOi94G_w8-wdKlysVWmhuDMqJqPcJV7ZudbhypJpj7kllWdPvMRZkoWXSfYLaoLMc8VQEqZcb",
-               "content-signature": "x5u=https://bucket.example.net/appkey1.pem;p384ecdsa=Nv-EJ1D0fanElBGP4ZZmV6zu_b4DuCP3H7xawlLrcR7to3aKzqfZknVXOi94G_w8-wdKlysVWmhuDMqJqPcJV7ZudbhypJpj7kllWdPvMRZkoWXSfYLaoLMc8VQEqZcb"
+               "signature": "Nv-EJ1D0fanElBGP4ZZmV6zu_b4DuCP3H7xawlLrcR7to3aKzqfZknVXOi94G_w8-wdKlysVWmhuDMqJqPcJV7ZudbhypJpj7kllWdPvMRZkoWXSfYLaoLMc8VQEqZcb"
            }
        },
        "permissions": {

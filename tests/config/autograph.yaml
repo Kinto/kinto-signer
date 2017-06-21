@@ -13,17 +13,32 @@ signers:
           BgUrgQQAIg==
           -----END EC PARAMETERS-----
           -----BEGIN EC PRIVATE KEY-----
-          MIGkAgEBBDART/nn3fKlhyENdc2u3klbvRJ5+odP0kWzt9p+v5hDyggbtVA4M1Mb
-          fL9KoaiAAv2gBwYFK4EEACKhZANiAATugz97A6HPqq0fJCGom9PdKJ58Y9aobARQ
-          BkZWS5IjC+15Uqt3yOcCMdjIJpikiD1WjXRaeFe+b3ovcoBs4ToLK7d8y0qFlkgx
-          /5Cp6z37rpp781N4haUOIauM14P4KUw=
+          MIGkAgEBBDAzX2TrGOr0WE92AbAl+nqnpqh25pKCLYNMTV2hJHztrkVPWOp8w0mh
+          scIodK8RMpagBwYFK4EEACKhZANiAATiTcWYbt0Wg63dO7OXvpptNG0ryxv+v+Js
+          JJ5Upr3pFus5fZyKxzP9NPzB+oFhL/xw3jMx7X5/vBGaQ2sJSiNlHVkqZgzYF6JQ
+          4yUyiqTY7v67CyfUPA1BJg/nxOS9m3o=
           -----END EC PRIVATE KEY-----
+    
+    - id: appkey2
+      type: contentsignature
+      privatekey: |
+          -----BEGIN EC PRIVATE KEY-----
+          MIGkAgEBBDDzB8n4AOghssIP8Y1/qBLAh3uW8w5i75fZG6qQDTGbOGZbpooeQvdk
+          agQT/dt8/KqgBwYFK4EEACKhZANiAARBmh+6Wc7CvAWylhyEsw5CMy7eSC5nfOo9
+          rszb+aoRxxe/PFrebfgqIBGx8EpXN+DT6QX5dZTLqcjj7GMWx50UvJ1+kIKTLbUx
+          +8Q7KIqH8pQ40GJbFySJS01LyNkqgqc=
+          -----END EC PRIVATE KEY-----
+    
 
 authorizations:
     - id: alice
       key: fs5wgcer9qj819kfptdlp8gm227ewxnzvsuj9ztycsx08hfhzu
       signers:
           - appkey1
+    - id: bob
+      key: 9vh6bhlc10y63ow2k4zke7k0c3l9hpr8mo96p92jmbfqngs9e7d
+      signers:
+          - appkey2
 
 monitoring:
     key: 19zd4w3xirb5syjgdx8atq6g91m03bdsmzjifs2oddivswlu9qs

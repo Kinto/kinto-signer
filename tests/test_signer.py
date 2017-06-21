@@ -14,7 +14,7 @@ from kinto_signer.signer import local_ecdsa
 
 SIGNATURE = (
     "ikfq6qOV85vR7QaNCTldVvvtcNpPIICqqMp3tfyiT7fHCgFNq410SFnIfjAPgSa"
-    "jEtxxyGtZFMoI/BzO/1y5oShLtX0LH4wx/Wft7wz17T7fFqpDQ9hFZzTOPBwZUIbx")
+    "jEtxxyGtZFMoI_BzO_1y5oShLtX0LH4wx_Wft7wz17T7fFqpDQ9hFZzTOPBwZUIbx")
 
 
 def save_key(key, key_name):

@@ -1,4 +1,4 @@
-from base64 import b64decode, urlsafe_b64encode
+from base64 import urlsafe_b64decode, urlsafe_b64encode
 import tempfile
 import re
 import os
@@ -67,7 +67,7 @@ class ECDSASignerTest(unittest.TestCase):
         signature_bundle = self.signer.sign("this is some text")
         b64signature = signature_bundle['signature']
 
-        decoded_signature = b64decode(b64signature.encode('utf-8'))
+        decoded_signature = urlsafe_b64decode(b64signature.encode('utf-8'))
         b64urlsignature = urlsafe_b64encode(decoded_signature).decode('utf-8')
         signature_bundle['signature'] = b64urlsignature
         signature_bundle['signature_encoding'] = 'rs_base64url'
@@ -77,8 +77,7 @@ class ECDSASignerTest(unittest.TestCase):
     def test_wrong_signature_raises_an_error(self):
         signature_bundle = {
             'signature': SIGNATURE,
-            'hash_algorithm': 'sha384',
-            'signature_encoding': 'rs_base64'}
+            'mode': 'p384ecdsa'}
 
         with pytest.raises(exceptions.BadSignatureError):
             self.signer.verify(
@@ -87,10 +86,7 @@ class ECDSASignerTest(unittest.TestCase):
 
     def test_signer_returns_a_base64_string(self):
         signature = self.signer.sign("this is some text")['signature']
-        hexa_regexp = (
-            r'^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}'
-            '==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$')
-        assert re.match(hexa_regexp, signature) is not None
+        urlsafe_b64decode(signature.encode('utf-8'))  # Raise if wrong.
 
     def test_load_private_key_raises_if_no_key_specified(self):
         with pytest.raises(ValueError):

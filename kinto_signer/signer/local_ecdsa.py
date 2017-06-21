@@ -51,19 +51,15 @@ class ECDSASigner(SignerBase):
 
         payload = self.prefix + payload
         private_key = self.load_private_key()
-        public_key = self.load_public_key()
         signature = private_key.sign(payload,
                                      hashfunc=hashlib.sha384,
                                      sigencode=ecdsa.util.sigencode_string)
         x5u = ''
         enc_signature = base64.urlsafe_b64encode(signature).decode('utf-8')
-        public_key = base64.urlsafe_b64encode(public_key.to_string()).decode('utf-8')
         return {
             'signature': enc_signature,
             'x5u': x5u,
-            'public_key': public_key,
-            'content-signature': 'x5u=%s;p384ecdsa=%s' % (x5u, enc_signature),
-            'type': 'contentsignature'
+            'mode': 'p384ecdsa'
         }
 
     def verify(self, payload, signature_bundle):

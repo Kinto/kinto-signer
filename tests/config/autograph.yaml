@@ -8,6 +8,7 @@ signers:
     # a p384 key, the standard
     - id: appkey1
       type: contentsignature
+      x5u: https://bucket.example.net/appkey1.pem
       privatekey: |
           -----BEGIN EC PARAMETERS-----
           BgUrgQQAIg==
@@ -21,6 +22,7 @@ signers:
     
     - id: appkey2
       type: contentsignature
+      x5u: https://bucket.example.net/appkey2.pem
       privatekey: |
           -----BEGIN EC PRIVATE KEY-----
           MIGkAgEBBDDzB8n4AOghssIP8Y1/qBLAh3uW8w5i75fZG6qQDTGbOGZbpooeQvdk

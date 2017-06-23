@@ -1,6 +1,5 @@
-from base64 import b64decode, urlsafe_b64encode
+from base64 import urlsafe_b64decode, urlsafe_b64encode
 import tempfile
-import re
 import os
 import unittest
 
@@ -15,7 +14,7 @@ from kinto_signer.signer import local_ecdsa
 
 SIGNATURE = (
     "ikfq6qOV85vR7QaNCTldVvvtcNpPIICqqMp3tfyiT7fHCgFNq410SFnIfjAPgSa"
-    "jEtxxyGtZFMoI/BzO/1y5oShLtX0LH4wx/Wft7wz17T7fFqpDQ9hFZzTOPBwZUIbx")
+    "jEtxxyGtZFMoI_BzO_1y5oShLtX0LH4wx_Wft7wz17T7fFqpDQ9hFZzTOPBwZUIbx")
 
 
 def save_key(key, key_name):
@@ -67,7 +66,7 @@ class ECDSASignerTest(unittest.TestCase):
         signature_bundle = self.signer.sign("this is some text")
         b64signature = signature_bundle['signature']
 
-        decoded_signature = b64decode(b64signature.encode('utf-8'))
+        decoded_signature = urlsafe_b64decode(b64signature.encode('utf-8'))
         b64urlsignature = urlsafe_b64encode(decoded_signature).decode('utf-8')
         signature_bundle['signature'] = b64urlsignature
         signature_bundle['signature_encoding'] = 'rs_base64url'
@@ -77,44 +76,16 @@ class ECDSASignerTest(unittest.TestCase):
     def test_wrong_signature_raises_an_error(self):
         signature_bundle = {
             'signature': SIGNATURE,
-            'hash_algorithm': 'sha384',
-            'signature_encoding': 'rs_base64'}
+            'mode': 'p384ecdsa'}
 
         with pytest.raises(exceptions.BadSignatureError):
             self.signer.verify(
                 "Text not matching with the sig.",
                 signature_bundle)
 
-    def test_unsupported_hash_algorithm_raises(self):
-        signature_bundle = {
-            'signature': SIGNATURE,
-            'hash_algorithm': 'sha256',
-            'signature_encoding': 'rs_base64'}
-
-        with pytest.raises(ValueError) as excinfo:
-            self.signer.verify(
-                "Text not matching with the sig.",
-                signature_bundle)
-        assert str(excinfo.value) == "Unsupported hash_algorithm: sha256"
-
-    def test_unsupported_signature_encoding_raises(self):
-        signature_bundle = {
-            'signature': SIGNATURE,
-            'hash_algorithm': 'sha384',
-            'signature_encoding': 'base64'}
-
-        with pytest.raises(ValueError) as excinfo:
-            self.signer.verify(
-                "Text not matching with the sig.",
-                signature_bundle)
-        assert str(excinfo.value) == "Unsupported signature_encoding: base64"
-
     def test_signer_returns_a_base64_string(self):
         signature = self.signer.sign("this is some text")['signature']
-        hexa_regexp = (
-            r'^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}'
-            '==|[A-Za-z0-9+/]{3}=|[A-Za-z0-9+/]{4})$')
-        assert re.match(hexa_regexp, signature) is not None
+        urlsafe_b64decode(signature.encode('utf-8'))  # Raise if wrong.
 
     def test_load_private_key_raises_if_no_key_specified(self):
         with pytest.raises(ValueError):
@@ -170,9 +141,7 @@ class AutographSignerTest(unittest.TestCase):
         requests.post.assert_called_with(
             'http://localhost:8000/sign/data',
             auth=self.signer.auth,
-            json=[{'hashwith': 'sha384',
-                   'input': 'dGVzdCBkYXRh',
-                   'template': 'content-signature'}])
+            json=[{'input': 'dGVzdCBkYXRh'}])
         assert signature_bundle['signature'] == SIGNATURE
 
     @mock.patch('kinto_signer.signer.autograph.AutographSigner')

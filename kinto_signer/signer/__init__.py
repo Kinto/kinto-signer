@@ -1,8 +1,7 @@
 from kinto import logger
 
 
-EXPECTED_FIELDS = ["content-signature", "signature", "hash_algorithm",
-                   "signature_encoding", "x5u"]
+EXPECTED_FIELDS = ["signature", "x5u", "mode"]
 
 
 def heartbeat(request):
@@ -15,7 +14,7 @@ def heartbeat(request):
     """
     for signer in request.registry.signers.values():
         try:
-            result = signer.sign("TEST")
+            result = signer.sign("This is an heartbeat tests.")
             expected = set(EXPECTED_FIELDS)
             obtained = result.keys()
             if len(expected.intersection(obtained)) != len(EXPECTED_FIELDS):

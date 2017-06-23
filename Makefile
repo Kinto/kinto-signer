@@ -56,7 +56,7 @@ run-kinto: install-dev
 install-autograph: $(VENV)/bin/autograph
 
 $(VENV)/bin/autograph:
-	export GOPATH=$(VENV); export PATH="$$GOPATH/bin;$$PATH"; go get -d -u github.com/mozilla-services/autograph; cd $(VENV)/src/github.com/mozilla-services/autograph/; git checkout 1.3.2; go get github.com/mozilla-services/autograph
+	export GOPATH=$(VENV); export PATH="$$GOPATH/bin;$$PATH"; go get -u github.com/mozilla-services/autograph
 
 run-autograph: install-autograph
 	$(VENV)/bin/autograph -c tests/config/autograph.yaml

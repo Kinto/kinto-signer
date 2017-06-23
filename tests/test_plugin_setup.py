@@ -69,11 +69,7 @@ class HeartbeatTest(BaseWebTest, unittest.TestCase):
         patch = mock.patch('kinto_signer.signer.autograph.requests')
         self.mock = patch.start()
         self.addCleanup(patch.stop)
-        self.signature = {"signature": "",
-                          "hash_algorithm": "",
-                          "signature_encoding": "",
-                          "content-signature": "",
-                          "x5u": ""}
+        self.signature = {"signature": "", "x5u": "", "mode": ""}
         self.mock.post.return_value.json.return_value = [self.signature]
 
     def test_heartbeat_is_exposed(self):

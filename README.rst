@@ -10,7 +10,7 @@ Kinto signer
     :target: https://coveralls.io/github/Kinto/kinto-signer?branch=master
 
 **Kinto signer** is a `Kinto <https://kinto.readthedocs.io>`_ plugin
-that signs records with a `content signatures <https://github.com/mozilla-services/autograph/blob/master/signer/contentsignature/README.rst>`_
+that signs records with a `content signature <https://github.com/mozilla-services/autograph/blob/e7c33d6/signer/contentsignature/README.rst>`_
 to guarantee their integrity and authenticity.
 
 
@@ -52,7 +52,7 @@ with the P-384 strength.
 * The signature is produced with ECDSA on P-384 using SHA-384.
 * The signature is returned as encoded using URL-safe variant of base-64.
 
-See `Content Signature <https://github.com/mozilla-services/autograph/blob/master/signer/contentsignature/README.rst>`_
+See `Content Signature <https://github.com/mozilla-services/autograph/blob/e7c33d6/signer/contentsignature/README.rst>`_
 
 The content signature is validated in Firefox using the `Personal Security Manager <https://developer.mozilla.org/en/docs/Mozilla/Projects/PSM>`_.
 

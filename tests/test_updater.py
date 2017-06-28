@@ -249,3 +249,10 @@ class LocalUpdaterTest(unittest.TestCase):
                 'Quantity': 1,
                 'Items': ['/v1//buckets/destbucket/collections/destcollection*']
             }
+
+    def test_does_not_fails_when_cache_invalidation_does(self):
+        request = mock.MagicMock()
+        request.registry.settings = {'signer.distribution_id': 'DWIGHTENIS'}
+        with mock.patch('boto3.client') as boto3_client:
+            boto3_client.return_value.create_invalidation.side_effect = ValueError
+            self.updater.invalidate_cloudfront_cache(request, 'tz_1234')

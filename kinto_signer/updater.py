@@ -418,5 +418,5 @@ class LocalUpdater(object):
                         },
                         'CallerReference': '{}-{}'.format(timestamp, uuid.uuid4())
                     })
-            except Exception as e:
+            except Exception:
                 logger.exception("Cache invalidation request failed.")

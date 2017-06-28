@@ -250,7 +250,7 @@ class LocalUpdaterTest(unittest.TestCase):
                 'Items': ['/v1//buckets/destbucket/collections/destcollection*']
             }
 
-    def test_does_not_fails_when_cache_invalidation_does(self):
+    def test_does_not_fail_when_cache_invalidation_does(self):
         request = mock.MagicMock()
         request.registry.settings = {'signer.distribution_id': 'DWIGHTENIS'}
         with mock.patch('boto3.client') as boto3_client:

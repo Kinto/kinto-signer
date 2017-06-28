@@ -2,7 +2,7 @@ from kinto import logger
 
 
 EXPECTED_FIELDS = ["content-signature", "signature", "hash_algorithm",
-                   "signature_encoding", "x5u"]
+                   "signature_encoding"]
 
 
 def heartbeat(request):

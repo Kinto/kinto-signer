@@ -21,7 +21,7 @@ def main(argv):
         stdout = open(argv[2], "w")
         stdout_close = True
 
-    if argv_len == 1:
+    if argv_len > 3:
         print("USAGE: {} [in] [out]".format(argv[0]), file=sys.stderr)
         sys.exit(1)
 

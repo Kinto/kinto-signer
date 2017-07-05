@@ -3,10 +3,10 @@ Changelog
 
 This document describes changes between each past release.
 
-1.6.0 (2017-07-05)
+2.0.0 (2017-07-05)
 ------------------
 
-**Internal changes**
+**Breaking changes**
 
 - Upgrade to autograph 2.0
 

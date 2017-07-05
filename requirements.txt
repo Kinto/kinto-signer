@@ -1,6 +1,6 @@
 bcrypt==3.1.3
 boto3==1.4.4
-botocore==1.5.76
+botocore==1.5.78
 certifi==2017.4.17
 cffi==1.10.0
 chardet==3.0.4
@@ -18,14 +18,14 @@ jmespath==0.9.3
 jsonpatch==1.16
 jsonpointer==1.10
 jsonschema==2.6.0
-kinto==7.3.0
+kinto==7.3.1
 logging-color-formatter==1.0.2
 mohawk==0.3.4
 PasteDeploy==1.5.2
-pycparser==2.17
+pycparser==2.18
 pyramid==1.8.4
 pyramid-multiauth==0.9.0
-pyramid-tm==2.1
+pyramid-tm==2.2
 python-dateutil==2.6.0
 repoze.lru==0.6
 requests==2.18.1
@@ -39,6 +39,6 @@ ujson==1.35
 urllib3==1.21.1
 venusian==1.1.0
 waitress==1.0.2
-WebOb==1.7.2
+WebOb==1.7.3
 zope.deprecation==4.2.0
 zope.interface==4.4.2

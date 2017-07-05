@@ -3,14 +3,18 @@ Changelog
 
 This document describes changes between each past release.
 
-1.6.0 (unreleased)
+2.0.0 (2017-07-05)
 ------------------
 
-- Nothing changed yet.
+**Breaking changes**
+
+- Upgrade to autograph 2.0
 
 
 1.5.2 (2017-06-28)
 ------------------
+
+**Bug fixes**
 
 - Catch cache invalidation errors and log the error. (#186)
 
@@ -18,11 +22,15 @@ This document describes changes between each past release.
 1.5.1 (2017-06-28)
 ------------------
 
+**Bug fixes**
+
 - Do not make the heartbeat fail on missing x5u. (#182)
 
 
 1.5.0 (2017-06-19)
 ------------------
+
+**New features**
 
 - Add support for CloudFront path cache invalidation. (#178)
 

@@ -241,10 +241,18 @@ class LocalUpdaterTest(unittest.TestCase):
         request.registry.settings = {'signer.distribution_id': 'DWIGHTENIS'}
         with mock.patch('boto3.client') as boto3_client:
             self.updater.invalidate_cloudfront_cache(request, 'tz_1234')
-            boto3_client.return_value.create_invalidation.assert_called_with(
-                DistributionId='DWIGHTENIS',
-                InvalidationBatch={
-                    'CallerReference': 'tz_1234',
-                    'Paths': {
-                        'Quantity': 1,
-                        'Items': ['/v1//buckets/destbucket/collections/destcollection*']}})
+            call_args = boto3_client.return_value.create_invalidation.call_args
+            params = call_args[1]
+            assert params['DistributionId'] == "DWIGHTENIS"
+            assert params['InvalidationBatch']['CallerReference'].startswith('tz_1234-')
+            assert params['InvalidationBatch']['Paths'] == {
+                'Quantity': 1,
+                'Items': ['/v1//buckets/destbucket/collections/destcollection*']
+            }
+
+    def test_does_not_fail_when_cache_invalidation_does(self):
+        request = mock.MagicMock()
+        request.registry.settings = {'signer.distribution_id': 'DWIGHTENIS'}
+        with mock.patch('boto3.client') as boto3_client:
+            boto3_client.return_value.create_invalidation.side_effect = ValueError
+            self.updater.invalidate_cloudfront_cache(request, 'tz_1234')

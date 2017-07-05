@@ -9,6 +9,18 @@ This document describes changes between each past release.
 - Nothing changed yet.
 
 
+1.5.2 (2017-06-28)
+------------------
+
+- Catch cache invalidation errors and log the error. (#186)
+
+
+1.5.1 (2017-06-28)
+------------------
+
+- Do not make the heartbeat fail on missing x5u. (#182)
+
+
 1.5.0 (2017-06-19)
 ------------------
 

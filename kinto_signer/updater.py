@@ -1,5 +1,6 @@
 from contextlib import contextmanager
 import logging
+import uuid
 
 from collections import OrderedDict
 
@@ -405,14 +406,17 @@ class LocalUpdater(object):
             client = boto3.client('cloudfront')
 
             # Invalidate
-            client.create_invalidation(
-                DistributionId=distribution_id,
-                InvalidationBatch={
-                    'Paths': {
-                        'Quantity': 1,
-                        'Items': [
-                            collection_paths
-                        ]
-                    },
-                    'CallerReference': str(timestamp)
-                })
+            try:
+                client.create_invalidation(
+                    DistributionId=distribution_id,
+                    InvalidationBatch={
+                        'Paths': {
+                            'Quantity': 1,
+                            'Items': [
+                                collection_paths
+                            ]
+                        },
+                        'CallerReference': '{}-{}'.format(timestamp, uuid.uuid4())
+                    })
+            except Exception:
+                logger.exception("Cache invalidation request failed.")

@@ -136,8 +136,8 @@ Configuration for the Autograph signer
 --------------------------------------
 
 Kinto signer can integrate with the
-`Autograph <https://github.com/mozilla-services/autograph>`_ server. To do so,
-use the following settings:
+`Autograph <https://github.com/mozilla-services/autograph>`_ server version 2.
+To do so, use the following settings:
 
 +------------------------------------+--------------------------------------------------------------------------+
 | Setting name                       | What does it do?                                                         |

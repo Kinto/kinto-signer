@@ -33,6 +33,7 @@ def notify_resource_event(request, request_options, matchdict,
     fakerequest.selected_userid = "kinto-signer"
     fakerequest.authn_type = "plugin"
     fakerequest.current_resource_name = resource_name
+    fakerequest._attachment_auto_save = getattr(request, '_attachment_auto_save', False)
     fakerequest.notify_resource_event(parent_id=parent_id,
                                       timestamp=record[FIELD_LAST_MODIFIED],
                                       data=record,

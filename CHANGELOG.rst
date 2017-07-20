@@ -3,10 +3,12 @@ Changelog
 
 This document describes changes between each past release.
 
-1.5.4 (unreleased)
+1.5.4 (2017-07-21)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Allow kinto-attachment collections reviews on subrequests too. (#192)
 
 
 1.5.3 (2017-07-20)

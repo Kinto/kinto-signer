@@ -72,6 +72,9 @@ def sign_collection_data(event, resources):
             new_status = new_collection.get("status")
             old_status = old_collection.get("status")
 
+            # Autorize kinto-attachment metadata write access. #190
+            event.request._attachment_auto_save = True
+
             if new_status == STATUS.TO_SIGN:
                 # Run signature process (will set `last_reviewer` field).
                 updater.sign_and_update_destination(event.request, source=new_collection)

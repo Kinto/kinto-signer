@@ -199,6 +199,19 @@ class OnCollectionChangedTest(unittest.TestCase):
         mocked = self.updater_mocked.return_value
         assert mocked.sign_and_update_destination.called
 
+    def test_kinto_attachment_property_is_set_to_allow_metadata_updates(self):
+        evt = mock.MagicMock(payload={"bucket_id": "a", "collection_id": "b"},
+                             impacted_records=[{
+                                 "new": {"id": "b", "status": "to-sign"}}])
+        evt.request.registry.storage = mock.sentinel.storage
+        evt.request.registry.permission = mock.sentinel.permission
+        evt.request.registry.signers = {
+            "/buckets/a/collections/b": mock.sentinel.signer
+        }
+        evt.request.route_path.return_value = "/v1/buckets/a/collections/b"
+        sign_collection_data(evt, resources=utils.parse_resources("a/b;c/d"))
+        assert evt.request._attachment_auto_save is True
+
     def test_updater_does_not_fail_when_payload_is_inconsistent(self):
         # This happens with events on default bucket for kinto < 3.3
         evt = mock.MagicMock(payload={"subpath": "collections/boom"})

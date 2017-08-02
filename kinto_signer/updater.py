@@ -397,7 +397,7 @@ class LocalUpdater(object):
             old=collection_record)
 
     def invalidate_cloudfront_cache(self, request, timestamp):
-        collection_paths = "/v1/%s*" % self.destination_collection_uri
+        collection_paths = "/v1%s*" % self.destination_collection_uri
         distribution_id = request.registry.settings.get('signer.distribution_id')
 
         if distribution_id:

@@ -247,7 +247,7 @@ class LocalUpdaterTest(unittest.TestCase):
             assert params['InvalidationBatch']['CallerReference'].startswith('tz_1234-')
             assert params['InvalidationBatch']['Paths'] == {
                 'Quantity': 1,
-                'Items': ['/v1//buckets/destbucket/collections/destcollection*']
+                'Items': ['/v1/buckets/destbucket/collections/destcollection*']
             }
 
     def test_does_not_fail_when_cache_invalidation_does(self):

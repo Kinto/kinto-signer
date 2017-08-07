@@ -3,12 +3,17 @@ Changelog
 
 This document describes changes between each past release.
 
-2.0.1 (2017-07-20)
+2.1.0 (2017-08-07)
 ------------------
+
+**New features**
+
+- Invalidate the monitor changes collection on updates (#187)
 
 **Bug fixes**
 
 - Allow kinto-attachment collections reviews. (#190)
+- Remove additional / in invalidation collection path (#194)
 
 
 2.0.0 (2017-07-05)

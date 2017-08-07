@@ -8,7 +8,9 @@ This document describes changes between each past release.
 
 **Bug fixes**
 
+- Invalidate the monitor/changes collection on update. (#187)
 - Allow kinto-attachment collections reviews. (#190)
+- Remove additionnal / from collection_paths (#193)
 
 
 2.0.0 (2017-07-05)

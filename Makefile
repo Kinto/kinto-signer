@@ -1,4 +1,4 @@
-VIRTUALENV = virtualenv --python python3
+VIRTUALENV = virtualenv --python python3.5
 VENV := $(shell echo $${VIRTUAL_ENV-$$PWD/.venv})
 PYTHON = $(VENV)/bin/python
 DEV_STAMP = $(VENV)/.dev_env_installed.stamp

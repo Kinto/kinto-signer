@@ -34,6 +34,7 @@ matrix:
         - make install
         - make run-autograph &
         - make run-kinto &
+        - sleep 5
     - go: 1.8
       language: go
       addons:

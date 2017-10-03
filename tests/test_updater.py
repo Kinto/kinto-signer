@@ -251,6 +251,58 @@ class LocalUpdaterTest(unittest.TestCase):
                           '/v1/buckets/monitor/collections/changes*']
             }
 
+    def test_if_distribution_id_a_cloudfront_invalidation_request_is_triggered_for_blocklist(self):
+        updater = LocalUpdater(
+            source={
+                'bucket': 'sourcebucket',
+                'collection': 'sourcecollection'},
+            destination={
+                'bucket': 'blocklists',
+                'collection': 'destcollection'},
+            signer=self.signer_instance,
+            storage=self.storage,
+            permission=self.permission)
+        request = mock.MagicMock()
+        request.registry.settings = {'signer.distribution_id': 'DWIGHTENIS'}
+        with mock.patch('boto3.client') as boto3_client:
+            updater.invalidate_cloudfront_cache(request, 'tz_1234')
+            call_args = boto3_client.return_value.create_invalidation.call_args
+            params = call_args[1]
+            assert params['DistributionId'] == "DWIGHTENIS"
+            assert params['InvalidationBatch']['CallerReference'].startswith('tz_1234-')
+            assert params['InvalidationBatch']['Paths'] == {
+                'Quantity': 2,
+                'Items': ['/v1/buckets/blocklists/collections/destcollection*',
+                          '/v1/buckets/monitor/collections/changes*',
+                          '/v1/blocklist/*']
+            }
+
+    def test_if_distribution_id_a_cloudfront_invalidation_request_is_triggered_for_preview(self):
+        self.updater = LocalUpdater(
+            source={
+                'bucket': 'sourcebucket',
+                'collection': 'sourcecollection'},
+            destination={
+                'bucket': 'blocklists-preview',
+                'collection': 'destcollection'},
+            signer=self.signer_instance,
+            storage=self.storage,
+            permission=self.permission)
+        request = mock.MagicMock()
+        request.registry.settings = {'signer.distribution_id': 'DWIGHTENIS'}
+        with mock.patch('boto3.client') as boto3_client:
+            self.updater.invalidate_cloudfront_cache(request, 'tz_1234')
+            call_args = boto3_client.return_value.create_invalidation.call_args
+            params = call_args[1]
+            assert params['DistributionId'] == "DWIGHTENIS"
+            assert params['InvalidationBatch']['CallerReference'].startswith('tz_1234-')
+            assert params['InvalidationBatch']['Paths'] == {
+                'Quantity': 2,
+                'Items': ['/v1/buckets/blocklists-preview/collections/destcollection*',
+                          '/v1/buckets/monitor/collections/changes*',
+                          '/v1/preview/*']
+            }
+
     def test_does_not_fail_when_cache_invalidation_does(self):
         request = mock.MagicMock()
         request.registry.settings = {'signer.distribution_id': 'DWIGHTENIS'}

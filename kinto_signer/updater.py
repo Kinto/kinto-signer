@@ -399,6 +399,14 @@ class LocalUpdater(object):
     def invalidate_cloudfront_cache(self, request, timestamp):
         collection_path = "/v1%s*" % self.destination_collection_uri
         monitor_path = "/v1/buckets/monitor/collections/changes*"
+
+        paths = [collection_path, monitor_path]
+
+        if self.destination_collection_uri.startswith('/buckets/blocklists/'):
+            paths.append('/v1/blocklist/*')
+        elif self.destination_collection_uri.startswith('/buckets/blocklists-preview/'):
+            paths.append('/v1/preview/*')
+
         distribution_id = request.registry.settings.get('signer.distribution_id')
 
         if distribution_id:
@@ -413,10 +421,7 @@ class LocalUpdater(object):
                     InvalidationBatch={
                         'Paths': {
                             'Quantity': 2,
-                            'Items': [
-                                collection_path,
-                                monitor_path
-                            ]
+                            'Items': paths
                         },
                         'CallerReference': '{}-{}'.format(timestamp, uuid.uuid4())
                     })

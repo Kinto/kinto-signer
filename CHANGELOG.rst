@@ -3,10 +3,12 @@ Changelog
 
 This document describes changes between each past release.
 
-2.2.0 (unreleased)
+2.1.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Invalidate kinto-amo blocklist paths in the CDN.
 
 
 2.1.0 (2017-08-07)

@@ -6,7 +6,7 @@ This document describes changes between each past release.
 2.1.0 (unreleased)
 ------------------
 
-- Invalidate all server cache. (#199)
+- Invalidate the CloudFront CDN cache. (#199)
 
 
 2.1.0 (2017-08-07)

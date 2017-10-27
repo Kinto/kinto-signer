@@ -3,10 +3,10 @@ Changelog
 
 This document describes changes between each past release.
 
-2.2.0 (unreleased)
+2.1.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Invalidate all server cache. (#199)
 
 
 2.1.0 (2017-08-07)

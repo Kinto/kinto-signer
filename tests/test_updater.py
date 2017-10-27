@@ -246,9 +246,8 @@ class LocalUpdaterTest(unittest.TestCase):
             assert params['DistributionId'] == "DWIGHTENIS"
             assert params['InvalidationBatch']['CallerReference'].startswith('tz_1234-')
             assert params['InvalidationBatch']['Paths'] == {
-                'Quantity': 2,
-                'Items': ['/v1/buckets/destbucket/collections/destcollection*',
-                          '/v1/buckets/monitor/collections/changes*']
+                'Quantity': 1,
+                'Items': ['/v1/*']
             }
 
     def test_does_not_fail_when_cache_invalidation_does(self):

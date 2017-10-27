@@ -271,7 +271,7 @@ class LocalUpdaterTest(unittest.TestCase):
             assert params['DistributionId'] == "DWIGHTENIS"
             assert params['InvalidationBatch']['CallerReference'].startswith('tz_1234-')
             assert params['InvalidationBatch']['Paths'] == {
-                'Quantity': 2,
+                'Quantity': 3,
                 'Items': ['/v1/buckets/blocklists/collections/destcollection*',
                           '/v1/buckets/monitor/collections/changes*',
                           '/v1/blocklist/*']
@@ -297,7 +297,7 @@ class LocalUpdaterTest(unittest.TestCase):
             assert params['DistributionId'] == "DWIGHTENIS"
             assert params['InvalidationBatch']['CallerReference'].startswith('tz_1234-')
             assert params['InvalidationBatch']['Paths'] == {
-                'Quantity': 2,
+                'Quantity': 3,
                 'Items': ['/v1/buckets/blocklists-preview/collections/destcollection*',
                           '/v1/buckets/monitor/collections/changes*',
                           '/v1/preview/*']

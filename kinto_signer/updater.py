@@ -420,7 +420,7 @@ class LocalUpdater(object):
                     DistributionId=distribution_id,
                     InvalidationBatch={
                         'Paths': {
-                            'Quantity': 2,
+                            'Quantity': len(paths),
                             'Items': paths
                         },
                         'CallerReference': '{}-{}'.format(timestamp, uuid.uuid4())

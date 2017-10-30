@@ -3,7 +3,7 @@ Changelog
 
 This document describes changes between each past release.
 
-2.1.0 (unreleased)
+2.1.1 (2017-10-27)
 ------------------
 
 - Invalidate the CloudFront CDN cache. (#199)

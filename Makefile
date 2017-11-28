@@ -3,7 +3,7 @@ VENV := $(shell echo $${VIRTUAL_ENV-$$PWD/.venv})
 PYTHON = $(VENV)/bin/python
 DEV_STAMP = $(VENV)/.dev_env_installed.stamp
 INSTALL_STAMP = $(VENV)/.install.stamp
-TEMPDIR := $(shell mktemp -d)
+TEMPDIR := $(shell mktemp -du)
 
 .IGNORE: clean
 .PHONY: all install virtualenv tests install-dev tests-once

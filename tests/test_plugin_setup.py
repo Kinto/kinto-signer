@@ -149,11 +149,15 @@ class IncludeMeTest(unittest.TestCase):
             "signer.sb1_sc1.autograph.hawk_secret": "a-secret",
         }
         config = self.includeme(settings)
+
         signer1 = config.registry.signers['/buckets/sb1/collections/sc1']
-        signer2 = config.registry.signers['/buckets/sb1/collections/sc2']
         assert isinstance(signer1, AutographSigner)
-        assert isinstance(signer2, AutographSigner)
+        assert signer1.server_url == "http://localhost"
         assert signer1.auth.credentials['id'] == "alice"
+
+        signer2 = config.registry.signers['/buckets/sb1/collections/sc2']
+        assert isinstance(signer2, AutographSigner)
+        assert signer2.server_url == "http://localhost"
         assert signer2.auth.credentials['id'] == "bob"
 
     def test_a_statsd_timer_is_used_for_signature_if_configured(self):

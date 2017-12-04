@@ -1,4 +1,5 @@
 import base64
+import warnings
 
 import requests
 import six
@@ -6,6 +7,7 @@ from requests_hawk import HawkAuth
 from six.moves.urllib.parse import urljoin
 
 from .base import SignerBase
+from ..utils import get_first_matching_setting
 
 
 class AutographSigner(SignerBase):
@@ -28,8 +30,16 @@ class AutographSigner(SignerBase):
         return signature_bundle
 
 
-def load_from_settings(settings, prefix=''):
+def load_from_settings(settings, prefix='', *, prefixes=None):
+    if prefixes is None:
+        prefixes = [prefix]
+
+    if prefix != '':
+        message = ('signer.load_from_settings `prefix` parameter is deprecated, please '
+                   'use `prefixes` instead.')
+        warnings.warn(message, DeprecationWarning)
+
     return AutographSigner(
-        server_url=settings[prefix + 'autograph.server_url'],
-        hawk_id=settings[prefix + 'autograph.hawk_id'],
-        hawk_secret=settings[prefix + 'autograph.hawk_secret'])
+        server_url=get_first_matching_setting('autograph.server_url', settings, prefixes),
+        hawk_id=get_first_matching_setting('autograph.hawk_id', settings, prefixes),
+        hawk_secret=get_first_matching_setting('autograph.hawk_secret', settings, prefixes))

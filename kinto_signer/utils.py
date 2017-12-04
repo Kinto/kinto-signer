@@ -74,3 +74,10 @@ def parse_resources(raw_resources):
             resources[key]['preview'] = _get_resource(preview)
 
     return resources
+
+
+def get_first_matching_setting(setting_name, settings, prefixes):
+    for prefix in prefixes:
+        prefixed_setting_name = '{}{}'.format(prefix, setting_name)
+        if prefixed_setting_name in settings:
+            return settings[prefixed_setting_name]

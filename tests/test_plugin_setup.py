@@ -137,7 +137,10 @@ class IncludeMeTest(unittest.TestCase):
 
     def test_falls_back_to_global_settings_if_not_defined(self):
         settings = {
-            "signer.resources": "/buckets/sb1/collections/sc1;/buckets/db1/collections/dc1",
+            "signer.resources": (
+                "/buckets/sb1/collections/sc1;/buckets/db1/collections/dc1\n"
+                "/buckets/sb1/collections/sc2;/buckets/db1/collections/dc2"
+            ),
             "signer.signer_backend": "kinto_signer.signer.autograph",
             "signer.autograph.server_url": "http://localhost",
             "signer.sb1.autograph.hawk_id": "bob",
@@ -146,11 +149,12 @@ class IncludeMeTest(unittest.TestCase):
             "signer.sb1_sc1.autograph.hawk_secret": "a-secret",
         }
         config = self.includeme(settings)
-        signer1, signer2 = config.registry.signers.values()
+        signer1 = config.registry.signers['/buckets/sb1/collections/sc1']
+        signer2 = config.registry.signers['/buckets/sb1/collections/sc2']
         assert isinstance(signer1, AutographSigner)
         assert isinstance(signer2, AutographSigner)
-        assert signer1.hawk_id == "alice"
-        assert signer2.hawk_id == "bob"
+        assert signer1.auth.credentials['id'] == "alice"
+        assert signer2.auth.credentials['id'] == "bob"
 
     def test_a_statsd_timer_is_used_for_signature_if_configured(self):
         settings = {

@@ -123,7 +123,7 @@ class LocalUpdater(object):
 
             records, timestamp = self.get_destination_records(empty_none=False)
             serialized_records = canonical_json(records, timestamp)
-            logger.debug(self.source_collection_uri + ":\t'" + serialized_records + "'")
+            logger.debug("{}:\t'{}'".format(self.source_collection_uri, serialized_records))
             signature = self.signer.sign(serialized_records)
 
             self.set_destination_signature(signature, source, request)

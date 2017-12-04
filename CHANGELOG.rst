@@ -6,7 +6,7 @@ This document describes changes between each past release.
 2.2.0 (unreleased)
 ------------------
 
-- Fix BadSignature on empty collections. (#164)
+- Fix bad signature on empty collections. (#164)
 
 
 2.1.1 (2017-10-27)

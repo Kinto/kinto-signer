@@ -6,6 +6,7 @@ This document describes changes between each past release.
 2.2.0 (unreleased)
 ------------------
 
+- Use generic config keys as a fallback for missing specific signer config keys. (#151)
 - Fix bad signature on empty collections. (#164)
 
 

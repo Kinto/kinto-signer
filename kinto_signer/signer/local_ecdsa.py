@@ -1,4 +1,5 @@
 import base64
+import warnings
 
 import ecdsa
 import hashlib
@@ -7,6 +8,7 @@ from ecdsa import NIST384p, SigningKey, VerifyingKey
 
 from .base import SignerBase
 from .exceptions import BadSignatureError
+from ..utils import get_first_matching_setting
 
 
 class ECDSASigner(SignerBase):
@@ -85,12 +87,20 @@ class ECDSASigner(SignerBase):
             raise BadSignatureError(e)
 
 
-def load_from_settings(settings, prefix):
-    private_key = settings.get(prefix + 'ecdsa.private_key')
-    public_key = settings.get(prefix + 'ecdsa.public_key')
+def load_from_settings(settings, prefix='', *, prefixes=None):
+    if prefixes is None:
+        prefixes = [prefix]
+
+    if prefix != '':
+        message = ('signer.load_from_settings `prefix` parameter is deprecated, please '
+                   'use `prefixes` instead.')
+        warnings.warn(message, DeprecationWarning)
+
+    private_key = get_first_matching_setting('ecdsa.private_key', settings, prefixes)
+    public_key = get_first_matching_setting('ecdsa.public_key', settings, prefixes)
     try:
         return ECDSASigner(private_key=private_key, public_key=public_key)
-    except ValueError:
+    except ValueError as e:
         msg = ("Please specify either kinto.signer.ecdsa.private_key or "
                "kinto.signer.ecdsa.public_key in the settings.")
         raise ValueError(msg)

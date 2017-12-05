@@ -29,20 +29,19 @@ def _signer_dotted_location(settings, resource):
         This means that every signer settings must be duplicated for each
         dedicated signer.
     """
-    backend_setting = 'signer_backend'
     prefix = 'signer.'
     bucket_wide = '{bucket}.'.format(**resource['source'])
     collection_wide = '{bucket}_{collection}.'.format(**resource['source'])
-    if (prefix + collection_wide + backend_setting) in settings:
-        prefix += collection_wide
-    elif (prefix + bucket_wide + backend_setting) in settings:
-        prefix += bucket_wide
+
+    prefixes = [prefix + collection_wide, prefix + bucket_wide, prefix]
+
+    backend_setting_value = utils.get_first_matching_setting('signer_backend', settings, prefixes)
 
     # Fallback to the local ECDSA signer.
     default_signer_module = "kinto_signer.signer.local_ecdsa"
-    signer_dotted_location = settings.get(prefix + backend_setting,
-                                          default_signer_module)
-    return signer_dotted_location, prefix
+    signer_dotted_location = backend_setting_value or default_signer_module
+
+    return signer_dotted_location, prefixes
 
 
 def includeme(config):
@@ -67,9 +66,9 @@ def includeme(config):
     config.registry.signers = {}
     for key, resource in resources.items():
         # Load the signers associated to each resource.
-        dotted_location, prefix = _signer_dotted_location(settings, resource)
+        dotted_location, prefixes = _signer_dotted_location(settings, resource)
         signer_module = config.maybe_dotted(dotted_location)
-        backend = signer_module.load_from_settings(settings, prefix)
+        backend = signer_module.load_from_settings(settings, prefixes=prefixes)
         config.registry.signers[key] = backend
 
         # Load the setttings associated to each resource.

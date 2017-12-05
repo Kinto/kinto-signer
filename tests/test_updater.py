@@ -101,6 +101,14 @@ class LocalUpdaterTest(unittest.TestCase):
 
     def test_push_records_to_destination_raises_if_storage_is_misconfigured(self):
         self.patch(self.updater, 'get_destination_records',
+                   return_value=([{}], 1324))
+        self.patch(self.updater, 'get_source_records',
+                   return_value=([{}], 1234))
+        with pytest.raises(ValueError):
+            self.updater.push_records_to_destination(DummyRequest())
+
+    def test_push_records_to_destination_does_not_raises_if_collection_is_empty(self):
+        self.patch(self.updater, 'get_destination_records',
                    return_value=([], 1324))
         self.patch(self.updater, 'get_source_records',
                    return_value=([], 1234))

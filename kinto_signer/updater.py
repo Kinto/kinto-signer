@@ -121,9 +121,9 @@ class LocalUpdater(object):
 
             self.push_records_to_destination(request)
 
-            records, timestamp = self.get_destination_records()
+            records, timestamp = self.get_destination_records(empty_none=False)
             serialized_records = canonical_json(records, timestamp)
-            logger.debug(self.source_collection_uri + ":\t" + serialized_records)
+            logger.debug("{}:\t'{}'".format(self.source_collection_uri, serialized_records))
             signature = self.signer.sign(serialized_records)
 
             self.set_destination_signature(signature, source, request)
@@ -200,7 +200,7 @@ class LocalUpdater(object):
             self.permission.replace_object_permissions(
                 self.destination_collection_uri, permissions)
 
-    def _get_records(self, rc, last_modified=None):
+    def _get_records(self, rc, last_modified=None, empty_none=True):
         # If last_modified was specified, only retrieve items since then.
         storage_kwargs = {}
         if last_modified is not None:
@@ -217,7 +217,7 @@ class LocalUpdater(object):
             include_deleted=True,
             **storage_kwargs)
 
-        if len(records) == count == 0:
+        if len(records) == count == 0 and empty_none:
             # When the collection empty (no records and no tombstones)
             collection_timestamp = None
         else:
@@ -227,12 +227,11 @@ class LocalUpdater(object):
 
         return records, collection_timestamp
 
-    def get_source_records(self, last_modified):
-        return self._get_records(self.source,
-                                 last_modified)
+    def get_source_records(self, last_modified, **kwargs):
+        return self._get_records(self.source, last_modified, **kwargs)
 
-    def get_destination_records(self):
-        return self._get_records(self.destination)
+    def get_destination_records(self, **kwargs):
+        return self._get_records(self.destination, **kwargs)
 
     def push_records_to_destination(self, request):
         __, dest_timestamp = self.get_destination_records()

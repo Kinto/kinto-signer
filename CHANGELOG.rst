@@ -7,6 +7,7 @@ This document describes changes between each past release.
 ------------------
 
 - Use generic config keys as a fallback for missing specific signer config keys. (#151)
+- Fix bad signature on empty collections. (#164)
 
 
 2.1.1 (2017-10-27)

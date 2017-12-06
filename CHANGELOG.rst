@@ -3,7 +3,7 @@ Changelog
 
 This document describes changes between each past release.
 
-2.2.0 (unreleased)
+2.2.0 (2017-12-06)
 ------------------
 
 - Use generic config keys as a fallback for missing specific signer config keys. (#151)

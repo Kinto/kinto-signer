@@ -22,8 +22,8 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
     @classmethod
     def get_app_settings(cls, extras=None):
         settings = super().get_app_settings(extras)
+        settings['signer.alice.reviewers_group'] = 'revoyeurs'
         settings['signer.alice_source.to_review_enabled'] = 'true'
-        settings['signer.alice_source.reviewers_group'] = 'revoyeurs'
         return settings
 
     def test_capability_is_exposed(self):
@@ -52,7 +52,8 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
                 "preview": {"bucket": "alice",
                             "collection": "preview"},
                 "source": {"bucket": "alice",
-                           "collection": "from"}
+                           "collection": "from"},
+                "reviewers_group": "revoyeurs",
             }, {
                 "destination": {"bucket": "bob",
                                 "collection": "destination"},

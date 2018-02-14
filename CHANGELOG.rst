@@ -6,7 +6,10 @@ This document describes changes between each past release.
 2.3.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**New features**
+
+- Allow configuration of ``reviewers_group``, ``editors_group``, ``to_review_enabled``, ``group_check_enabled``
+  by bucket
 
 
 2.2.0 (2017-12-06)

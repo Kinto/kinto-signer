@@ -21,6 +21,12 @@ matrix:
       language: go
       addons:
         postgresql: "9.5"
+        apt:
+          sources:
+            - deadsnakes # source required so it finds the package definition below
+          packages:
+            - python3.6
+            - python3.6-dev
       env:
         - TOX_ENV=functional
       install:
@@ -33,6 +39,12 @@ matrix:
       language: go
       addons:
         postgresql: "9.5"
+        apt:
+          sources:
+            - deadsnakes # source required so it finds the package definition below
+          packages:
+            - python3.6
+            - python3.6-dev
       env:
         - TOX_ENV=functional
           WITH=kinto-master

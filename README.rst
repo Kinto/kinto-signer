@@ -185,14 +185,15 @@ makes sure that:
 
 See `Kinto groups API <http://kinto.readthedocs.io/en/stable/api/1.x/groups.html>`_ for more details about how to define groups.
 
-The above settings can be set or overriden by collection using the ``<bucket_id>_<collection_id>_`` prefix.
+The above settings can be set or overriden by bucket using the ``<bucket_id>_`` prefix or by collection using the ``<bucket_id>_<collection_id>_`` prefix.
 For example:
 
 .. code-block:: ini
 
-    kinto.signer.staging_certificates.group_check_enabled = true
-    kinto.signer.staging_certificates.to_review_enabled = true
-    kinto.signer.staging_certificates.editors_group = certificates-editors
+    kinto.signer.staging.group_check_enabled = true
+    kinto.signer.staging.to_review_enabled = true
+    kinto.signer.staging_certificates.group_check_enabled = false
+    kinto.signer.staging_certificates.to_review_enabled = false
     kinto.signer.staging_certificates.reviewers_group = certificates-reviewers
 
 If the review process is enabled, it is possible to configure a *preview*

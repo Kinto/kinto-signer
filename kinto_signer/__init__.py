@@ -57,12 +57,14 @@ def includeme(config):
         raise ConfigurationError(error_msg)
     resources = utils.parse_resources(raw_resources)
 
-    reviewers_group = settings.get("signer.reviewers_group", "reviewers")
-    editors_group = settings.get("signer.editors_group", "editors")
-    to_review_enabled = asbool(settings.get("signer.to_review_enabled", False))
-    group_check_enabled = asbool(settings.get("signer.group_check_enabled",
-                                              False))
-
+    # Default global settings values.
+    defaults = {
+        "to_review_enabled": False,
+        "group_check_enabled": False,
+        "reviewers_principal": "/buckets/{bucket_id}/groups/reviewers",
+        "editors_principal": "/buckets/{bucket_id}/groups/editors",
+    }
+    # Iterate over configured resources and resolves associated settings.
     config.registry.signers = {}
     for key, resource in resources.items():
         # Load the signers associated to each resource.
@@ -74,26 +76,29 @@ def includeme(config):
         # Load the setttings associated to each resource.
         bucket_wide = "{source[bucket]}".format(**resource)
         collection_wide = "{source[bucket]}_{source[collection]}".format(**resource)
-        for setting in ("reviewers_group", "editors_group",
+        for setting in ("reviewers_principal", "editors_principal",
                         "to_review_enabled", "group_check_enabled"):
-            # Legacy format with _ separation between prefix and setting name.
             value = settings.get("signer.%s.%s" % (collection_wide, setting))
             if value is None:
-                # By bucket or globally.
+                # By bucket.
                 value = settings.get("signer.%s.%s" % (bucket_wide, setting))
-            if value is not None:
-                resource[setting] = value
+                if value is None:
+                    # Globally.
+                    value = settings.get("signer.%s" % setting, defaults[setting])
+            # Resolve placeholder with source info.
+            if setting.endswith("_principal"):
+                value = value.format(bucket_id=resource['source']['bucket'],
+                                     collection_id=resource['source']['collection'])
+            if setting.endswith("_enabled"):
+                value = asbool(value)
+            resource[setting] = value
 
     # Expose the capabilities in the root endpoint.
     message = "Digital signatures for integrity and authenticity of records."
     docs = "https://github.com/Kinto/kinto-signer#kinto-signer"
     config.add_api_capability("signer", message, docs,
                               version=__version__,
-                              resources=resources.values(),
-                              to_review_enabled=to_review_enabled,
-                              group_check_enabled=group_check_enabled,
-                              editors_group=editors_group,
-                              reviewers_group=reviewers_group)
+                              resources=resources.values())
 
     config.add_subscriber(
         functools.partial(listeners.set_work_in_progress_status,
@@ -103,11 +108,7 @@ def includeme(config):
 
     config.add_subscriber(
         functools.partial(listeners.check_collection_status,
-                          resources=resources,
-                          to_review_enabled=to_review_enabled,
-                          group_check_enabled=group_check_enabled,
-                          editors_group=editors_group,
-                          reviewers_group=reviewers_group),
+                          resources=resources),
         ResourceChanged,
         for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
         for_resources=('collection',))

@@ -349,7 +349,7 @@ class UserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCase):
                                   code=403,
                                   errno=ERRORS.FORBIDDEN,
                                   error="Forbidden",
-                                  message="Not in editors group")
+                                  message="User is not /buckets/alice/groups/editors")
 
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
@@ -368,7 +368,7 @@ class UserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCase):
                                   code=403,
                                   errno=ERRORS.FORBIDDEN,
                                   error="Forbidden",
-                                  message="Not in reviewers group")
+                                  message="User is not /buckets/alice/groups/reviewers")
 
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
@@ -391,8 +391,8 @@ class SpecificUserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.Test
 
         settings['signer.group_check_enabled'] = 'false'
         settings['signer.alice_cid1.group_check_enabled'] = 'true'
-        settings['signer.alice_cid1.editors_group'] = 'editeurs'
-        settings['signer.alice_cid1.reviewers_group'] = 'revoyeurs'
+        settings['signer.alice_cid1.editors_principal'] = '/buckets/alice/groups/editeurs'
+        settings['signer.alice_cid1.reviewers_principal'] = '/buckets/alice/groups/revoyeurs'
         return settings
 
     def setUp(self):
@@ -426,7 +426,7 @@ class SpecificUserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.Test
                                   code=403,
                                   errno=ERRORS.FORBIDDEN,
                                   error="Forbidden",
-                                  message="Not in editeurs group")
+                                  message="User is not /buckets/alice/groups/editeurs")
 
     def test_only_reviewers_can_ask_to_sign(self):
         self.app.patch_json(self.source_collection1,
@@ -440,7 +440,7 @@ class SpecificUserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.Test
                                   code=403,
                                   errno=ERRORS.FORBIDDEN,
                                   error="Forbidden",
-                                  message="Not in revoyeurs group")
+                                  message="User is not /buckets/alice/groups/revoyeurs")
 
 
 class PreviewCollectionTest(PostgresWebTest, unittest.TestCase):

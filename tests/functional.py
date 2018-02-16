@@ -115,8 +115,9 @@ class BaseTestFunctional(object):
 
     def test_groups_and_reviewers_are_forced(self):
         capability = self.source.server_info()['capabilities']['signer']
-        assert capability['group_check_enabled']
-        assert capability['to_review_enabled']
+        for resource in capability['resources']:
+            assert resource['group_check_enabled']
+            assert resource['to_review_enabled']
 
     def test_heartbeat_is_successful(self):
         hb_url = urljoin(self.server_url, '/__heartbeat__')

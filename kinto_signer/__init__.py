@@ -74,17 +74,11 @@ def includeme(config):
         config.registry.signers[key] = backend
 
         # Load the setttings associated to each resource.
-        bucket_wide = "{source[bucket]}".format(**resource)
-        collection_wide = "{source[bucket]}_{source[collection]}".format(**resource)
         for setting in ("reviewers_principal", "editors_principal",
                         "to_review_enabled", "group_check_enabled"):
-            value = settings.get("signer.%s.%s" % (collection_wide, setting))
+            value = utils.get_first_matching_setting(setting, settings, prefixes)
             if value is None:
-                # By bucket.
-                value = settings.get("signer.%s.%s" % (bucket_wide, setting))
-                if value is None:
-                    # Globally.
-                    value = settings.get("signer.%s" % setting, defaults[setting])
+                value = defaults[setting]
             # Resolve placeholder with source info.
             if setting.endswith("_principal"):
                 value = value.format(bucket_id=resource['source']['bucket'],

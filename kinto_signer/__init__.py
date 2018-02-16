@@ -77,8 +77,7 @@ def includeme(config):
         for setting in ("reviewers_group", "editors_group",
                         "to_review_enabled", "group_check_enabled"):
             # Legacy format with _ separation between prefix and setting name.
-            value = settings.get("signer.%s.%s" % (collection_wide, setting),
-                                 settings.get("signer.%s_%s" % (collection_wide, setting)))
+            value = settings.get("signer.%s.%s" % (collection_wide, setting))
             if value is None:
                 # By bucket or globally.
                 value = settings.get("signer.%s.%s" % (bucket_wide, setting))

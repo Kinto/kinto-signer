@@ -23,7 +23,7 @@ def collection_timestamp(client, **kwargs):
     return headers.get('ETag', '').strip('"')
 
 
-def user_principal(client):
+def user_id(client):
     return client.server_info()['user']['id']
 
 
@@ -96,9 +96,9 @@ class BaseTestFunctional(object):
         self.source.create_bucket()
         perms = {"write": ["system.Authenticated"]}
         self.source.create_collection(permissions=perms)
-        principals = [user_principal(self.editor_client),
-                      user_principal(self.someone_client),
-                      user_principal(self.source)]
+        principals = [user_id(self.editor_client),
+                      user_id(self.someone_client),
+                      user_id(self.source)]
         create_group(self.source, "editors", members=principals)
         create_group(self.source, "reviewers", members=principals)
 
@@ -115,8 +115,9 @@ class BaseTestFunctional(object):
 
     def test_groups_and_reviewers_are_forced(self):
         capability = self.source.server_info()['capabilities']['signer']
-        assert capability['group_check_enabled']
-        assert capability['to_review_enabled']
+        for resource in capability['resources']:
+            assert resource['group_check_enabled']
+            assert resource['to_review_enabled']
 
     def test_heartbeat_is_successful(self):
         hb_url = urljoin(self.server_url, '/__heartbeat__')
@@ -290,8 +291,8 @@ class HistoryTest(unittest.TestCase):
     def setUp(self):
         # Give the permission to write in collection to anybody
         self.source.create_bucket()
-        principals = [user_principal(self.editor_client),
-                      user_principal(self.source)]
+        principals = [user_id(self.editor_client),
+                      user_id(self.source)]
         create_group(self.source, "editors", members=principals)
         create_group(self.source, "reviewers", members=principals)
 
@@ -351,9 +352,9 @@ class WorkflowTest(unittest.TestCase):
         cls.client = Client(auth=DEFAULT_AUTH, **client_kw)
         cls.elsa_client = Client(auth=('elsa', ''), **client_kw)
         cls.anna_client = Client(auth=('anna', ''), **client_kw)
-        cls.client_principal = user_principal(cls.client)
-        cls.elsa_principal = user_principal(cls.elsa_client)
-        cls.anna_principal = user_principal(cls.anna_client)
+        cls.client_principal = user_id(cls.client)
+        cls.elsa_principal = user_id(cls.elsa_client)
+        cls.anna_principal = user_id(cls.anna_client)
 
         private_key = os.path.join(__HERE__, 'config/ecdsa.private.pem')
         cls.signer = local_ecdsa.ECDSASigner(private_key=private_key)

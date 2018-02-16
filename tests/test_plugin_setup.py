@@ -22,30 +22,35 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
     @classmethod
     def get_app_settings(cls, extras=None):
         settings = super().get_app_settings(extras)
-        settings['signer.alice.reviewers_group'] = 'revoyeurs'
-        settings['signer.alice_source.to_review_enabled'] = 'true'
+        settings.update({
+            'signer.alice.reviewers_principal': '/buckets/{bucket_id}/groups/revoyeurs',
+            'signer.alice_source.to_review_enabled': 'true',
+            'signer.bob_source.editors_principal': 'tag:{bucket_id}-{collection_id}-reviewers',
+        })
         return settings
 
     def test_capability_is_exposed(self):
-        self.maxDiff = None
         resp = self.app.get('/')
         capabilities = resp.json['capabilities']
         self.assertIn('signer', capabilities)
+
+    def test_review_settings_are_details(self):
+        self.maxDiff = None
+        resp = self.app.get('/')
+        capabilities = resp.json['capabilities']
         expected = {
             "description": "Digital signatures for integrity and authenticity of records.",  # NOQA
             "url": ("https://github.com/Kinto/kinto-signer#kinto-signer"),
             "version": signer_version,
-            "to_review_enabled": False,
-            "group_check_enabled": False,
-            "editors_group": "editors",
-            "reviewers_group": "reviewers",
             "resources": [{
                 "destination": {"bucket": "alice",
                                 "collection": "destination"},
                 "source": {"bucket": "alice",
                            "collection": "source"},
-                "reviewers_group": "revoyeurs",
-                "to_review_enabled": True
+                "editors_principal": "/buckets/alice/groups/editors",
+                "reviewers_principal": "/buckets/alice/groups/revoyeurs",
+                "to_review_enabled": True,
+                "group_check_enabled": False,
             }, {
                 "destination": {"bucket": "alice",
                                 "collection": "to"},
@@ -53,12 +58,19 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
                             "collection": "preview"},
                 "source": {"bucket": "alice",
                            "collection": "from"},
-                "reviewers_group": "revoyeurs",
+                "editors_principal": "/buckets/alice/groups/editors",
+                "reviewers_principal": "/buckets/alice/groups/revoyeurs",
+                "to_review_enabled": False,
+                "group_check_enabled": False,
             }, {
                 "destination": {"bucket": "bob",
                                 "collection": "destination"},
                 "source": {"bucket": "bob",
-                           "collection": "source"}
+                           "collection": "source"},
+                "editors_principal": "tag:bob-source-reviewers",
+                "reviewers_principal": "/buckets/bob/groups/reviewers",
+                "to_review_enabled": False,
+                "group_check_enabled": False,
             }]
         }
         self.assertEqual(expected, capabilities['signer'])

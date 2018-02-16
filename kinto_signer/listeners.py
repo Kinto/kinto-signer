@@ -124,8 +124,7 @@ def send_signer_events(event):
         event.request.registry.notify(review_event)
 
 
-def check_collection_status(event, resources, group_check_enabled,
-                            to_review_enabled, editors_group, reviewers_group):
+def check_collection_status(event, resources):
     """Make sure status changes are allowed.
     """
     payload = event.payload
@@ -151,17 +150,10 @@ def check_collection_status(event, resources, group_check_enabled,
         if resource is None:
             continue
 
-        _to_review_enabled = resource.get("to_review_enabled", to_review_enabled)
-        _group_check_enabled = resource.get("group_check_enabled", group_check_enabled)
-
-        _editors_group = resource.get("editors_group", editors_group)
-        editors_group_uri = instance_uri(event.request, "group",
-                                         bucket_id=payload["bucket_id"],
-                                         id=_editors_group)
-        _reviewers_group = resource.get("reviewers_group", reviewers_group)
-        reviewers_group_uri = instance_uri(event.request, "group",
-                                           bucket_id=payload["bucket_id"],
-                                           id=_reviewers_group)
+        to_review_enabled = resource["to_review_enabled"]
+        group_check_enabled = resource["group_check_enabled"]
+        editors_principal = resource["editors_principal"]
+        reviewers_principal = resource["reviewers_principal"]
 
         if old_status == new_status:
             continue
@@ -172,23 +164,23 @@ def check_collection_status(event, resources, group_check_enabled,
 
         # 2. work-in-progress -> to-review
         elif new_status == STATUS.TO_REVIEW:
-            if editors_group_uri not in user_principals and _group_check_enabled:
-                raise_forbidden(message="Not in %s group" % _editors_group)
+            if editors_principal not in user_principals and group_check_enabled:
+                raise_forbidden(message="User is not %s" % editors_principal)
 
         # 3. to-review -> work-in-progress
         # 3. to-review -> to-sign
         elif new_status == STATUS.TO_SIGN:
             # Only allow to-sign from to-review if reviewer and no-editor
-            if reviewers_group_uri not in user_principals and _group_check_enabled:
-                raise_forbidden(message="Not in %s group" % _reviewers_group)
+            if reviewers_principal not in user_principals and group_check_enabled:
+                raise_forbidden(message="User is not %s" % reviewers_principal)
 
             requires_review = old_status not in (STATUS.TO_REVIEW,
                                                  STATUS.SIGNED)
-            if requires_review and _to_review_enabled:
+            if requires_review and to_review_enabled:
                 raise_invalid(message="Collection not reviewed")
 
             is_same_editor = old_collection.get(FIELD_LAST_EDITOR) == current_user_id
-            if _to_review_enabled and is_same_editor and old_status != STATUS.SIGNED:
+            if to_review_enabled and is_same_editor and old_status != STATUS.SIGNED:
                 raise_forbidden(message="Editor cannot review")
 
         # 4. to-sign -> signed

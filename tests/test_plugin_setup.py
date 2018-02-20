@@ -22,6 +22,7 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
     @classmethod
     def get_app_settings(cls, extras=None):
         settings = super().get_app_settings(extras)
+        settings['signer.reviewers_group'] = '{bucket_id}-{collection_id}-reviewers'
         settings['signer.alice.reviewers_group'] = 'revoyeurs'
         settings['signer.alice_source.to_review_enabled'] = 'true'
         return settings
@@ -38,7 +39,7 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
             "to_review_enabled": False,
             "group_check_enabled": False,
             "editors_group": "editors",
-            "reviewers_group": "reviewers",
+            "reviewers_group": "{bucket_id}-{collection_id}-reviewers",
             "resources": [{
                 "destination": {"bucket": "alice",
                                 "collection": "destination"},
@@ -58,7 +59,8 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
                 "destination": {"bucket": "bob",
                                 "collection": "destination"},
                 "source": {"bucket": "bob",
-                           "collection": "source"}
+                           "collection": "source"},
+                "reviewers_group": "bob-source-reviewers",
             }]
         }
         self.assertEqual(expected, capabilities['signer'])

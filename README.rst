@@ -183,6 +183,10 @@ makes sure that:
     The ``editors`` and ``reviewers`` groups are defined in the **source bucket**
     (e.g. ``/buckets/staging/groups/editors``).
 
+    The ``editors`` and ``reviewers`` groups can have placeholders that are resolved
+    with the source **source bucket/collection**
+    (e.g. ``group:/buckets/{bucket_id}/groups/{collection_id}-reviewers``).
+
 See `Kinto groups API <http://kinto.readthedocs.io/en/stable/api/1.x/groups.html>`_ for more details about how to define groups.
 
 The above settings can be set or overriden by bucket using the ``<bucket_id>_`` prefix or by collection using the ``<bucket_id>_<collection_id>_`` prefix.

@@ -6,6 +6,12 @@ This document describes changes between each past release.
 2.3.0 (unreleased)
 ------------------
 
+**Breaking changes**
+
+- The settings ``reviewers_group``, ``editors_group``, ``to_review_enabled``, ``group_check_enabled``
+  prefixed with ``_`` are not supported anymore. (eg. use ``kinto.signer.staging_certificates.editors_group``
+  instead of ``kinto.signer.staging_certificates_editors_group``)
+
 **New features**
 
 - Allow configuration of ``reviewers_group``, ``editors_group``, ``to_review_enabled``, ``group_check_enabled``

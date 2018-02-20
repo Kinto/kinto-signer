@@ -11,6 +11,10 @@ This document describes changes between each past release.
 - Allow configuration of ``reviewers_group``, ``editors_group``, ``to_review_enabled``, ``group_check_enabled``
   by bucket
 
+**Bug fixes**
+
+- Fix permissions of automatically created preview/destination bucket (fixes #155)
+
 
 2.2.0 (2017-12-06)
 ------------------

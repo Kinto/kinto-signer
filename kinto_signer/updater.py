@@ -161,8 +161,6 @@ class LocalUpdater(object):
         # With the current implementation, the destination is not writable by
         # anyone and readable by everyone.
         # https://github.com/Kinto/kinto-signer/issues/55
-        readonly_perms = {'read': ("system.Everyone",)}
-
         bucket_name = self.destination['bucket']
         collection_name = self.destination['collection']
 
@@ -172,8 +170,9 @@ class LocalUpdater(object):
                                                request=request)
         if created:
             # Set the permissions on the destination bucket.
+            perms = {'write': [request.prefixed_userid]}
             self.permission.replace_object_permissions(self.destination_bucket_uri,
-                                                       readonly_perms)
+                                                       perms)
             notify_resource_event(request,
                                   {'method': 'PUT',
                                    'path': self.destination_bucket_uri},
@@ -201,6 +200,7 @@ class LocalUpdater(object):
                                   action=ACTIONS.CREATE)
 
             # Set the permissions on the destination collection.
+            readonly_perms = {'read': ("system.Everyone",)}
             self.permission.replace_object_permissions(self.destination_collection_uri,
                                                        readonly_perms)
 

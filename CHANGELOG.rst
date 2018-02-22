@@ -20,6 +20,10 @@ This document describes changes between each past release.
   ``to_review_enabled``, and ``group_check_enabled`` settings
   (e.g. ``group:/buckets/{bucket_id}/groups/{collection_id}-reviewers``) (fixes #210)
 
+**Bug fixes**
+
+- Fix permissions of automatically created preview/destination bucket (fixes #155)
+
 
 2.2.0 (2017-12-06)
 ------------------

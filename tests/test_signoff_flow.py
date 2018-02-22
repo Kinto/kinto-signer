@@ -448,7 +448,8 @@ class PreviewCollectionTest(PostgresWebTest, unittest.TestCase):
     def get_app_settings(cls, extras=None):
         settings = super().get_app_settings(extras)
 
-        cls.preview_collection = "/buckets/preview/collections/pcid"
+        cls.preview_bucket = "/buckets/preview"
+        cls.preview_collection = cls.preview_bucket + "/collections/pcid"
 
         settings['signer.to_review_enabled'] = 'true'
         settings['kinto.signer.resources'] = '%s;%s;%s' % (
@@ -458,12 +459,15 @@ class PreviewCollectionTest(PostgresWebTest, unittest.TestCase):
         return settings
 
     def test_the_preview_collection_does_not_exist_at_first(self):
+        self.app.get(self.preview_bucket, headers=self.headers, status=403)
         self.app.get(self.preview_collection, headers=self.headers, status=403)
 
     def test_the_preview_collection_is_updated_and_signed(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
                             headers=self.headers)
+
+        self.app.get(self.preview_bucket, headers=self.headers)
 
         resp = self.app.get(self.preview_collection, headers=self.headers)
         assert 'signature' in resp.json['data']

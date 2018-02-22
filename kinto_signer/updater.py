@@ -145,26 +145,34 @@ class LocalUpdater(object):
         request.bound_data["resource_events"] = before_events
 
     def _ensure_resource_exists(self, resource_type, parent_id,
-                                record_id, request, **attributes):
-        attributes.update({FIELD_ID: record_id})
+                                id, request, **attributes):
+        attributes.update({FIELD_ID: id})
         try:
-            created = self.storage.create(
-                collection_id=resource_type,
-                parent_id=parent_id,
-                record=attributes)
+            created = self.storage.create(collection_id=resource_type,
+                                          parent_id=parent_id,
+                                          record=attributes)
         except UnicityError:
             created = None
         return created
 
     def create_destination(self, request):
-        # Create the destination bucket/collection if they don't already exist.
+        """Create the destination bucket/collection if they don't already exist.
+        """
+        # With the current implementation, the destination is not writable by
+        # anyone and readable by everyone.
+        # https://github.com/Kinto/kinto-signer/issues/55
         bucket_name = self.destination['bucket']
         collection_name = self.destination['collection']
 
-        created = self._ensure_resource_exists('bucket', '',
-                                               bucket_name,
-                                               request)
+        created = self._ensure_resource_exists(resource_type='bucket',
+                                               parent_id='',
+                                               id=bucket_name,
+                                               request=request)
         if created:
+            # Set the permissions on the destination bucket.
+            perms = {'write': [request.prefixed_userid]}
+            self.permission.replace_object_permissions(self.destination_bucket_uri,
+                                                       perms)
             notify_resource_event(request,
                                   {'method': 'PUT',
                                    'path': self.destination_bucket_uri},
@@ -174,11 +182,10 @@ class LocalUpdater(object):
                                   record=created,
                                   action=ACTIONS.CREATE)
 
-        created = self._ensure_resource_exists(
-            'collection',
-            self.destination_bucket_uri,
-            collection_name,
-            request)
+        created = self._ensure_resource_exists(resource_type='collection',
+                                               parent_id=self.destination_bucket_uri,
+                                               id=collection_name,
+                                               request=request)
         if created:
             notify_resource_event(request,
                                   {'method': 'PUT',
@@ -193,12 +200,9 @@ class LocalUpdater(object):
                                   action=ACTIONS.CREATE)
 
             # Set the permissions on the destination collection.
-            # With the current implementation, the destination is not writable by
-            # anyone and readable by everyone.
-            # https://github.com/Kinto/kinto-signer/issues/55
-            permissions = {'read': ("system.Everyone",)}
-            self.permission.replace_object_permissions(
-                self.destination_collection_uri, permissions)
+            readonly_perms = {'read': ("system.Everyone",)}
+            self.permission.replace_object_permissions(self.destination_collection_uri,
+                                                       readonly_perms)
 
     def _get_records(self, rc, last_modified=None, empty_none=True):
         # If last_modified was specified, only retrieve items since then.

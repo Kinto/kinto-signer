@@ -16,6 +16,9 @@ This document describes changes between each past release.
 
 - Allow configuration of ``reviewers_group``, ``editors_group``, ``to_review_enabled``, ``group_check_enabled``
   by bucket
+- Allow placeholders ``{bucket_id}`` and ``{collection_id}`` in ``reviewers_group``, ``editors_group``,
+  ``to_review_enabled``, and ``group_check_enabled`` settings
+  (e.g. ``group:/buckets/{bucket_id}/groups/{collection_id}-reviewers``) (fixes #210)
 
 
 2.2.0 (2017-12-06)

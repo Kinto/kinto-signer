@@ -57,11 +57,13 @@ def includeme(config):
         raise ConfigurationError(error_msg)
     resources = utils.parse_resources(raw_resources)
 
-    reviewers_group = settings.get("signer.reviewers_group", "reviewers")
-    editors_group = settings.get("signer.editors_group", "editors")
-    to_review_enabled = asbool(settings.get("signer.to_review_enabled", False))
-    group_check_enabled = asbool(settings.get("signer.group_check_enabled",
-                                              False))
+    defaults = {
+        "reviewers_group": "reviewers",
+        "editors_group": "editors",
+        "to_review_enabled": False,
+        "group_check_enabled": False,
+    }
+    global_settings = {}
 
     config.registry.signers = {}
     for key, resource in resources.items():
@@ -72,16 +74,25 @@ def includeme(config):
         config.registry.signers[key] = backend
 
         # Load the setttings associated to each resource.
-        bucket_wide = "{source[bucket]}".format(**resource)
-        collection_wide = "{source[bucket]}_{source[collection]}".format(**resource)
         for setting in ("reviewers_group", "editors_group",
                         "to_review_enabled", "group_check_enabled"):
-            # Legacy format with _ separation between prefix and setting name.
-            value = settings.get("signer.%s.%s" % (collection_wide, setting))
+            default = defaults[setting]
+            # Global to all collections.
+            global_settings[setting] = settings.get("signer.%s" % setting, default)
+            # Per collection/bucket:
+            value = utils.get_first_matching_setting(setting, settings, prefixes)
             if value is None:
-                # By bucket or globally.
-                value = settings.get("signer.%s.%s" % (bucket_wide, setting))
-            if value is not None:
+                value = default
+            config_value = value
+
+            if setting.endswith("_enabled"):
+                value = asbool(value)
+            # Resolve placeholder with source info.
+            if setting.endswith("_group"):
+                value = value.format(bucket_id=resource['source']['bucket'],
+                                     collection_id=resource['source']['collection'])
+            # Only store if relevant.
+            if config_value != default:
                 resource[setting] = value
 
     # Expose the capabilities in the root endpoint.
@@ -90,10 +101,7 @@ def includeme(config):
     config.add_api_capability("signer", message, docs,
                               version=__version__,
                               resources=resources.values(),
-                              to_review_enabled=to_review_enabled,
-                              group_check_enabled=group_check_enabled,
-                              editors_group=editors_group,
-                              reviewers_group=reviewers_group)
+                              **global_settings)
 
     config.add_subscriber(
         functools.partial(listeners.set_work_in_progress_status,
@@ -104,10 +112,7 @@ def includeme(config):
     config.add_subscriber(
         functools.partial(listeners.check_collection_status,
                           resources=resources,
-                          to_review_enabled=to_review_enabled,
-                          group_check_enabled=group_check_enabled,
-                          editors_group=editors_group,
-                          reviewers_group=reviewers_group),
+                          **global_settings),
         ResourceChanged,
         for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
         for_resources=('collection',))

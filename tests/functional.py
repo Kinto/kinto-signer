@@ -262,6 +262,15 @@ class BobFunctionalTest(BaseTestFunctional, unittest.TestCase):
     destination_collection = "destination"
 
 
+# Signoff is configured per bucket.
+class PerBucketFunctionalTest(BaseTestFunctional, unittest.TestCase):
+    private_key = os.path.join(__HERE__, 'config/ecdsa.private.pem')
+    source_bucket = "stage"
+    source_collection = "cid"
+    destination_bucket = "prod"
+    destination_collection = "cid"
+
+
 class HistoryTest(unittest.TestCase):
     server_url = SERVER_URL
     private_key = os.path.join(__HERE__, 'config/ecdsa.private.pem')

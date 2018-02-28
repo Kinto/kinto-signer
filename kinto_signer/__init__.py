@@ -139,6 +139,15 @@ def includeme(config):
         for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
         for_resources=('collection',))
 
+    config.add_subscriber(
+        functools.partial(listeners.create_editors_reviewers_groups,
+                          resources=resources,
+                          editors_group=global_settings["editors_group"],
+                          reviewers_group=global_settings["reviewers_group"]),
+        ResourceChanged,
+        for_actions=(ACTIONS.CREATE,),
+        for_resources=('collection',))
+
     sign_data_listener = functools.partial(listeners.sign_collection_data,
                                            resources=resources)
 

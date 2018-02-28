@@ -6,11 +6,13 @@ from kinto.core import errors
 from kinto.core.utils import instance_uri
 from kinto.core.errors import ERRORS
 from pyramid import httpexceptions
+from pyramid.interfaces import IAuthorizationPolicy
 
 from kinto_signer.updater import (LocalUpdater, FIELD_LAST_AUTHOR,
                                   FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER)
 from kinto_signer import events as signer_events
-from kinto_signer.utils import STATUS, PLUGIN_USERID, send_resource_events
+from kinto_signer.utils import (STATUS, PLUGIN_USERID, send_resource_events,
+                                ensure_resource_exists)
 
 
 REVIEW_SETTINGS = ("reviewers_group", "editors_group",
@@ -67,6 +69,13 @@ def pick_resource_and_signer(request, resources, bucket_id, collection_id):
         signer = request.registry.signers[bucket_key]
 
     return resource, signer
+
+
+def resource_group(resource, name, default):
+    group = resource.get(name, default)
+    # If review is configured per-bucket, the group patterns have to be replaced
+    # with the source collection id.
+    return group.format(collection_id=resource["source"]["collection"])
 
 
 def sign_collection_data(event, resources):
@@ -194,12 +203,8 @@ def check_collection_status(event, resources, group_check_enabled,
         # to-review and group checking.
         _to_review_enabled = resource.get("to_review_enabled", to_review_enabled)
         _group_check_enabled = resource.get("group_check_enabled", group_check_enabled)
-        _editors_group = resource.get("editors_group", editors_group)
-        _reviewers_group = resource.get("reviewers_group", reviewers_group)
-        # If review is configured per-bucket, the group patterns have to be replaced
-        # with current collection.
-        _editors_group = _editors_group.format(collection_id=resource["source"]["collection"])
-        _reviewers_group = _reviewers_group.format(collection_id=resource["source"]["collection"])
+        _editors_group = resource_group(resource, "editors_group", default=editors_group)
+        _reviewers_group = resource_group(resource, "reviewers_group", default=reviewers_group)
         # Member of groups have their URIs in their principals.
         editors_group_uri = instance_uri(event.request, "group",
                                          bucket_id=payload["bucket_id"],
@@ -291,3 +296,44 @@ def set_work_in_progress_status(event, resources):
                            destination=resource['destination'])
     with send_resource_events(event.request):
         updater.update_source_status(STATUS.WORK_IN_PROGRESS, event.request)
+
+
+def create_editors_reviewers_groups(event, resources, editors_group, reviewers_group):
+    if event.request.prefixed_userid == PLUGIN_USERID:
+        return
+
+    bid = event.payload["bucket_id"]
+    bucket_uri = instance_uri(event.request, "bucket", id=bid)
+
+    current_user_id = event.request.prefixed_userid
+    principals = event.request.prefixed_principals
+
+    authz = event.request.registry.getUtility(IAuthorizationPolicy)
+
+    for impacted in event.impacted_records:
+        new_collection = impacted["new"]
+
+        # Skip if collection is not configured for review.
+        resource, _ = pick_resource_and_signer(event.request, resources,
+                                               bucket_id=event.payload["bucket_id"],
+                                               collection_id=new_collection["id"])
+        if resource is None:
+            continue
+
+        _editors_group = resource_group(resource, "editors_group", default=editors_group)
+        _reviewers_group = resource_group(resource, "reviewers_group", default=reviewers_group)
+
+        required_perms = authz.get_bound_permissions(bucket_uri, 'group:create')
+        permission = event.request.registry.permission
+        if not permission.check_permission(principals, required_perms):
+            return
+
+        group_perms = {'write': [current_user_id]}
+        with send_resource_events(event.request):
+            for group, members in ((_editors_group, [current_user_id]), (_reviewers_group, [])):
+                ensure_resource_exists(request=event.request,
+                                       resource_name='group',
+                                       parent_id=bucket_uri,
+                                       record={'id': group, 'members': members},
+                                       permissions=group_perms,
+                                       matchdict={'bucket_id': bid, 'id': group})

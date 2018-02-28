@@ -5,14 +5,9 @@ except ImportError:
     import configparser
 
 from kinto import main as kinto_main
+from kinto.core.testing import BaseWebTest as CoreWebTest, get_user_headers, DummyRequest
 
-try:
-    from kinto.core.testing import (
-        BaseWebTest as CoreWebTest, get_user_headers, DummyRequest)
-except ImportError:
-    # kinto <= 4.0.0
-    from kinto.tests.support import BaseWebTest as CoreWebTest, get_user_headers  # NOQA
-    from kinto.tests.core.support import DummyRequest  # NOQA
+__all__ = ["BaseWebTest", "DummyRequest", "get_user_headers"]
 
 
 here = os.path.abspath(os.path.dirname(__file__))

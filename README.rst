@@ -114,8 +114,9 @@ Here is an example of what a configuration could look like:
 |                                 | triggered and the destination where the data and the signatures will     |
 |                                 | end-up.                                                                  |
 |                                 |                                                                          |
-|                                 | In the case buckets URIs are specified the destination collection keeps  |
-|                                 | the same.                                                                |
+|                                 | In the case buckets URIs are specified, every collection in the source   |
+|                                 | bucket will be reviewed/signed, review and destination will keep the     |
+|                                 | same id.                                                                 |
 +---------------------------------+--------------------------------------------------------------------------+
 | kinto.signer.signer_backend     | The python dotted location to the signer to use. By default, a local     |
 |                                 | ECDSA signer will be used. Choices are either                            |

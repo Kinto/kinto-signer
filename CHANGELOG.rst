@@ -19,6 +19,7 @@ This document describes changes between each past release.
 - Allow placeholders ``{bucket_id}`` and ``{collection_id}`` in ``reviewers_group``, ``editors_group``,
   ``to_review_enabled``, and ``group_check_enabled`` settings
   (e.g. ``group:/buckets/{bucket_id}/groups/{collection_id}-reviewers``) (fixes #210)
+- Allow configuration by bucket. Every collections in the source bucket will be reviewed/signed (fixes #144).
 
 **Bug fixes**
 

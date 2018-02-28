@@ -28,12 +28,9 @@ def parse_resources(raw_resources):
     name_generator = NameGenerator()
 
     for res in aslist(raw_resources):
-        error_msg = ("Resources should be defined as "
-                     "'/buckets/<bid>/collections/<cid>;"
-                     "/buckets/<bid>/collections/<cid>' and "
-                     "separated with space or linebreaks. Got %r" % res)
+        error_msg = "Malformed resource: %%s (in %r). See kinto-signer README." % res
         if ";" not in res:
-            raise ConfigurationError(error_msg)
+            raise ConfigurationError(error_msg % "not separated with ';'")
 
         try:
             triplet = res.strip(';').split(';')
@@ -43,7 +40,7 @@ def parse_resources(raw_resources):
             else:
                 source, preview, destination = triplet
         except ValueError:
-            raise ConfigurationError(error_msg)
+            raise ConfigurationError(error_msg % "should be a pair or a triplet")
 
         def _get_resource(resource):
             parts = resource.split('/')
@@ -57,11 +54,11 @@ def parse_resources(raw_resources):
                 # /buckets/bid/collections/cid
                 _, _, bucket, _, collection = parts
             else:
-                raise ConfigurationError(error_msg)
+                raise ConfigurationError(error_msg % "should be a bucket or collection URI")
             valid_ids = (name_generator.match(bucket) and
                          (collection is None or name_generator.match(collection)))
             if not valid_ids:
-                raise ConfigurationError(error_msg)
+                raise ConfigurationError(error_msg % "bucket or collection id is invalid")
             return {
                 'bucket': bucket,
                 'collection': collection

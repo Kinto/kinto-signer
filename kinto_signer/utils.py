@@ -23,6 +23,10 @@ class STATUS(Enum):
 
 
 def _get_resource(resource):
+    # Use the default NameGenerator in Kinto resources to check if the resource
+    # URIs seem valid.
+    # XXX: if a custom ID generator is specified in settings, this verification would
+    # not result as expected.
     name_generator = NameGenerator()
 
     parts = resource.split('/')
@@ -73,13 +77,13 @@ def parse_resources(raw_resources):
             raise ConfigurationError(error_msg % e)
 
         # Raise if mix-up of per-bucket/specific collection.
-        mixed = source['collection'] is None and (
-            destination['collection'] is not None or
-            preview is not None and preview['collection'] is not None)
-        if mixed:
+        sections = (source, destination) + ((preview,) if preview else tuple())
+        all_per_bucket = all([x['collection'] is None for x in sections])
+        all_explicit = all([x['collection'] is not None for x in sections])
+        if not all_per_bucket and not all_explicit:
             raise ConfigurationError(error_msg % "cannot mix bucket and collection URIs")
 
-        # Repeated source/preview/prod.
+        # Repeated source/preview/destination.
         if len(set([tuple(s.items()) for s in (source, preview or {}, destination)])) != 3:
             raise ConfigurationError(error_msg % "cannot have same value for source, "
                                      " preview or destination")
@@ -92,6 +96,7 @@ def parse_resources(raw_resources):
             # For a specific collection.
             key = '/buckets/{bucket}/collections/{collection}'.format(**source)
 
+        # We can't have the same source twice.
         if key in resources:
             raise ConfigurationError(error_msg % "cannot repeat resource")
 
@@ -103,7 +108,7 @@ def parse_resources(raw_resources):
             resources[key]['preview'] = preview
 
     # Raise if same bid/cid twice/thrice.
-    # Theorically we could support it, but since we never said it was possible
+    # Theoretically we could support it, but since we never said it was possible
     # and have no test at all for that, prefer safety.
     sources = [tuple(r['source'].items()) for r in resources.values()]
     destinations = [tuple(r['destination'].items()) for r in resources.values()]

@@ -156,7 +156,17 @@ class ParseResourcesTest(unittest.TestCase):
         with self.assertRaises(ConfigurationError):
             utils.parse_resources(raw_resources)
 
+        raw_resources = ("/buckets/stage/collections/boom;"
+                         "/buckets/preview/collections/boom;"
+                         "/buckets/prod")
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)
+
         raw_resources = "/buckets/stage;/buckets/preview/collections/boom;/buckets/prod"
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)
+
+        raw_resources = "/buckets/stage/collections/boom;/buckets/prod"
         with self.assertRaises(ConfigurationError):
             utils.parse_resources(raw_resources)
 
@@ -176,8 +186,8 @@ class ParseResourcesTest(unittest.TestCase):
     def test_cannot_repeat_resources(self):
         # Repeated source.
         raw_resources = """
-        /buckets/stage;/buckets/preview;/buckets/prod
-        /buckets/stage;/buckets/preview;/buckets/prod
+        /buckets/stage;/buckets/preview1;/buckets/prod1
+        /buckets/stage;/buckets/preview2;/buckets/prod2
         """
         with self.assertRaises(ConfigurationError):
             utils.parse_resources(raw_resources)
@@ -209,7 +219,7 @@ class ParseResourcesTest(unittest.TestCase):
         # Source in other's destination.
         raw_resources = """
         /buckets/bid/collections/cid;/buckets/bid/collections/cid2;/buckets/bid/collections/cid3
-        /buckets/bid/collections/cid1;/buckets/bid/collections/cid2;/buckets/bid/collections/cid
+        /buckets/bid/collections/cida;/buckets/bid/collections/cidb;/buckets/bid/collections/cid
         """
         with self.assertRaises(ConfigurationError):
             utils.parse_resources(raw_resources)

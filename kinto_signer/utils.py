@@ -22,10 +22,33 @@ class STATUS(Enum):
         return not self.__eq__(other)
 
 
+def _get_resource(resource):
+    name_generator = NameGenerator()
+
+    parts = resource.split('/')
+    if len(parts) == 2:
+        bucket, collection = parts
+    elif len(parts) == 3 and parts[1] == 'buckets':
+        # /buckets/bid
+        _, _, bucket = parts
+        collection = None
+    elif len(parts) == 5 and parts[1] == 'buckets' and parts[3] == 'collections':
+        # /buckets/bid/collections/cid
+        _, _, bucket, _, collection = parts
+    else:
+        raise ValueError("should be a bucket or collection URI")
+    valid_ids = (name_generator.match(bucket) and
+                 (collection is None or name_generator.match(collection)))
+    if not valid_ids:
+        raise ValueError("bucket or collection id is invalid")
+    return {
+        'bucket': bucket,
+        'collection': collection
+    }
+
+
 def parse_resources(raw_resources):
     resources = OrderedDict()
-
-    name_generator = NameGenerator()
 
     for res in aslist(raw_resources):
         error_msg = "Malformed resource: %%s (in %r). See kinto-signer README." % res
@@ -35,38 +58,33 @@ def parse_resources(raw_resources):
         try:
             triplet = res.strip(';').split(';')
             if len(triplet) == 2:
-                source, destination = triplet
-                preview = None
+                source_uri, destination_uri = triplet
+                preview_uri = None
             else:
-                source, preview, destination = triplet
+                source_uri, preview_uri, destination_uri = triplet
         except ValueError:
             raise ConfigurationError(error_msg % "should be a pair or a triplet")
 
-        def _get_resource(resource):
-            parts = resource.split('/')
-            if len(parts) == 2:
-                bucket, collection = parts
-            elif len(parts) == 3 and parts[1] == 'buckets':
-                # /buckets/bid
-                _, _, bucket = parts
-                collection = None
-            elif len(parts) == 5 and parts[1] == 'buckets' and parts[3] == 'collections':
-                # /buckets/bid/collections/cid
-                _, _, bucket, _, collection = parts
-            else:
-                raise ConfigurationError(error_msg % "should be a bucket or collection URI")
-            valid_ids = (name_generator.match(bucket) and
-                         (collection is None or name_generator.match(collection)))
-            if not valid_ids:
-                raise ConfigurationError(error_msg % "bucket or collection id is invalid")
-            return {
-                'bucket': bucket,
-                'collection': collection
-            }
+        try:
+            source = _get_resource(source_uri)
+            destination = _get_resource(destination_uri)
+            preview = _get_resource(preview_uri) if preview_uri else None
+        except ValueError as e:
+            raise ConfigurationError(error_msg % e)
 
-        source = _get_resource(source)
-        destination = _get_resource(destination)
+        # Raise if mix-up of per-bucket/specific collection.
+        mixed = source['collection'] is None and (
+            destination['collection'] is not None or
+            preview is not None and preview['collection'] is not None)
+        if mixed:
+            raise ConfigurationError(error_msg % "cannot mix bucket and collection URIs")
 
+        # Repeated source/preview/prod.
+        if len(set([tuple(s.items()) for s in (source, preview or {}, destination)])) != 3:
+            raise ConfigurationError(error_msg % "cannot have same value for source, "
+                                     " preview or destination")
+
+        # Resources info is returned as a mapping by bucket/collection URI.
         if source['collection'] is None:
             # Per bucket.
             key = '/buckets/{bucket}'.format(**source)
@@ -74,14 +92,34 @@ def parse_resources(raw_resources):
             # For a specific collection.
             key = '/buckets/{bucket}/collections/{collection}'.format(**source)
 
+        if key in resources:
+            raise ConfigurationError(error_msg % "cannot repeat resource")
+
         resources[key] = {
             'source': source,
             'destination': destination,
         }
         if preview is not None:
-            resources[key]['preview'] = _get_resource(preview)
-        # XXX: raise if mix-up of per-bucket/specific collection
-        # XXX: raise if same bid/cid twice/thrice
+            resources[key]['preview'] = preview
+
+    # Raise if same bid/cid twice/thrice.
+    # Theorically we could support it, but since we never said it was possible
+    # and have no test at all for that, prefer safety.
+    sources = [tuple(r['source'].items()) for r in resources.values()]
+    destinations = [tuple(r['destination'].items()) for r in resources.values()]
+    previews = [tuple(r['preview'].items()) for r in resources.values()
+                if 'preview' in r]
+
+    if len(set(destinations)) != len(destinations):
+        raise ConfigurationError("Resources setting has repeated destination URI")
+    if len(set(previews)) != len(previews):
+        raise ConfigurationError("Resources setting has repeated preview URI")
+
+    intersects = (set(sources).intersection(set(previews)) or
+                  set(sources).intersection(set(destinations)) or
+                  set(destinations).intersection(set(previews)))
+    if intersects:
+        raise ConfigurationError("cannot repeat URIs across resources")
 
     return resources
 

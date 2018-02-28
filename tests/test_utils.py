@@ -126,13 +126,13 @@ class ParseResourcesTest(unittest.TestCase):
         raw_resources = (
             "/buckets/sbi+d1/collections/scid;/buckets/dbid1/collections/dci,d"
         )
-        with self.assertRaises(ConfigurationError):
+        with self.assertRaises(ConfigurationError) as e:
             utils.parse_resources(raw_resources)
+        assert repr(e.exception).startswith('ConfigurationError("Malformed resource: '
+                                            'bucket or collection id is invalid')
 
     def test_resources_can_be_defined_per_bucket(self):
-        raw_resources = (
-            "/buckets/stage;/buckets/preview;/buckets/prod;"
-        )
+        raw_resources = "/buckets/stage;/buckets/preview;/buckets/prod"
         resources = utils.parse_resources(raw_resources)
         assert resources == {
             '/buckets/stage': {
@@ -150,3 +150,74 @@ class ParseResourcesTest(unittest.TestCase):
                 }
             }
         }
+
+    def test_cannot_mix_per_bucket_and_per_collection(self):
+        raw_resources = "/buckets/stage;/buckets/prod/collections/boom"
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)
+
+        raw_resources = "/buckets/stage;/buckets/preview/collections/boom;/buckets/prod"
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)
+
+    def test_cannot_repeat_source_preview_or_destination(self):
+        raw_resources = "/buckets/stage;/buckets/stage;/buckets/prod"
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)
+
+        raw_resources = "/buckets/stage;/buckets/preview;/buckets/stage"
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)
+
+        raw_resources = "/buckets/stage;/buckets/preview;/buckets/preview"
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)
+
+    def test_cannot_repeat_resources(self):
+        # Repeated source.
+        raw_resources = """
+        /buckets/stage;/buckets/preview;/buckets/prod
+        /buckets/stage;/buckets/preview;/buckets/prod
+        """
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)
+
+        # Repeated reviews.
+        raw_resources = """
+        /buckets/stage1;/buckets/preview;/buckets/prod1
+        /buckets/stage2;/buckets/preview;/buckets/prod2
+        """
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)
+
+        # Repeated destination.
+        raw_resources = """
+        /buckets/stage1;/buckets/prod
+        /buckets/stage2;/buckets/preview;/buckets/prod
+        """
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)
+
+        # Source in other's preview.
+        raw_resources = """
+        /buckets/stage;/buckets/preview;/buckets/prod
+        /buckets/bid1;/buckets/stage;/buckets/bid2
+        """
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)
+
+        # Source in other's destination.
+        raw_resources = """
+        /buckets/bid/collections/cid;/buckets/bid/collections/cid2;/buckets/bid/collections/cid3
+        /buckets/bid/collections/cid1;/buckets/bid/collections/cid2;/buckets/bid/collections/cid
+        """
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)
+
+        # Preview in other's destination.
+        raw_resources = """
+        /buckets/bid/collections/cid0;/buckets/bid/collections/cid1;/buckets/bid/collections/cid2
+        /buckets/bid/collections/cida;/buckets/bid/collections/cidb;/buckets/bid/collections/cid1
+        """
+        with self.assertRaises(ConfigurationError):
+            utils.parse_resources(raw_resources)

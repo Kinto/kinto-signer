@@ -89,8 +89,12 @@ def includeme(config):
                 value = asbool(value)
             # Resolve placeholder with source info.
             if setting.endswith("_group"):
+                # If configured per bucket, then we leave the placeholder.
+                # It will be resolved in listeners during group checking and
+                # by Kinto-Admin when matching user groups with info from capabilities.
+                collection_id = resource['source']['collection'] or "{collection_id}"
                 value = value.format(bucket_id=resource['source']['bucket'],
-                                     collection_id=resource['source']['collection'])
+                                     collection_id=collection_id)
             # Only store if relevant.
             if config_value != default:
                 resource[setting] = value

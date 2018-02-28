@@ -61,6 +61,14 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
                 "source": {"bucket": "bob",
                            "collection": "source"},
                 "reviewers_group": "bob-source-reviewers",
+            }, {
+                "source": {"bucket": "stage",
+                                "collection": None},
+                "preview": {"bucket": "preview",
+                            "collection": None},
+                "destination": {"bucket": "prod",
+                                "collection": None},
+                "reviewers_group": "stage-{collection_id}-reviewers",
             }]
         }
         self.assertEqual(expected, capabilities['signer'])

@@ -35,16 +35,16 @@ class PostgresWebTest(BaseWebTest):
         self.other_userid = resp.json["user"]["id"]
 
         # Source bucket
-        self.app.put_json("/buckets/alice",
+        self.app.put_json(self.source_bucket,
                           {"permissions": {"write": ["system.Authenticated"]}},
                           headers=self.headers)
 
         # Editors and reviewers group
-        self.app.put_json("/buckets/alice/groups/editors",
+        self.app.put_json(self.source_bucket + "/groups/editors",
                           {"data": {"members": [self.userid,
                                                 self.other_userid]}},
                           headers=self.headers)
-        self.app.put_json("/buckets/alice/groups/reviewers",
+        self.app.put_json(self.source_bucket + "/groups/reviewers",
                           {"data": {"members": [self.userid,
                                                 self.other_userid]}},
                           headers=self.headers)
@@ -69,8 +69,10 @@ class PostgresWebTest(BaseWebTest):
         settings['permission_url'] = db
         settings['cache_backend'] = 'kinto.core.cache.memory'
 
-        cls.source_collection = "/buckets/alice/collections/scid"
-        cls.destination_collection = "/buckets/destination/collections/dcid"
+        cls.source_bucket = "/buckets/alice"
+        cls.source_collection = cls.source_bucket + "/collections/scid"
+        cls.destination_bucket = "/buckets/alice"
+        cls.destination_collection = cls.destination_bucket + "/collections/dcid"
 
         settings['kinto.signer.resources'] = '%s;%s' % (
             cls.source_collection,
@@ -486,3 +488,37 @@ class PreviewCollectionTest(PostgresWebTest, unittest.TestCase):
 
         resp = self.app.get(self.preview_collection, headers=self.headers)
         assert resp.json['data']['displayFields'] == ['age']
+
+
+class PerBucketTest(PostgresWebTest, unittest.TestCase):
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
+
+        cls.source_bucket = "/buckets/stage"
+        cls.source_collection = cls.source_bucket + "/collections/cid"
+        cls.preview_bucket = "/buckets/preview"
+        cls.preview_collection = cls.preview_bucket + "/collections/cid"
+        cls.destination_bucket = "/buckets/prod"
+        cls.destination_collection = cls.destination_bucket + "/collections/cid"
+
+        settings['kinto.signer.resources'] = ';'.join([
+            cls.source_bucket,
+            cls.preview_bucket,
+            cls.destination_bucket])
+        return settings
+
+    def test_destination_does_not_exist_at_first(self):
+        self.app.get(self.preview_collection, headers=self.headers, status=403)
+        self.app.get(self.destination_collection, headers=self.headers, status=403)
+
+    def test_collection_with_same_name_gets_created_when_signed(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+        self.app.get(self.preview_collection, headers=self.headers, status=200)
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
+        self.app.get(self.destination_collection, headers=self.headers, status=200)

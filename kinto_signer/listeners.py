@@ -1,3 +1,5 @@
+import copy
+
 import transaction
 from kinto import logger
 from kinto.core import errors
@@ -28,6 +30,31 @@ def raise_forbidden(**kwargs):
     raise errors.http_error(httpexceptions.HTTPForbidden(), **kwargs)
 
 
+def pick_resource_and_signer(request, resources, bucket_id, collection_id):
+    bucket_key = instance_uri(request, "bucket", id=bucket_id)
+    collection_key = instance_uri(request, "collection",
+                                  bucket_id=bucket_id,
+                                  id=collection_id)
+    resource = signer = None
+    # Review might have been configured explictly for this collection,
+    if collection_key in resources:
+        resource = resources[collection_key]
+        signer = request.registry.signers[collection_key]
+    elif bucket_key in resources:
+        # Or via its bucket.
+        resource = copy.deepcopy(resources[bucket_key])
+        signer = request.registry.signers[bucket_key]
+        # Since it was configured per bucket, we want to make this
+        # resource look as if it was configured explicitly for this
+        # collection.
+        resource["source"]["collection"] = collection_id
+        resource["destination"]["collection"] = collection_id
+        if "preview" in resource:
+            resource["preview"]["collection"] = collection_id
+
+    return resource, signer
+
+
 def sign_collection_data(event, resources):
     """
     Listen to resource change events, to check if a new signature is
@@ -51,21 +78,21 @@ def sign_collection_data(event, resources):
         new_collection = impacted['new']
         old_collection = impacted.get('old', {})
 
-        uri = instance_uri(event.request, "collection",
-                           bucket_id=payload['bucket_id'],
-                           id=new_collection['id'])
-        resource = resources.get(uri)
-
         # Only sign the configured resources.
+        resource, signer = pick_resource_and_signer(event.request, resources,
+                                                    bucket_id=payload['bucket_id'],
+                                                    collection_id=new_collection['id'])
         if resource is None:
             continue
 
-        registry = event.request.registry
-        updater = LocalUpdater(signer=registry.signers[uri],
-                               storage=registry.storage,
-                               permission=registry.permission,
+        updater = LocalUpdater(signer=signer,
+                               storage=event.request.registry.storage,
+                               permission=event.request.registry.permission,
                                source=resource['source'],
                                destination=resource['destination'])
+
+        uri = instance_uri(event.request, "collection", bucket_id=payload['bucket_id'],
+                           id=new_collection['id'])
 
         review_event_cls = None
         try:
@@ -143,22 +170,26 @@ def check_collection_status(event, resources, group_check_enabled,
         new_collection = impacted["new"]
         new_status = new_collection.get("status")
 
-        # Skip if resource is not configured.
-        key = instance_uri(event.request, "collection",
-                           bucket_id=payload["bucket_id"],
-                           id=new_collection["id"])
-        resource = resources.get(key)
+        # Skip if collection is not configured for review.
+        resource, _ = pick_resource_and_signer(event.request, resources,
+                                               bucket_id=payload["bucket_id"],
+                                               collection_id=new_collection["id"])
         if resource is None:
             continue
 
+        # to-review and group checking.
         _to_review_enabled = resource.get("to_review_enabled", to_review_enabled)
         _group_check_enabled = resource.get("group_check_enabled", group_check_enabled)
-
         _editors_group = resource.get("editors_group", editors_group)
+        _reviewers_group = resource.get("reviewers_group", reviewers_group)
+        # If review is configured per-bucket, the group patterns have to be replaced
+        # with current collection.
+        _editors_group = _editors_group.format(collection_id=resource["source"]["collection"])
+        _reviewers_group = _reviewers_group.format(collection_id=resource["source"]["collection"])
+        # Member of groups have their URIs in their principals.
         editors_group_uri = instance_uri(event.request, "group",
                                          bucket_id=payload["bucket_id"],
                                          id=_editors_group)
-        _reviewers_group = resource.get("reviewers_group", reviewers_group)
         reviewers_group_uri = instance_uri(event.request, "group",
                                            bucket_id=payload["bucket_id"],
                                            id=_reviewers_group)
@@ -215,11 +246,11 @@ def check_collection_tracking(event, resources):
         old_collection = impacted.get("old", {})
         new_collection = impacted["new"]
 
+        resource, _ = pick_resource_and_signer(event.request, resources,
+                                               bucket_id=event.payload["bucket_id"],
+                                               collection_id=new_collection["id"])
         # Skip if resource is not configured.
-        key = instance_uri(event.request, "collection",
-                           bucket_id=event.payload["bucket_id"],
-                           id=new_collection["id"])
-        if key not in resources:
+        if resource is None:
             continue
 
         for field in tracking_fields:
@@ -232,21 +263,16 @@ def check_collection_tracking(event, resources):
 def set_work_in_progress_status(event, resources):
     """Put the status in work-in-progress if was signed.
     """
-    payload = event.payload
-
-    key = instance_uri(event.request, "collection",
-                       bucket_id=payload["bucket_id"],
-                       id=payload["collection_id"])
-    resource = resources.get(key)
-
+    resource, signer = pick_resource_and_signer(event.request, resources,
+                                                bucket_id=event.payload["bucket_id"],
+                                                collection_id=event.payload["collection_id"])
     # Skip if resource is not configured.
     if resource is None:
         return
 
-    registry = event.request.registry
-    updater = LocalUpdater(signer=registry.signers[key],
-                           storage=registry.storage,
-                           permission=registry.permission,
+    updater = LocalUpdater(signer=signer,
+                           storage=event.request.registry.storage,
+                           permission=event.request.registry.permission,
                            source=resource['source'],
                            destination=resource['destination'])
     with updater.send_events(event.request):

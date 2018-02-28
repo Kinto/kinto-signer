@@ -28,12 +28,9 @@ def parse_resources(raw_resources):
     name_generator = NameGenerator()
 
     for res in aslist(raw_resources):
-        error_msg = ("Resources should be defined as "
-                     "'/buckets/<bid>/collections/<cid>;"
-                     "/buckets/<bid>/collections/<cid>' and "
-                     "separated with space or linebreaks. Got %r" % res)
+        error_msg = "Malformed resource: %%s (in %r). See kinto-signer README." % res
         if ";" not in res:
-            raise ConfigurationError(error_msg)
+            raise ConfigurationError(error_msg % "not separated with ';'")
 
         try:
             triplet = res.strip(';').split(';')
@@ -43,35 +40,48 @@ def parse_resources(raw_resources):
             else:
                 source, preview, destination = triplet
         except ValueError:
-            raise ConfigurationError(error_msg)
+            raise ConfigurationError(error_msg % "should be a pair or a triplet")
 
         def _get_resource(resource):
             parts = resource.split('/')
             if len(parts) == 2:
                 bucket, collection = parts
-            elif len(parts) == 5:
+            elif len(parts) == 3 and parts[1] == 'buckets':
+                # /buckets/bid
+                _, _, bucket = parts
+                collection = None
+            elif len(parts) == 5 and parts[1] == 'buckets' and parts[3] == 'collections':
+                # /buckets/bid/collections/cid
                 _, _, bucket, _, collection = parts
             else:
-                raise ConfigurationError(error_msg)
+                raise ConfigurationError(error_msg % "should be a bucket or collection URI")
             valid_ids = (name_generator.match(bucket) and
-                         name_generator.match(collection))
+                         (collection is None or name_generator.match(collection)))
             if not valid_ids:
-                raise ConfigurationError(error_msg)
+                raise ConfigurationError(error_msg % "bucket or collection id is invalid")
             return {
                 'bucket': bucket,
                 'collection': collection
             }
 
-        pattern = '/buckets/{bucket}/collections/{collection}'
         source = _get_resource(source)
         destination = _get_resource(destination)
-        key = pattern.format(**source)
+
+        if source['collection'] is None:
+            # Per bucket.
+            key = '/buckets/{bucket}'.format(**source)
+        else:
+            # For a specific collection.
+            key = '/buckets/{bucket}/collections/{collection}'.format(**source)
+
         resources[key] = {
             'source': source,
             'destination': destination,
         }
         if preview is not None:
             resources[key]['preview'] = _get_resource(preview)
+        # XXX: raise if mix-up of per-bucket/specific collection
+        # XXX: raise if same bid/cid twice/thrice
 
     return resources
 

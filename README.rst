@@ -103,15 +103,20 @@ Here is an example of what a configuration could look like:
   kinto.includes = kinto_signer
 
   kinto.signer.resources =
-      /buckets/source/collections/collection1;/buckets/destination/collections/collection1
-      /buckets/source/collections/collection2;/buckets/destination/collections/collection2
+      /buckets/source;/bucket/destination
+      /buckets/source/collections/collection1;/buckets/destination/collections/collection2
+      /buckets/bid/collections/cid;/buckets/bid/collections/cid2
 
 +---------------------------------+--------------------------------------------------------------------------+
 | Setting name                    | What does it do?                                                         |
 +=================================+==========================================================================+
-| kinto.signer.resources          | The source collections URIs on which signatures should be triggered      |
-|                                 | and the destination collection where the data and the signatures will    |
+| kinto.signer.resources          | The source URIs (bucket or collection) on which signatures should be     |
+|                                 | triggered and the destination where the data and the signatures will     |
 |                                 | end-up.                                                                  |
+|                                 |                                                                          |
+|                                 | In the case buckets URIs are specified, every collection in the source   |
+|                                 | bucket will be reviewed/signed, review and destination will keep the     |
+|                                 | same id.                                                                 |
 +---------------------------------+--------------------------------------------------------------------------+
 | kinto.signer.signer_backend     | The python dotted location to the signer to use. By default, a local     |
 |                                 | ECDSA signer will be used. Choices are either                            |
@@ -211,7 +216,8 @@ collection will be enabled.
 .. code-block:: ini
 
   kinto.signer.resources =
-      /buckets/staging/collections/articles;/buckets/preview/collections/articles;/buckets/blog/collections/articles
+      /buckets/staging;/buckets/preview;/buckets/blog
+      /buckets/bid/collections/c1;/buckets/bid/collections/c2;/buckets/bid/collections/c3
 
 
 .. image:: workflow.png
@@ -249,7 +255,7 @@ Suppose we defined the following resources in the configuration:
 
 .. code-block:: ini
 
-    kinto.signer.resources = /buckets/source/collections/collection1;/buckets/destination/collections/collection1
+    kinto.signer.resources = /buckets/source;/buckets/destination
 
 First, if necessary, we create the appropriate Kinto objects, for example, with ``httpie``:
 

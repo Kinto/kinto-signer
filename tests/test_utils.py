@@ -128,3 +128,25 @@ class ParseResourcesTest(unittest.TestCase):
         )
         with self.assertRaises(ConfigurationError):
             utils.parse_resources(raw_resources)
+
+    def test_resources_can_be_defined_per_bucket(self):
+        raw_resources = (
+            "/buckets/stage;/buckets/preview;/buckets/prod;"
+        )
+        resources = utils.parse_resources(raw_resources)
+        assert resources == {
+            '/buckets/stage': {
+                'source': {
+                    'bucket': 'stage',
+                    'collection': None
+                },
+                'preview': {
+                    'bucket': 'preview',
+                    'collection': None
+                },
+                'destination': {
+                    'bucket': 'prod',
+                    'collection': None
+                }
+            }
+        }

@@ -194,6 +194,19 @@ class IncludeMeTest(unittest.TestCase):
             timers = set(c[0][0] for c in mocked.call_args_list)
             assert 'plugins.signer' in timers
 
+    def test_includeme_raises_value_error_if_unknown_placeholder(self):
+        settings = {
+            "signer.resources": (
+                "/buckets/sb1/collections/sc1;/buckets/db1/collections/dc1",
+            ),
+            "signer.editors_group": "{datetime}_group",
+            "signer.ecdsa.public_key": "/path/to/key",
+            "signer.ecdsa.private_key": "/path/to/private",
+        }
+        with pytest.raises(ConfigurationError) as excinfo:
+            self.includeme(settings=settings)
+        assert "Unknown group placeholder 'datetime'" in repr(excinfo.value)
+
 
 class OnCollectionChangedTest(unittest.TestCase):
 

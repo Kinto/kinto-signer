@@ -233,8 +233,9 @@ Settings can be prefixed with bucket id:
 
 .. code-block:: ini
 
-    kinto.signer.<bucket-id>.signer_backend = kinto_signer.signer.autograph
-    kinto.signer.<bucket-id>.autograph.server_url = http://172.11.20.1:8888
+    kinto.signer.signer_backend = kinto_signer.signer.autograph
+    kinto.signer.autograph.server_url = http://172.11.20.1:8888
+
     kinto.signer.<bucket-id>.autograph.hawk_id = bob
     kinto.signer.<bucket-id>.autograph.hawk_secret = a-secret
 

@@ -1,3 +1,4 @@
+import re
 import pkg_resources
 import functools
 
@@ -15,33 +16,7 @@ from kinto_signer import listeners
 __version__ = pkg_resources.get_distribution(__package__).version
 
 
-def _signer_dotted_location(settings, resource):
-    """
-    Returns the Python dotted location for the specified `resource`, along
-    the associated settings prefix.
-
-    If a ``signer_backend`` setting is defined for a particular bucket
-    or a particular collection, then use the same prefix for every other
-    settings names.
-
-    .. note::
-
-        This means that every signer settings must be duplicated for each
-        dedicated signer.
-    """
-    prefix = 'signer.'
-    bucket_wide = '{bucket}.'.format(**resource['source'])
-    collection_wide = '{bucket}_{collection}.'.format(**resource['source'])
-
-    prefixes = [prefix + collection_wide, prefix + bucket_wide, prefix]
-
-    backend_setting_value = utils.get_first_matching_setting('signer_backend', settings, prefixes)
-
-    # Fallback to the local ECDSA signer.
-    default_signer_module = "kinto_signer.signer.local_ecdsa"
-    signer_dotted_location = backend_setting_value or default_signer_module
-
-    return signer_dotted_location, prefixes
+DEFAULT_SIGNER = "kinto_signer.signer.local_ecdsa"
 
 
 def includeme(config):
@@ -63,15 +38,48 @@ def includeme(config):
         "to_review_enabled": False,
         "group_check_enabled": False,
     }
+
     global_settings = {}
 
     config.registry.signers = {}
     for key, resource in resources.items():
-        # Load the signers associated to each resource.
-        dotted_location, prefixes = _signer_dotted_location(settings, resource)
-        signer_module = config.maybe_dotted(dotted_location)
-        backend = signer_module.load_from_settings(settings, prefixes=prefixes)
-        config.registry.signers[key] = backend
+
+        server_wide = 'signer.'
+        bucket_wide = 'signer.{bucket}.'.format(**resource['source'])
+
+        if resource['source']['collection'] is not None:
+            collection_wide = 'signer.{bucket}_{collection}.'.format(**resource['source'])
+            signers_prefixes = [(key, [collection_wide, bucket_wide, server_wide])]
+        else:
+            # If collection is None, it means the resource was configured for the whole bucket.
+            signers_prefixes = [(key, [bucket_wide, server_wide])]
+            # Iterate on settings to see if a specific signer config exists for
+            # a collection within this bucket.
+            bid = resource['source']['bucket']
+            # Match setting names like signer.stage_specific.autograph.hawk_id
+            matched = [re.search('signer\.{0}_([^\.]+)\.(.+)'.format(bid), k)
+                       for k, v in settings.items()]
+            for cid, unprefixed_setting_name in [m.groups() for m in matched if m]:
+                if unprefixed_setting_name in listeners.REVIEW_SETTINGS:
+                    # No need to have a custom signer for specific review settings.
+                    continue
+                # A specific signer will be instantiated and stored in the registry
+                # with collection URI key since at least one of its parameter is specific.
+                signer_key = "/buckets/{0}/collections/{1}".format(bid, cid)
+                # Define the list of prefixes for this collection. This will allow
+                # to mix collection specific with global defaults for signer settings.
+                collection_wide = 'signer.{0}_{1}.'.format(bid, cid)
+                signers_prefixes += [(signer_key, [collection_wide, bucket_wide, server_wide])]
+
+        # Instantiates the signers associated to this resource.
+        for signer_key, prefixes in signers_prefixes:
+            dotted_location = utils.get_first_matching_setting('signer_backend',
+                                                               settings,
+                                                               prefixes,
+                                                               default=DEFAULT_SIGNER)
+            signer_module = config.maybe_dotted(dotted_location)
+            backend = signer_module.load_from_settings(settings, prefixes=prefixes)
+            config.registry.signers[signer_key] = backend
 
         # Load the setttings associated to each resource.
         for setting in listeners.REVIEW_SETTINGS:

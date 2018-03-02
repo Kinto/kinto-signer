@@ -7,24 +7,19 @@ from kinto.core.errors import ERRORS
 from .support import BaseWebTest, get_user_headers
 
 
-def _patch_autograph():
-    # Patch calls to Autograph.
-    patch = mock.patch('kinto_signer.signer.autograph.requests')
-    mocked = patch.start()
-    mocked.post.return_value.json.return_value = [{
-        "signature": "",
-        "hash_algorithm": "",
-        "signature_encoding": "",
-        "content-signature": "",
-        "x5u": ""}]
-    return patch
-
-
 class PostgresWebTest(BaseWebTest):
     def setUp(self):
         super(PostgresWebTest, self).setUp()
-        patch = _patch_autograph()
+        # Patch calls to Autograph.
+        patch = mock.patch('kinto_signer.signer.autograph.requests')
         self.addCleanup(patch.stop)
+        self.mocked_autograph = patch.start()
+        self.mocked_autograph.post.return_value.json.return_value = [{
+            "signature": "",
+            "hash_algorithm": "",
+            "signature_encoding": "",
+            "content-signature": "",
+            "x5u": ""}]
 
         self.headers = get_user_headers('tarte:en-pion')
         resp = self.app.get("/", headers=self.headers)
@@ -510,6 +505,7 @@ class PerBucketTest(PostgresWebTest, unittest.TestCase):
         settings['signer.to_review_enabled'] = 'true'
         settings['signer.stage_specific.to_review_enabled'] = 'false'
 
+        settings['signer.stage_specific.autograph.hawk_id'] = 'for-specific'
         return settings
 
     def test_destination_does_not_exist_at_first(self):
@@ -526,9 +522,20 @@ class PerBucketTest(PostgresWebTest, unittest.TestCase):
                             {"data": {"status": "to-sign"}},
                             headers=self.other_headers)
         self.app.get(self.destination_collection, headers=self.headers, status=200)
+        assert self.mocked_autograph.post.called
 
     def test_review_settings_can_be_overriden_for_a_specific_collection(self):
         # review is not enabled for this particular one, sign directly!
         self.app.put_json(self.source_bucket + "/collections/specific",
                           {"data": {"status": "to-sign"}},
                           headers=self.headers)
+
+    def test_signer_can_be_specified_per_collection(self):
+        self.app.put_json(self.source_bucket + "/collections/specific",
+                          {"data": {"status": "to-sign"}},
+                          headers=self.headers)
+
+        args, kwargs = self.mocked_autograph.post.call_args_list[0]
+        assert args[0].startswith('http://localhost:8000')  # global.
+        assert kwargs['auth'].credentials['id'] == 'for-specific'
+        assert kwargs['auth'].credentials['key'].startswith('fs5w')  # global in signer.ini

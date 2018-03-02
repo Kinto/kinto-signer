@@ -46,11 +46,9 @@ def pick_resource_and_signer(request, resources, bucket_id, collection_id):
     # Review might have been configured explictly for this collection,
     if collection_key in resources:
         resource = resources[collection_key]
-        signer = request.registry.signers[collection_key]
     elif bucket_key in resources:
         # Or via its bucket.
         resource = copy.deepcopy(resources[bucket_key])
-        signer = request.registry.signers[bucket_key]
         # Since it was configured per bucket, we want to make this
         # resource look as if it was configured explicitly for this
         # collection.
@@ -64,6 +62,11 @@ def pick_resource_and_signer(request, resources, bucket_id, collection_id):
             setting_key = "signer.%s_%s.%s" % (bucket_id, collection_id, setting)
             if setting_key in settings:
                 resource[setting] = settings[setting_key]
+
+    if collection_key in request.registry.signers:
+        signer = request.registry.signers[collection_key]
+    elif bucket_key in request.registry.signers:
+        signer = request.registry.signers[bucket_key]
 
     return resource, signer
 

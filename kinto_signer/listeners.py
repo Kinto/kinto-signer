@@ -13,6 +13,9 @@ from kinto_signer import events as signer_events
 from kinto_signer.utils import STATUS
 
 
+REVIEW_SETTINGS = ("reviewers_group", "editors_group",
+                   "to_review_enabled", "group_check_enabled")
+
 _PLUGIN_USERID = "plugin:kinto-signer"
 
 
@@ -35,7 +38,11 @@ def pick_resource_and_signer(request, resources, bucket_id, collection_id):
     collection_key = instance_uri(request, "collection",
                                   bucket_id=bucket_id,
                                   id=collection_id)
+
+    settings = request.registry.settings
+
     resource = signer = None
+
     # Review might have been configured explictly for this collection,
     if collection_key in resources:
         resource = resources[collection_key]
@@ -51,6 +58,12 @@ def pick_resource_and_signer(request, resources, bucket_id, collection_id):
         resource["destination"]["collection"] = collection_id
         if "preview" in resource:
             resource["preview"]["collection"] = collection_id
+
+        # Look-up if a setting overrides a global one here.
+        for setting in REVIEW_SETTINGS:
+            setting_key = "signer.%s_%s.%s" % (bucket_id, collection_id, setting)
+            if setting_key in settings:
+                resource[setting] = settings[setting_key]
 
     return resource, signer
 

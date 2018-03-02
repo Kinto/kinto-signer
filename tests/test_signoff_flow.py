@@ -506,6 +506,10 @@ class PerBucketTest(PostgresWebTest, unittest.TestCase):
             cls.source_bucket,
             cls.preview_bucket,
             cls.destination_bucket])
+
+        settings['signer.to_review_enabled'] = 'true'
+        settings['signer.stage_specific.to_review_enabled'] = 'false'
+
         return settings
 
     def test_destination_does_not_exist_at_first(self):
@@ -520,5 +524,11 @@ class PerBucketTest(PostgresWebTest, unittest.TestCase):
 
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
-                            headers=self.headers)
+                            headers=self.other_headers)
         self.app.get(self.destination_collection, headers=self.headers, status=200)
+
+    def test_review_settings_can_be_overriden_for_a_specific_collection(self):
+        # review is not enabled for this particular one, sign directly!
+        self.app.put_json(self.source_bucket + "/collections/specific",
+                          {"data": {"status": "to-sign"}},
+                          headers=self.headers)

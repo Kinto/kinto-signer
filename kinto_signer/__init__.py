@@ -74,8 +74,7 @@ def includeme(config):
         config.registry.signers[key] = backend
 
         # Load the setttings associated to each resource.
-        for setting in ("reviewers_group", "editors_group",
-                        "to_review_enabled", "group_check_enabled"):
+        for setting in listeners.REVIEW_SETTINGS:
             default = defaults[setting]
             # Global to all collections.
             global_settings[setting] = settings.get("signer.%s" % setting, default)

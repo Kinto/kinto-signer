@@ -103,9 +103,9 @@ Here is an example of what a configuration could look like:
   kinto.includes = kinto_signer
 
   kinto.signer.resources =
-      /buckets/source;/bucket/destination
-      /buckets/source/collections/collection1;/buckets/destination/collections/collection2
-      /buckets/bid/collections/cid;/buckets/bid/collections/cid2
+      /buckets/source                         ; /bucket/destination
+      /buckets/source/collections/collection1 ; /buckets/destination/collections/collection2
+      /buckets/bid/collections/cid            ; /buckets/bid/collections/cid2
 
 +---------------------------------+--------------------------------------------------------------------------+
 | Setting name                    | What does it do?                                                         |
@@ -216,8 +216,8 @@ collection will be enabled.
 .. code-block:: ini
 
   kinto.signer.resources =
-      /buckets/staging;/buckets/preview;/buckets/blog
-      /buckets/bid/collections/c1;/buckets/bid/collections/c2;/buckets/bid/collections/c3
+      /buckets/staging            ; /buckets/preview            ; /buckets/blog
+      /buckets/bid/collections/c1 ; /buckets/bid/collections/c2 ; /buckets/bid/collections/c3
 
 
 .. image:: workflow.png
@@ -255,7 +255,7 @@ Suppose we defined the following resources in the configuration:
 
 .. code-block:: ini
 
-    kinto.signer.resources = /buckets/source;/buckets/destination
+    kinto.signer.resources = /buckets/source ; /buckets/destination
 
 First, if necessary, we create the appropriate Kinto objects, for example, with ``httpie``:
 

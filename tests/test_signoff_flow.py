@@ -385,7 +385,7 @@ class SpecificUserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.Test
         cls.source_collection1 = "/buckets/alice/collections/cid1"
         cls.source_collection2 = "/buckets/alice/collections/cid2"
 
-        settings['kinto.signer.resources'] = "%s;%s %s;%s" % (
+        settings['kinto.signer.resources'] = "%s;%s\n%s;%s" % (
             cls.source_collection1,
             cls.source_collection1.replace("alice", "destination"),
             cls.source_collection2,

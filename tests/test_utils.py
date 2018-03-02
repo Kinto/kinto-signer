@@ -76,6 +76,16 @@ class ParseResourcesTest(unittest.TestCase):
             }
         }
 
+    def test_spaces_are_supported(self):
+        raw_resources = """
+        /buckets/bid1/collections/scid1 ; /buckets/bid1/collections/dcid1
+        /buckets/bid2/collections/scid2 ; /buckets/bid2/collections/dcid2
+        """
+        resources = utils.parse_resources(raw_resources)
+        assert len(resources) == 2
+        assert resources['/buckets/bid1/collections/scid1']['source']['bucket'] == 'bid1'
+        assert resources['/buckets/bid2/collections/scid2']['source']['bucket'] == 'bid2'
+
     def test_multiple_resources_are_supported(self):
         raw_resources = """
         /buckets/sbid1/collections/scid1;/buckets/dbid1/collections/dcid1
@@ -211,14 +221,14 @@ class ParseResourcesTest(unittest.TestCase):
         # Source in other's preview.
         raw_resources = """
         /buckets/stage;/buckets/preview;/buckets/prod
-        /buckets/bid1;/buckets/stage;/buckets/bid2
+        /buckets/bid1 ;/buckets/stage  ;/buckets/bid2
         """
         with self.assertRaises(ConfigurationError):
             utils.parse_resources(raw_resources)
 
         # Source in other's destination.
         raw_resources = """
-        /buckets/bid/collections/cid;/buckets/bid/collections/cid2;/buckets/bid/collections/cid3
+        /buckets/bid/collections/cid ;/buckets/bid/collections/cid2;/buckets/bid/collections/cid3
         /buckets/bid/collections/cida;/buckets/bid/collections/cidb;/buckets/bid/collections/cid
         """
         with self.assertRaises(ConfigurationError):

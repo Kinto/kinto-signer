@@ -196,9 +196,7 @@ class IncludeMeTest(unittest.TestCase):
 
     def test_includeme_raises_value_error_if_unknown_placeholder(self):
         settings = {
-            "signer.resources": (
-                "/buckets/sb1/collections/sc1;/buckets/db1/collections/dc1",
-            ),
+            "signer.resources": "/buckets/sb1/collections/sc1;/buckets/db1/collections/dc1",
             "signer.editors_group": "{datetime}_group",
             "signer.ecdsa.public_key": "/path/to/key",
             "signer.ecdsa.private_key": "/path/to/private",

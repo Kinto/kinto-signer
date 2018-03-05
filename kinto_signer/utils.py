@@ -56,11 +56,12 @@ def parse_resources(raw_resources):
     lines = [l.strip() for l in raw_resources.strip().splitlines()]
     for res in lines:
         error_msg = "Malformed resource: %%s (in %r). See kinto-signer README." % res
-        if ";" not in res:
+        if "->" not in res and ";" not in res:
             raise ConfigurationError(error_msg % "not separated with ';'")
 
         try:
-            triplet = [r.strip() for r in res.strip(';').split(';')]
+            triplet = [r.strip()
+                       for r in res.replace(';', ' ').replace('->', ' ').split()]
             if len(triplet) == 2:
                 source_uri, destination_uri = triplet
                 preview_uri = None

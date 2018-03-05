@@ -14,7 +14,7 @@ This document describes changes between each past release.
 
 **New features**
 
-- Allow spaces in resources configurations (fixes #148)
+- Allow spaces in resources configurations, and separate URIs with ``->`` for better readability (fixes #148, fixes #88)
 - Allow configuration of ``reviewers_group``, ``editors_group``, ``to_review_enabled``, ``group_check_enabled``
   by bucket
 - Allow placeholders ``{bucket_id}`` and ``{collection_id}`` in ``reviewers_group``, ``editors_group``,

@@ -129,8 +129,9 @@ def parse_resources(raw_resources):
     return resources
 
 
-def get_first_matching_setting(setting_name, settings, prefixes):
+def get_first_matching_setting(setting_name, settings, prefixes, default=None):
     for prefix in prefixes:
         prefixed_setting_name = '{}{}'.format(prefix, setting_name)
         if prefixed_setting_name in settings:
             return settings[prefixed_setting_name]
+    return default

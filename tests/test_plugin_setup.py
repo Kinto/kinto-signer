@@ -115,7 +115,7 @@ class IncludeMeTest(unittest.TestCase):
     def test_defines_a_signer_per_bucket(self):
         settings = {
             "signer.resources": (
-                "/buckets/sb1/collections/sc1;/buckets/db1/collections/dc1\n"
+                "/buckets/sb1/collections/sc1 -> /buckets/db1/collections/dc1\n"
             ),
             "signer.sb1.signer_backend": "kinto_signer.signer.local_ecdsa",
             "signer.sb1.ecdsa.public_key": "/path/to/key",
@@ -128,8 +128,8 @@ class IncludeMeTest(unittest.TestCase):
     def test_defines_a_signer_per_bucket_and_collection(self):
         settings = {
             "signer.resources": (
-                "/buckets/sb1/collections/sc1;/buckets/db1/collections/dc1\n"
-                "/buckets/sb1/collections/sc2;/buckets/db1/collections/dc2"
+                "/buckets/sb1/collections/sc1 -> /buckets/db1/collections/dc1\n"
+                "/buckets/sb1/collections/sc2 -> /buckets/db1/collections/dc2"
             ),
             "signer.sb1.signer_backend": "kinto_signer.signer.local_ecdsa",
             "signer.sb1.ecdsa.public_key": "/path/to/key",
@@ -149,8 +149,8 @@ class IncludeMeTest(unittest.TestCase):
     def test_falls_back_to_global_settings_if_not_defined(self):
         settings = {
             "signer.resources": (
-                "/buckets/sb1/collections/sc1;/buckets/db1/collections/dc1\n"
-                "/buckets/sb1/collections/sc2;/buckets/db1/collections/dc2"
+                "/buckets/sb1/collections/sc1 -> /buckets/db1/collections/dc1\n"
+                "/buckets/sb1/collections/sc2 -> /buckets/db1/collections/dc2"
             ),
             "signer.signer_backend": "kinto_signer.signer.autograph",
             "signer.autograph.server_url": "http://localhost",
@@ -175,7 +175,7 @@ class IncludeMeTest(unittest.TestCase):
         settings = {
             "statsd_url": "udp://127.0.0.1:8125",
             "signer.resources": (
-                "/buckets/sb1/collections/sc1;/buckets/db1/collections/dc1"
+                "/buckets/sb1/collections/sc1 -> /buckets/db1/collections/dc1"
             ),
             "signer.ecdsa.public_key": "/path/to/key",
             "signer.ecdsa.private_key": "/path/to/private",
@@ -196,9 +196,7 @@ class IncludeMeTest(unittest.TestCase):
 
     def test_includeme_raises_value_error_if_unknown_placeholder(self):
         settings = {
-            "signer.resources": (
-                "/buckets/sb1/collections/sc1;/buckets/db1/collections/dc1",
-            ),
+            "signer.resources": "/buckets/sb1/collections/sc1 -> /buckets/db1/collections/dc1",
             "signer.editors_group": "{datetime}_group",
             "signer.ecdsa.public_key": "/path/to/key",
             "signer.ecdsa.private_key": "/path/to/private",
@@ -217,14 +215,14 @@ class OnCollectionChangedTest(unittest.TestCase):
 
     def test_nothing_happens_when_resource_is_not_configured(self):
         evt = mock.MagicMock(payload={"bucket_id": "a", "collection_id": "b"})
-        sign_collection_data(evt, resources=utils.parse_resources("c/d;e/f"))
+        sign_collection_data(evt, resources=utils.parse_resources("c/d -> e/f"))
         assert not self.updater_mocked.called
 
     def test_nothing_happens_when_status_is_not_to_sign(self):
         evt = mock.MagicMock(payload={"bucket_id": "a", "collection_id": "b"},
                              impacted_records=[{
                                  "new": {"id": "b", "status": "signed"}}])
-        sign_collection_data(evt, resources=utils.parse_resources("a/b;c/d"))
+        sign_collection_data(evt, resources=utils.parse_resources("a/b -> c/d"))
         assert not self.updater_mocked.sign_and_update_destination.called
 
     def test_updater_is_called_when_resource_and_status_matches(self):
@@ -237,7 +235,7 @@ class OnCollectionChangedTest(unittest.TestCase):
             "/buckets/a/collections/b": mock.sentinel.signer
         }
         evt.request.route_path.return_value = "/v1/buckets/a/collections/b"
-        sign_collection_data(evt, resources=utils.parse_resources("a/b;c/d"))
+        sign_collection_data(evt, resources=utils.parse_resources("a/b -> c/d"))
         self.updater_mocked.assert_called_with(
             signer=mock.sentinel.signer,
             storage=mock.sentinel.storage,
@@ -258,13 +256,13 @@ class OnCollectionChangedTest(unittest.TestCase):
             "/buckets/a/collections/b": mock.sentinel.signer
         }
         evt.request.route_path.return_value = "/v1/buckets/a/collections/b"
-        sign_collection_data(evt, resources=utils.parse_resources("a/b;c/d"))
+        sign_collection_data(evt, resources=utils.parse_resources("a/b -> c/d"))
         assert evt.request._attachment_auto_save is True
 
     def test_updater_does_not_fail_when_payload_is_inconsistent(self):
         # This happens with events on default bucket for kinto < 3.3
         evt = mock.MagicMock(payload={"subpath": "collections/boom"})
-        sign_collection_data(evt, resources=utils.parse_resources("a/b;c/d"))
+        sign_collection_data(evt, resources=utils.parse_resources("a/b -> c/d"))
 
 
 class BatchTest(BaseWebTest, unittest.TestCase):

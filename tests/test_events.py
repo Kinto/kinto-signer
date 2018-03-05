@@ -36,7 +36,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         cls.source_collection = "/buckets/alice/collections/scid"
         cls.destination_collection = "/buckets/destination/collections/dcid"
 
-        settings['kinto.signer.resources'] = '%s;%s' % (
+        settings['kinto.signer.resources'] = '%s -> %s' % (
             cls.source_collection,
             cls.destination_collection)
 
@@ -223,7 +223,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         cls.source_collection = "/buckets/alice/collections/scid"
         cls.destination_collection = "/buckets/destination/collections/dcid"
 
-        settings['kinto.signer.resources'] = '%s;%s' % (
+        settings['kinto.signer.resources'] = '%s -> %s' % (
             cls.source_collection,
             cls.destination_collection)
 

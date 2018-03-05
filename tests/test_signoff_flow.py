@@ -69,7 +69,7 @@ class PostgresWebTest(BaseWebTest):
         cls.destination_bucket = "/buckets/alice"
         cls.destination_collection = cls.destination_bucket + "/collections/dcid"
 
-        settings['kinto.signer.resources'] = '%s;%s' % (
+        settings['kinto.signer.resources'] = '%s -> %s' % (
             cls.source_collection,
             cls.destination_collection)
         return settings
@@ -380,7 +380,7 @@ class SpecificUserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.Test
         cls.source_collection1 = "/buckets/alice/collections/cid1"
         cls.source_collection2 = "/buckets/alice/collections/cid2"
 
-        settings['kinto.signer.resources'] = "%s;%s %s;%s" % (
+        settings['kinto.signer.resources'] = "%s -> %s\n%s -> %s" % (
             cls.source_collection1,
             cls.source_collection1.replace("alice", "destination"),
             cls.source_collection2,
@@ -449,7 +449,7 @@ class PreviewCollectionTest(PostgresWebTest, unittest.TestCase):
         cls.preview_collection = cls.preview_bucket + "/collections/pcid"
 
         settings['signer.to_review_enabled'] = 'true'
-        settings['kinto.signer.resources'] = '%s;%s;%s' % (
+        settings['kinto.signer.resources'] = '%s -> %s -> %s' % (
             cls.source_collection,
             cls.preview_collection,
             cls.destination_collection)
@@ -497,7 +497,7 @@ class PerBucketTest(PostgresWebTest, unittest.TestCase):
         cls.destination_bucket = "/buckets/prod"
         cls.destination_collection = cls.destination_bucket + "/collections/cid"
 
-        settings['kinto.signer.resources'] = ';'.join([
+        settings['kinto.signer.resources'] = ' -> '.join([
             cls.source_bucket,
             cls.preview_bucket,
             cls.destination_bucket])

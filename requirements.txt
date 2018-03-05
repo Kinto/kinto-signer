@@ -11,7 +11,6 @@ cornice-swagger==0.5.2
 dockerflow==2017.11.0
 docutils==0.14
 ecdsa==0.13
-enum34==1.1.6
 hupper==1.0
 idna==2.6
 iso8601==0.1.12

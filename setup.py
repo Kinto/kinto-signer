@@ -11,7 +11,6 @@ REQUIREMENTS = [
     'kinto>=7.1.0',
     'boto3',
     'ecdsa',
-    'enum34',
     'requests-hawk',
 ]
 

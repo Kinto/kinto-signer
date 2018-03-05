@@ -57,7 +57,7 @@ def parse_resources(raw_resources):
     for res in lines:
         error_msg = "Malformed resource: %%s (in %r). See kinto-signer README." % res
         if "->" not in res and ";" not in res:
-            raise ConfigurationError(error_msg % "not separated with ';'")
+            raise ConfigurationError(error_msg % "not separated with '->'")
 
         try:
             triplet = [r.strip()

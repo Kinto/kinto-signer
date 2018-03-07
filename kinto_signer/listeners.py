@@ -3,6 +3,7 @@ import copy
 import transaction
 from kinto import logger
 from kinto.core import errors
+from kinto.core.events import ACTIONS
 from kinto.core.utils import instance_uri
 from kinto.core.errors import ERRORS
 from pyramid import httpexceptions
@@ -89,6 +90,8 @@ def sign_collection_data(event, resources):
     """
     payload = event.payload
 
+    is_new_collection = payload['action'] == ACTIONS.CREATE.value
+
     current_user_id = event.request.prefixed_userid
     if current_user_id == PLUGIN_USERID:
         # Ignore changes made by plugin.
@@ -118,16 +121,30 @@ def sign_collection_data(event, resources):
                            id=new_collection['id'])
 
         review_event_cls = None
+
+        new_status = new_collection.get("status")
+        old_status = old_collection.get("status")
+
+        # Autorize kinto-attachment metadata write access. #190
+        event.request._attachment_auto_save = True
+
+        if is_new_collection:
+            if 'preview' in resource:
+                updater.destination = resource['preview']
+                updater.sign_and_update_destination(event.request,
+                                                    source_attributes=new_collection,
+                                                    next_source_status=None)
+            updater.destination = resource['destination']
+            updater.sign_and_update_destination(event.request,
+                                                source_attributes=new_collection,
+                                                next_source_status=None)
+
         try:
-            new_status = new_collection.get("status")
-            old_status = old_collection.get("status")
-
-            # Autorize kinto-attachment metadata write access. #190
-            event.request._attachment_auto_save = True
-
             if new_status == STATUS.TO_SIGN:
                 # Run signature process (will set `last_reviewer` field).
-                updater.sign_and_update_destination(event.request, source=new_collection)
+                updater.destination = resource['destination']
+                updater.sign_and_update_destination(event.request,
+                                                    source_attributes=new_collection)
                 if old_status != STATUS.SIGNED:
                     review_event_cls = signer_events.ReviewApproved
 
@@ -136,7 +153,7 @@ def sign_collection_data(event, resources):
                     # If preview collection: update and sign preview collection
                     updater.destination = resource['preview']
                     updater.sign_and_update_destination(event.request,
-                                                        source=new_collection,
+                                                        source_attributes=new_collection,
                                                         next_source_status=STATUS.TO_REVIEW)
                 else:
                     # If no preview collection: just track `last_editor`

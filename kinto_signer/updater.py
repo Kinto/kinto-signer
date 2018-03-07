@@ -87,7 +87,7 @@ class LocalUpdater(object):
             self.destination['bucket'],
             self.destination['collection'])
 
-    def sign_and_update_destination(self, request, source,
+    def sign_and_update_destination(self, request, source_attributes,
                                     next_source_status=STATUS.SIGNED):
         """Sign the specified collection.
 
@@ -108,8 +108,9 @@ class LocalUpdater(object):
             logger.debug("{}:\t'{}'".format(self.source_collection_uri, serialized_records))
             signature = self.signer.sign(serialized_records)
 
-            self.set_destination_signature(signature, source, request)
-            self.update_source_status(next_source_status, request)
+            self.set_destination_signature(signature, source_attributes, request)
+            if next_source_status is not None:
+                self.update_source_status(next_source_status, request)
             self.invalidate_cloudfront_cache(request, timestamp)
 
     def create_destination(self, request):

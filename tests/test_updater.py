@@ -3,7 +3,7 @@ import pytest
 import unittest
 
 from kinto.core.storage import Filter, Sort
-from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
+from kinto.core.storage.exceptions import RecordNotFoundError
 from kinto.core.utils import COMPARISON
 
 from kinto_signer.updater import LocalUpdater
@@ -30,7 +30,7 @@ class LocalUpdaterTest(unittest.TestCase):
             permission=self.permission)
 
         # Resource events are bypassed completely in this test suite.
-        patcher = mock.patch('kinto_signer.updater.build_request')
+        patcher = mock.patch('kinto_signer.utils.build_request')
         self.addCleanup(patcher.stop)
         patcher.start()
 
@@ -201,30 +201,29 @@ class LocalUpdaterTest(unittest.TestCase):
 
     def test_create_destination_updates_collection_permissions(self):
         collection_id = '/buckets/destbucket/collections/destcollection'
-        self.updater.create_destination(DummyRequest())
-        self.permission.replace_object_permissions.assert_called_with(
+        request = DummyRequest()
+        request.route_path.return_value = collection_id
+        self.updater.create_destination(request)
+        request.registry.permission.replace_object_permissions.assert_called_with(
             collection_id,
             {"read": ("system.Everyone",)})
 
     def test_create_destination_creates_bucket(self):
-        self.updater.create_destination(DummyRequest())
-        self.storage.create.assert_any_call(
+        request = DummyRequest()
+        self.updater.create_destination(request)
+        request.registry.storage.create.assert_any_call(
             collection_id='bucket',
             parent_id='',
             record={"id": 'destbucket'})
 
     def test_create_destination_creates_collection(self):
         bucket_id = '/buckets/destbucket'
-        self.updater.create_destination(DummyRequest())
-        self.storage.create.assert_any_call(
+        request = DummyRequest()
+        self.updater.create_destination(request)
+        request.registry.storage.create.assert_any_call(
             collection_id='collection',
             parent_id=bucket_id,
             record={"id": 'destcollection'})
-
-    def test_ensure_resource_exists_handles_uniticy_errors(self):
-        self.storage.create.side_effect = UnicityError('id', 'record')
-        self.updater._ensure_resource_exists('bucket', '', 'abcd',
-                                             DummyRequest())
 
     def test_sign_and_update_destination(self):
         records = [{'id': idx, 'foo': 'bar %s' % idx, 'last_modified': idx}

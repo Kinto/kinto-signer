@@ -10,13 +10,11 @@ from pyramid import httpexceptions
 from kinto_signer.updater import (LocalUpdater, FIELD_LAST_AUTHOR,
                                   FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER)
 from kinto_signer import events as signer_events
-from kinto_signer.utils import STATUS
+from kinto_signer.utils import STATUS, PLUGIN_USERID, send_resource_events
 
 
 REVIEW_SETTINGS = ("reviewers_group", "editors_group",
                    "to_review_enabled", "group_check_enabled")
-
-_PLUGIN_USERID = "plugin:kinto-signer"
 
 
 def raise_invalid(**kwargs):
@@ -83,7 +81,7 @@ def sign_collection_data(event, resources):
     payload = event.payload
 
     current_user_id = event.request.prefixed_userid
-    if current_user_id == _PLUGIN_USERID:
+    if current_user_id == PLUGIN_USERID:
         # Ignore changes made by plugin.
         return
 
@@ -133,7 +131,7 @@ def sign_collection_data(event, resources):
                                                         next_source_status=STATUS.TO_REVIEW)
                 else:
                     # If no preview collection: just track `last_editor`
-                    with updater.send_events(event.request):
+                    with send_resource_events(event.request):
                         updater.update_source_editor(event.request)
                 review_event_cls = signer_events.ReviewRequested
 
@@ -174,7 +172,7 @@ def check_collection_status(event, resources, group_check_enabled,
     payload = event.payload
 
     current_user_id = event.request.prefixed_userid
-    if current_user_id == _PLUGIN_USERID:
+    if current_user_id == PLUGIN_USERID:
         # Ignore changes made by plugin.
         return
 
@@ -253,7 +251,7 @@ def check_collection_status(event, resources, group_check_enabled,
 def check_collection_tracking(event, resources):
     """Make sure tracking fields are not changed manually/removed.
     """
-    if event.request.prefixed_userid == _PLUGIN_USERID:
+    if event.request.prefixed_userid == PLUGIN_USERID:
         return
 
     tracking_fields = (FIELD_LAST_AUTHOR, FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER)
@@ -291,5 +289,5 @@ def set_work_in_progress_status(event, resources):
                            permission=event.request.registry.permission,
                            source=resource['source'],
                            destination=resource['destination'])
-    with updater.send_events(event.request):
+    with send_resource_events(event.request):
         updater.update_source_status(STATUS.WORK_IN_PROGRESS, event.request)

@@ -103,7 +103,7 @@ Here is an example of what a configuration could look like:
   kinto.includes = kinto_signer
 
   kinto.signer.resources =
-      /buckets/source                         -> /bucket/destination
+      /buckets/source                         -> /buckets/destination
       /buckets/source/collections/collection1 -> /buckets/destination/collections/collection2
       /buckets/bid/collections/cid            -> /buckets/bid/collections/cid2
 

@@ -128,18 +128,18 @@ def sign_collection_data(event, resources):
         # Autorize kinto-attachment metadata write access. #190
         event.request._attachment_auto_save = True
 
-        if is_new_collection:
-            if 'preview' in resource:
-                updater.destination = resource['preview']
+        try:
+            if is_new_collection:
+                if 'preview' in resource:
+                    updater.destination = resource['preview']
+                    updater.sign_and_update_destination(event.request,
+                                                        source_attributes=new_collection,
+                                                        next_source_status=None)
+                updater.destination = resource['destination']
                 updater.sign_and_update_destination(event.request,
                                                     source_attributes=new_collection,
                                                     next_source_status=None)
-            updater.destination = resource['destination']
-            updater.sign_and_update_destination(event.request,
-                                                source_attributes=new_collection,
-                                                next_source_status=None)
 
-        try:
             if new_status == STATUS.TO_SIGN:
                 # Run signature process (will set `last_reviewer` field).
                 updater.destination = resource['destination']

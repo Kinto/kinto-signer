@@ -214,19 +214,19 @@ class OnCollectionChangedTest(unittest.TestCase):
         self.addCleanup(patch.stop)
 
     def test_nothing_happens_when_resource_is_not_configured(self):
-        evt = mock.MagicMock(payload={"bucket_id": "a", "collection_id": "b"})
+        evt = mock.MagicMock(payload={"action": "update", "bucket_id": "a", "collection_id": "b"})
         sign_collection_data(evt, resources=utils.parse_resources("c/d -> e/f"))
         assert not self.updater_mocked.called
 
     def test_nothing_happens_when_status_is_not_to_sign(self):
-        evt = mock.MagicMock(payload={"bucket_id": "a", "collection_id": "b"},
+        evt = mock.MagicMock(payload={"action": "update", "bucket_id": "a", "collection_id": "b"},
                              impacted_records=[{
                                  "new": {"id": "b", "status": "signed"}}])
         sign_collection_data(evt, resources=utils.parse_resources("a/b -> c/d"))
         assert not self.updater_mocked.sign_and_update_destination.called
 
     def test_updater_is_called_when_resource_and_status_matches(self):
-        evt = mock.MagicMock(payload={"bucket_id": "a", "collection_id": "b"},
+        evt = mock.MagicMock(payload={"action": "update", "bucket_id": "a", "collection_id": "b"},
                              impacted_records=[{
                                  "new": {"id": "b", "status": "to-sign"}}])
         evt.request.registry.storage = mock.sentinel.storage
@@ -247,7 +247,7 @@ class OnCollectionChangedTest(unittest.TestCase):
         assert mocked.sign_and_update_destination.called
 
     def test_kinto_attachment_property_is_set_to_allow_metadata_updates(self):
-        evt = mock.MagicMock(payload={"bucket_id": "a", "collection_id": "b"},
+        evt = mock.MagicMock(payload={"action": "update", "bucket_id": "a", "collection_id": "b"},
                              impacted_records=[{
                                  "new": {"id": "b", "status": "to-sign"}}])
         evt.request.registry.storage = mock.sentinel.storage
@@ -261,7 +261,7 @@ class OnCollectionChangedTest(unittest.TestCase):
 
     def test_updater_does_not_fail_when_payload_is_inconsistent(self):
         # This happens with events on default bucket for kinto < 3.3
-        evt = mock.MagicMock(payload={"subpath": "collections/boom"})
+        evt = mock.MagicMock(payload={"action": "update", "subpath": "collections/boom"})
         sign_collection_data(evt, resources=utils.parse_resources("a/b -> c/d"))
 
 
@@ -330,18 +330,11 @@ class BatchTest(BaseWebTest, unittest.TestCase):
 
 class SigningErrorTest(BaseWebTest, unittest.TestCase):
     def test_returns_503_if_autograph_cannot_be_reached(self):
-        headers = get_user_headers('me')
-        self.app.put_json("/buckets/alice", headers=headers)
-        self.app.put_json("/buckets/alice/collections/source",
-                          headers=headers)
-        self.app.post_json("/buckets/alice/collections/source/records",
-                           {"data": {"title": "hello"}},
-                           headers=headers)
+        collection_uri = '/buckets/alice/collections/source'
+        self.app.app.registry.signers[collection_uri].server_url = 'http://0.0.0.0:1234'
 
-        rc = '/buckets/alice/collections/source'
-        self.app.app.registry.signers[rc].server_url = 'http://0.0.0.0:1234'
-
-        self.app.patch_json("/buckets/alice/collections/source",
-                            {"data": {"status": "to-sign"}},
-                            headers=headers,
-                            status=503)
+        self.app.put_json("/buckets/alice", headers=self.headers)
+        self.app.put_json(collection_uri,
+                          {"data": {"status": "to-sign"}},
+                          headers=self.headers,
+                          status=503)

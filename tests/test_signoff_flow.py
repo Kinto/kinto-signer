@@ -458,10 +458,6 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
             cls.destination_collection)
         return settings
 
-    def test_the_preview_collection_does_not_exist_at_first(self):
-        self.app.get(self.preview_bucket, headers=self.headers, status=403)
-        self.app.get(self.preview_collection, headers=self.headers, status=403)
-
     def test_the_preview_collection_is_updated_and_signed(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
@@ -511,21 +507,19 @@ class PerBucketTest(SignoffWebTest, unittest.TestCase):
         settings['signer.stage_specific.autograph.hawk_id'] = 'for-specific'
         return settings
 
-    def test_destination_does_not_exist_at_first(self):
-        self.app.get(self.preview_collection, headers=self.headers, status=403)
-        self.app.get(self.destination_collection, headers=self.headers, status=403)
+    def test_destination_and_preview_collections_are_created_and_signed(self):
+        col_uri = "/collections/pim"
+        self.app.put(self.source_bucket + col_uri, headers=self.headers)
 
-    def test_collection_with_same_name_gets_created_when_signed(self):
-        self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-review"}},
-                            headers=self.headers)
-        self.app.get(self.preview_collection, headers=self.headers, status=200)
+        data = self.app.get(self.preview_bucket + col_uri, headers=self.headers).json['data']
+        assert "signature" in data
 
-        self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-sign"}},
-                            headers=self.other_headers)
-        self.app.get(self.destination_collection, headers=self.headers, status=200)
-        assert self.mocked_autograph.post.called
+        data = self.app.get(self.destination_bucket + col_uri, headers=self.headers).json['data']
+        assert "signature" in data
+
+        # Source status was left untouched (ie. missing here)
+        data = self.app.get(self.source_bucket + col_uri, headers=self.headers).json['data']
+        assert "status" not in data
 
     def test_review_settings_can_be_overriden_for_a_specific_collection(self):
         # review is not enabled for this particular one, sign directly!
@@ -534,6 +528,7 @@ class PerBucketTest(SignoffWebTest, unittest.TestCase):
                           headers=self.headers)
 
     def test_signer_can_be_specified_per_collection(self):
+        self.mocked_autograph.post.reset_mock()
         self.app.put_json(self.source_bucket + "/collections/specific",
                           {"data": {"status": "to-sign"}},
                           headers=self.headers)

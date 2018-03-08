@@ -330,18 +330,11 @@ class BatchTest(BaseWebTest, unittest.TestCase):
 
 class SigningErrorTest(BaseWebTest, unittest.TestCase):
     def test_returns_503_if_autograph_cannot_be_reached(self):
-        headers = get_user_headers('me')
-        self.app.put_json("/buckets/alice", headers=headers)
-        self.app.put_json("/buckets/alice/collections/source",
-                          headers=headers)
-        self.app.post_json("/buckets/alice/collections/source/records",
-                           {"data": {"title": "hello"}},
-                           headers=headers)
+        collection_uri = '/buckets/alice/collections/source'
+        self.app.app.registry.signers[collection_uri].server_url = 'http://0.0.0.0:1234'
 
-        rc = '/buckets/alice/collections/source'
-        self.app.app.registry.signers[rc].server_url = 'http://0.0.0.0:1234'
-
-        self.app.patch_json("/buckets/alice/collections/source",
-                            {"data": {"status": "to-sign"}},
-                            headers=headers,
-                            status=503)
+        self.app.put_json("/buckets/alice", headers=self.headers)
+        self.app.put_json(collection_uri,
+                          {"data": {"status": "to-sign"}},
+                          headers=self.headers,
+                          status=503)

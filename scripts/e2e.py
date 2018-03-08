@@ -127,10 +127,9 @@ def main():
 
     if group_check_enabled:
         editors_group = signer_capabilities['editors_group']
-        client.create_group(id=editors_group, data={'members': [editor_id]}, if_not_exists=True)
+        client.patch_group(id=editors_group, data={'members': [editor_id]})
         reviewers_group = signer_capabilities['reviewers_group']
-        client.create_group(id=reviewers_group, data={'members': [reviewer_id]},
-                            if_not_exists=True)
+        client.patch_group(id=reviewers_group, data={'members': [reviewer_id]})
 
     dest_client = Client(server_url=args.server,
                          bucket=resource['destination']['bucket'],

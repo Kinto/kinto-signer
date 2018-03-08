@@ -21,6 +21,7 @@ This document describes changes between each past release.
   ``to_review_enabled``, and ``group_check_enabled`` settings
   (e.g. ``group:/buckets/{bucket_id}/groups/{collection_id}-reviewers``) (fixes #210)
 - Allow configuration by bucket. Every collections in the source bucket will be reviewed/signed (fixes #144).
+- Editors and reviewers groups are created automatically when source collection is created (fixes #213)
 
 **Bug fixes**
 

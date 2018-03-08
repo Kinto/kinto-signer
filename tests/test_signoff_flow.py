@@ -21,6 +21,31 @@ class PostgresWebTest(BaseWebTest):
             "content-signature": "",
             "x5u": ""}]
 
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
+
+        settings['storage_backend'] = 'kinto.core.storage.postgresql'
+        db = "postgres://postgres:postgres@localhost/testdb"
+        settings['storage_url'] = db
+        settings['permission_backend'] = 'kinto.core.permission.postgresql'
+        settings['permission_url'] = db
+        settings['cache_backend'] = 'kinto.core.cache.memory'
+
+        cls.source_bucket = "/buckets/alice"
+        cls.source_collection = cls.source_bucket + "/collections/scid"
+        cls.destination_bucket = "/buckets/alice"
+        cls.destination_collection = cls.destination_bucket + "/collections/dcid"
+
+        settings['kinto.signer.resources'] = '%s -> %s' % (
+            cls.source_collection,
+            cls.destination_collection)
+        return settings
+
+
+class SignoffWebTest(PostgresWebTest):
+    def setUp(self):
+        super(SignoffWebTest, self).setUp()
         self.headers = get_user_headers('tarte:en-pion')
         resp = self.app.get("/", headers=self.headers)
         self.userid = resp.json["user"]["id"]
@@ -53,30 +78,8 @@ class PostgresWebTest(BaseWebTest):
                            {"data": {"title": "bonjour"}},
                            headers=self.headers)
 
-    @classmethod
-    def get_app_settings(cls, extras=None):
-        settings = super().get_app_settings(extras)
 
-        settings['storage_backend'] = 'kinto.core.storage.postgresql'
-        db = "postgres://postgres:postgres@localhost/testdb"
-        settings['storage_url'] = db
-        settings['permission_backend'] = 'kinto.core.permission.postgresql'
-        settings['permission_url'] = db
-        settings['cache_backend'] = 'kinto.core.cache.memory'
-
-        cls.source_bucket = "/buckets/alice"
-        cls.source_collection = cls.source_bucket + "/collections/scid"
-        cls.destination_bucket = "/buckets/alice"
-        cls.destination_collection = cls.destination_bucket + "/collections/dcid"
-
-        settings['kinto.signer.resources'] = '%s -> %s' % (
-            cls.source_collection,
-            cls.destination_collection)
-        return settings
-
-
-class CollectionStatusTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCase):
-
+class CollectionStatusTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCase):
     def test_status_cannot_be_set_to_unknown_value(self):
         resp = self.app.patch_json(self.source_collection,
                                    {"data": {"status": "married"}},
@@ -167,7 +170,7 @@ class CollectionStatusTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCa
         assert resp.json["data"]["status"] == "work-in-progress"
 
 
-class ForceReviewTest(PostgresWebTest, unittest.TestCase):
+class ForceReviewTest(SignoffWebTest, unittest.TestCase):
     @classmethod
     def get_app_settings(cls, extras=None):
         settings = super().get_app_settings(extras)
@@ -240,7 +243,7 @@ class ForceReviewTest(PostgresWebTest, unittest.TestCase):
         assert resp.json["data"]["status"] == "signed"
 
 
-class TrackingFieldsTest(PostgresWebTest, unittest.TestCase):
+class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
 
     def last_author_is_tracked(self):
         self.app.post_json(self.source_collection + "/records",
@@ -308,7 +311,7 @@ class TrackingFieldsTest(PostgresWebTest, unittest.TestCase):
                               status=400)
 
 
-class UserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCase):
+class UserGroupsTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCase):
     @classmethod
     def get_app_settings(cls, extras=None):
         settings = super().get_app_settings(extras)
@@ -372,7 +375,7 @@ class UserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCase):
                             headers=self.reviewer_headers)
 
 
-class SpecificUserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.TestCase):
+class SpecificUserGroupsTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCase):
     @classmethod
     def get_app_settings(cls, extras=None):
         settings = super().get_app_settings(extras)
@@ -440,7 +443,7 @@ class SpecificUserGroupsTest(PostgresWebTest, FormattedErrorMixin, unittest.Test
                                   message="Not in revoyeurs group")
 
 
-class PreviewCollectionTest(PostgresWebTest, unittest.TestCase):
+class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
     @classmethod
     def get_app_settings(cls, extras=None):
         settings = super().get_app_settings(extras)
@@ -485,7 +488,7 @@ class PreviewCollectionTest(PostgresWebTest, unittest.TestCase):
         assert resp.json['data']['displayFields'] == ['age']
 
 
-class PerBucketTest(PostgresWebTest, unittest.TestCase):
+class PerBucketTest(SignoffWebTest, unittest.TestCase):
     @classmethod
     def get_app_settings(cls, extras=None):
         settings = super().get_app_settings(extras)
@@ -539,3 +542,115 @@ class PerBucketTest(PostgresWebTest, unittest.TestCase):
         assert args[0].startswith('http://localhost:8000')  # global.
         assert kwargs['auth'].credentials['id'] == 'for-specific'
         assert kwargs['auth'].credentials['key'].startswith('fs5w')  # global in signer.ini
+
+
+class GroupCreationTest(PostgresWebTest, unittest.TestCase):
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
+
+        cls.source_bucket = "/buckets/stage"
+        cls.preview_bucket = "/buckets/preview"
+        cls.destination_bucket = "/buckets/prod"
+
+        settings['kinto.signer.editors_group'] = 'best-editors'
+        settings['kinto.signer.reviewers_group'] = '{collection_id}-reviewers'
+        settings['kinto.signer.resources'] = ';'.join([
+            cls.source_bucket,
+            cls.preview_bucket,
+            cls.destination_bucket])
+
+        cls.editors_group = cls.source_bucket + "/groups/best-editors"
+        cls.reviewers_group = cls.source_bucket + "/groups/good-reviewers"
+        cls.source_collection = cls.source_bucket + "/collections/good"
+
+        return settings
+
+    def setUp(self):
+        super(GroupCreationTest, self).setUp()
+
+        resp = self.app.get("/", headers=self.headers)
+        self.userid = resp.json["user"]["id"]
+
+        self.app.put(self.source_bucket, headers=self.headers)
+
+        self.other_headers = get_user_headers('otra:persona')
+        resp = self.app.get("/", headers=self.other_headers)
+        self.other_userid = resp.json["user"]["id"]
+
+    def test_groups_are_not_touched_if_existing(self):
+        resp = self.app.put(self.editors_group, headers=self.headers)
+        before = resp.json['data']['last_modified']
+
+        self.app.put(self.source_collection, headers=self.headers)
+
+        resp = self.app.get(self.editors_group, headers=self.headers)
+        after = resp.json['data']['last_modified']
+
+        assert before == after
+
+    def test_groups_are_created_if_missing(self):
+        self.app.get(self.editors_group, headers=self.headers, status=404)
+        self.app.get(self.reviewers_group, headers=self.headers, status=404)
+
+        self.app.put(self.source_collection, headers=self.headers)
+
+        self.app.get(self.editors_group, headers=self.headers)
+        self.app.get(self.reviewers_group, headers=self.headers)
+
+    def test_events_are_sent(self):
+        patch = mock.patch('kinto_signer.utils.notify_resource_event')
+        mocked = patch.start()
+        self.addCleanup(patch.stop)
+
+        self.app.put(self.source_collection, headers=self.headers)
+
+        args, kwargs = mocked.call_args_list[0]
+        _, fakerequest = args
+        assert fakerequest['method'] == 'PUT'
+        assert fakerequest['path'] == '/buckets/stage/groups/best-editors'
+        assert kwargs['resource_name'] == 'group'
+
+    def test_groups_permissions_include_current_user_only(self):
+        self.app.put(self.source_collection, headers=self.headers)
+
+        r = self.app.get(self.editors_group, headers=self.headers).json
+        assert r['permissions']['write'] == [self.userid]
+        r = self.app.get(self.reviewers_group, headers=self.headers).json
+        assert r['permissions']['write'] == [self.userid]
+
+    def test_editors_contains_current_user_as_member_by_default(self):
+        self.app.put(self.source_collection, headers=self.headers)
+
+        r = self.app.get(self.editors_group, headers=self.headers).json
+        assert r['data']['members'] == [self.userid]
+        r = self.app.get(self.reviewers_group, headers=self.headers).json
+        assert r['data']['members'] == []
+
+    def test_groups_are_not_created_if_not_allowed(self):
+        self.other_headers = get_user_headers('otra:persona')
+        resp = self.app.get("/", headers=self.other_headers)
+        self.other_userid = resp.json["user"]["id"]
+
+        # Allow this other user to create collections.
+        body = {'permissions': {'collection:create': [self.other_userid]}}
+        self.app.patch_json(self.source_bucket, body, headers=self.headers)
+
+        # Create the collection.
+        self.app.put(self.source_collection, headers=self.other_headers)
+
+        # Groups were not created.
+        self.app.get(self.editors_group, headers=self.headers, status=404)
+        self.app.get(self.reviewers_group, headers=self.headers, status=404)
+
+    def test_groups_are_created_if_allowed_via_group_create_perm(self):
+        # Allow this other user to create collections and groups.
+        body = {'permissions': {'collection:create': [self.other_userid],
+                                'group:create': [self.other_userid]}}
+        self.app.patch_json(self.source_bucket, body, headers=self.headers)
+
+        # Create the collection.
+        self.app.put(self.source_collection, headers=self.other_headers)
+
+        self.app.get(self.editors_group, headers=self.headers)
+        self.app.get(self.reviewers_group, headers=self.headers)

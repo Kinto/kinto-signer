@@ -1,9 +1,17 @@
 from collections import OrderedDict
+from contextlib import contextmanager
 
 from kinto.views import NameGenerator
+from kinto.core.events import ACTIONS
+from kinto.core.storage.exceptions import UnicityError
+from kinto.core.utils import build_request, instance_uri
 
 from enum import Enum
 from pyramid.exceptions import ConfigurationError
+
+
+PLUGIN_USERID = "plugin:kinto-signer"
+FIELD_LAST_MODIFIED = 'last_modified'
 
 
 class STATUS(Enum):
@@ -136,3 +144,55 @@ def get_first_matching_setting(setting_name, settings, prefixes, default=None):
         if prefixed_setting_name in settings:
             return settings[prefixed_setting_name]
     return default
+
+
+def ensure_resource_exists(request, resource_name, parent_id, record,
+                           permissions, matchdict):
+    storage = request.registry.storage
+    permission = request.registry.permission
+    try:
+        created = storage.create(collection_id=resource_name,
+                                 parent_id=parent_id,
+                                 record=record)
+        object_uri = instance_uri(request, resource_name, **matchdict)
+        permission.replace_object_permissions(object_uri, permissions)
+        notify_resource_event(request,
+                              {'method': 'PUT', 'path': object_uri},
+                              matchdict=matchdict,
+                              resource_name=resource_name,
+                              parent_id=parent_id,
+                              record=created,
+                              action=ACTIONS.CREATE)
+    except UnicityError:
+        pass
+
+
+def notify_resource_event(request, request_options, matchdict,
+                          resource_name, parent_id, record, action, old=None):
+    """Helper that triggers resource events as real requests.
+    """
+    fakerequest = build_request(request, request_options)
+    fakerequest.matchdict = matchdict
+    fakerequest.bound_data = request.bound_data
+    fakerequest.authn_type, fakerequest.selected_userid = PLUGIN_USERID.split(":")
+    fakerequest.current_resource_name = resource_name
+    fakerequest.notify_resource_event(parent_id=parent_id,
+                                      timestamp=record[FIELD_LAST_MODIFIED],
+                                      data=record,
+                                      action=action,
+                                      old=old)
+
+
+@contextmanager
+def send_resource_events(request):
+    # Backup resource events generated until now and set it to empty dict.
+    before_events = request.bound_data["resource_events"]
+    request.bound_data["resource_events"] = OrderedDict()
+    yield
+    # The resource events we gathered during listeners and hooks of kinto-signer
+    # can now be added to ``kinto_signer.events`` which will be sent later
+    # in ``listeners.send_signer_events()``.
+    new_events = request.get_resource_events()
+    request.bound_data.setdefault('kinto_signer.events', []).extend(new_events)
+    # Restore backup.
+    request.bound_data["resource_events"] = before_events

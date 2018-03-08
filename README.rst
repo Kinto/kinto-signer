@@ -223,6 +223,9 @@ collection will be enabled.
 .. image:: workflow.png
 
 
+The editors and reviewers groups are automatically created when the source collection is created.
+
+
 Multiple certificates
 ---------------------
 

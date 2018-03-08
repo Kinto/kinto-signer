@@ -1,16 +1,16 @@
-from contextlib import contextmanager
 import logging
 import uuid
 
-from collections import OrderedDict
-
 from kinto.core.events import ACTIONS
 from kinto.core.storage import Filter, Sort
-from kinto.core.storage.exceptions import UnicityError, RecordNotFoundError
-from kinto.core.utils import COMPARISON, build_request
+from kinto.core.storage.exceptions import RecordNotFoundError
+from kinto.core.utils import COMPARISON
+from pyramid.security import Everyone
 
 from kinto_signer.serializer import canonical_json
-from kinto_signer.utils import STATUS
+from kinto_signer.utils import (STATUS, send_resource_events, ensure_resource_exists,
+                                notify_resource_event)
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,24 +20,6 @@ FIELD_LAST_MODIFIED = 'last_modified'
 FIELD_LAST_AUTHOR = 'last_author'
 FIELD_LAST_EDITOR = 'last_editor'
 FIELD_LAST_REVIEWER = 'last_reviewer'
-
-
-def notify_resource_event(request, request_options, matchdict,
-                          resource_name, parent_id, record, action, old=None):
-    """Private helper that triggers resource events when the updater modifies
-    the source and destination objects.
-    """
-    fakerequest = build_request(request, request_options)
-    fakerequest.matchdict = matchdict
-    fakerequest.bound_data = request.bound_data
-    fakerequest.selected_userid = "kinto-signer"
-    fakerequest.authn_type = "plugin"
-    fakerequest.current_resource_name = resource_name
-    fakerequest.notify_resource_event(parent_id=parent_id,
-                                      timestamp=record[FIELD_LAST_MODIFIED],
-                                      data=record,
-                                      action=action,
-                                      old=old)
 
 
 def _ensure_resource(resource):
@@ -116,7 +98,7 @@ class LocalUpdater(object):
         4. Ask the signer for a signature
         5. Send the signature to the destination.
         """
-        with self.send_events(request):
+        with send_resource_events(request):
             self.create_destination(request)
 
             self.push_records_to_destination(request)
@@ -130,31 +112,6 @@ class LocalUpdater(object):
             self.update_source_status(next_source_status, request)
             self.invalidate_cloudfront_cache(request, timestamp)
 
-    @contextmanager
-    def send_events(self, request):
-        # Backup resource events generated until now and set it to empty dict.
-        before_events = request.bound_data["resource_events"]
-        request.bound_data["resource_events"] = OrderedDict()
-        yield
-        # The resource events we gathered during listeners and hooks of kinto-signer
-        # can now be added to ``kinto_signer.events`` which will be sent later
-        # in ``listeners.send_signer_events()``.
-        new_events = request.get_resource_events()
-        request.bound_data.setdefault('kinto_signer.events', []).extend(new_events)
-        # Restore backup.
-        request.bound_data["resource_events"] = before_events
-
-    def _ensure_resource_exists(self, resource_type, parent_id,
-                                id, request, **attributes):
-        attributes.update({FIELD_ID: id})
-        try:
-            created = self.storage.create(collection_id=resource_type,
-                                          parent_id=parent_id,
-                                          record=attributes)
-        except UnicityError:
-            created = None
-        return created
-
     def create_destination(self, request):
         """Create the destination bucket/collection if they don't already exist.
         """
@@ -164,45 +121,26 @@ class LocalUpdater(object):
         bucket_name = self.destination['bucket']
         collection_name = self.destination['collection']
 
-        created = self._ensure_resource_exists(resource_type='bucket',
-                                               parent_id='',
-                                               id=bucket_name,
-                                               request=request)
-        if created:
-            # Set the permissions on the destination bucket.
-            perms = {'write': [request.prefixed_userid]}
-            self.permission.replace_object_permissions(self.destination_bucket_uri,
-                                                       perms)
-            notify_resource_event(request,
-                                  {'method': 'PUT',
-                                   'path': self.destination_bucket_uri},
-                                  matchdict={FIELD_ID: self.destination['bucket']},
-                                  resource_name="bucket",
-                                  parent_id='',
-                                  record=created,
-                                  action=ACTIONS.CREATE)
+        # Destination bucket will be writable by current user.
+        perms = {'write': [request.prefixed_userid]}
+        ensure_resource_exists(request=request,
+                               resource_name='bucket',
+                               parent_id='',
+                               record={FIELD_ID: bucket_name},
+                               permissions=perms,
+                               matchdict={'id': bucket_name})
 
-        created = self._ensure_resource_exists(resource_type='collection',
-                                               parent_id=self.destination_bucket_uri,
-                                               id=collection_name,
-                                               request=request)
-        if created:
-            notify_resource_event(request,
-                                  {'method': 'PUT',
-                                   'path': self.destination_collection_uri},
-                                  matchdict={
-                                      'bucket_id': self.destination['bucket'],
-                                      FIELD_ID: self.destination['collection']
-                                  },
-                                  resource_name="collection",
-                                  parent_id=self.destination_bucket_uri,
-                                  record=created,
-                                  action=ACTIONS.CREATE)
-
-            # Set the permissions on the destination collection.
-            readonly_perms = {'read': ("system.Everyone",)}
-            self.permission.replace_object_permissions(self.destination_collection_uri,
-                                                       readonly_perms)
+        # Destination collection will be publicly readable.
+        readonly_perms = {'read': (Everyone,)}
+        ensure_resource_exists(request=request,
+                               resource_name='collection',
+                               parent_id=self.destination_bucket_uri,
+                               record={FIELD_ID: collection_name},
+                               permissions=readonly_perms,
+                               matchdict={
+                                'bucket_id': bucket_name,
+                                'id': collection_name
+                               })
 
     def _get_records(self, rc, last_modified=None, empty_none=True):
         # If last_modified was specified, only retrieve items since then.

@@ -22,6 +22,7 @@ This document describes changes between each past release.
   (e.g. ``group:/buckets/{bucket_id}/groups/{collection_id}-reviewers``) (fixes #210)
 - Allow configuration by bucket. Every collections in the source bucket will be reviewed/signed (fixes #144).
 - Editors and reviewers groups are created automatically when source collection is created (fixes #213)
+- Preview and destination collections are automatically signed when source is created (fixes #226)
 
 **Bug fixes**
 

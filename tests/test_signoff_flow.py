@@ -628,10 +628,6 @@ class GroupCreationTest(PostgresWebTest, unittest.TestCase):
         assert r['data']['members'] == []
 
     def test_groups_are_not_created_if_not_allowed(self):
-        self.other_headers = get_user_headers('otra:persona')
-        resp = self.app.get("/", headers=self.other_headers)
-        self.other_userid = resp.json["user"]["id"]
-
         # Allow this other user to create collections.
         body = {'permissions': {'collection:create': [self.other_userid]}}
         self.app.patch_json(self.source_bucket, body, headers=self.headers)

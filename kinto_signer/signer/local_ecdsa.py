@@ -3,7 +3,6 @@ import warnings
 
 import ecdsa
 import hashlib
-import six
 from ecdsa import NIST384p, SigningKey, VerifyingKey
 
 from .base import SignerBase
@@ -48,9 +47,6 @@ class ECDSASigner(SignerBase):
                 return VerifyingKey.from_pem(key_file.read())
 
     def sign(self, payload):
-        if isinstance(payload, six.text_type):  # pragma: nocover
-            payload = payload.encode('utf-8')
-
         payload = self.prefix + payload
         private_key = self.load_private_key()
         signature = private_key.sign(payload,
@@ -66,15 +62,7 @@ class ECDSASigner(SignerBase):
 
     def verify(self, payload, signature_bundle):
         signature = signature_bundle['signature']
-
-        if isinstance(payload, six.text_type):  # pragma: nocover
-            payload = payload.encode('utf-8')
-
         payload = self.prefix + payload
-
-        if isinstance(signature, six.text_type):  # pragma: nocover
-            signature = signature.encode('utf-8')
-
         signature_bytes = base64.urlsafe_b64decode(signature)
 
         public_key = self.load_public_key()

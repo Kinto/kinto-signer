@@ -271,7 +271,7 @@ By default, it invalidates the whole path (``/v1/*``). But paths can be configur
 
     kinto.signer.invalidation_paths = /v1/buckets/{bucket_id}/collections/{collection_id}*
                                       /v1/buckets/monitor/collections/changes*
-
+                                      /v1/blocklist/*
 
 Usage
 =====

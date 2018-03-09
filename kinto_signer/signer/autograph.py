@@ -16,6 +16,9 @@ class AutographSigner(SignerBase):
         self.auth = HawkAuth(id=hawk_id, key=hawk_secret)
 
     def sign(self, payload):
+        if isinstance(payload, str):  # pragma: nocover
+            payload = payload.encode('utf-8')
+
         b64_payload = base64.b64encode(payload)
         url = urljoin(self.server_url, '/sign/data')
         resp = requests.post(url, auth=self.auth, json=[{

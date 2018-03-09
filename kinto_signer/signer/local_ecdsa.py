@@ -10,6 +10,10 @@ from .exceptions import BadSignatureError
 from ..utils import get_first_matching_setting
 
 
+# Autograph uses this prefix prior to signing.
+SIGN_PREFIX = b"Content-Signature:\x00"
+
+
 class ECDSASigner(SignerBase):
 
     def __init__(self, private_key=None, public_key=None):
@@ -19,9 +23,6 @@ class ECDSASigner(SignerBase):
             raise ValueError(msg)
         self.private_key = private_key
         self.public_key = public_key
-
-        # Autograph uses this prefix prior to signing.
-        self.prefix = "Content-Signature:\x00".encode("utf-8")
 
     @classmethod
     def generate_keypair(cls):
@@ -47,7 +48,10 @@ class ECDSASigner(SignerBase):
                 return VerifyingKey.from_pem(key_file.read())
 
     def sign(self, payload):
-        payload = self.prefix + payload
+        if isinstance(payload, str):  # pragma: nocover
+            payload = payload.encode('utf-8')
+
+        payload = SIGN_PREFIX + payload
         private_key = self.load_private_key()
         signature = private_key.sign(payload,
                                      hashfunc=hashlib.sha384,
@@ -61,8 +65,14 @@ class ECDSASigner(SignerBase):
         }
 
     def verify(self, payload, signature_bundle):
+        if isinstance(payload, str):  # pragma: nocover
+            payload = payload.encode('utf-8')
+
+        payload = SIGN_PREFIX + payload
         signature = signature_bundle['signature']
-        payload = self.prefix + payload
+        if isinstance(signature, str):  # pragma: nocover
+            signature = signature.encode('utf-8')
+
         signature_bytes = base64.urlsafe_b64decode(signature)
 
         public_key = self.load_public_key()

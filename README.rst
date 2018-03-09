@@ -265,7 +265,7 @@ For the setups where those public collections are served behind a Cloudfront CDN
 
     kinto.signer.distribution_id = E155JIFUEHFGY
 
-By default, it invalidates the whole path (``/v1/*``). But paths can be configured:
+By default, it invalidates the whole CDN (``/v1/*``). But paths can be configured:
 
 .. code-block:: ini
 

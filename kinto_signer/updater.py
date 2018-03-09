@@ -12,6 +12,10 @@ from kinto_signer.serializer import canonical_json
 from kinto_signer.utils import (STATUS, send_resource_events, ensure_resource_exists,
                                 notify_resource_event)
 
+try:
+    import boto3
+except ImportError:
+    boto3 = None
 
 logger = logging.getLogger(__name__)
 
@@ -353,12 +357,9 @@ class LocalUpdater(object):
         cid = self.destination['collection']
         paths = [p.format(bucket_id=bid, collection_id=cid) for p in paths]
 
-        # Create a boto client
-        import boto3
-        client = boto3.client('cloudfront')
-
-        # Invalidate
         try:
+            # Create a boto client
+            client = boto3.client('cloudfront')
             client.create_invalidation(
                 DistributionId=distribution_id,
                 InvalidationBatch={

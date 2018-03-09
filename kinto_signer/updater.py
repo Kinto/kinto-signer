@@ -14,7 +14,7 @@ from kinto_signer.utils import (STATUS, send_resource_events, ensure_resource_ex
 
 try:
     import boto3
-except ImportError:
+except ImportError:  # pragma: nocover
     boto3 = None
 
 logger = logging.getLogger(__name__)

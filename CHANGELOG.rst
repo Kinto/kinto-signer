@@ -6,7 +6,9 @@ This document describes changes between each past release.
 3.1.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**New features**
+
+- Cloudfront invalidation paths can be configured
 
 
 3.0.0 (2018-03-08)

@@ -6,6 +6,7 @@ from kinto.core.storage import Filter, Sort
 from kinto.core.storage.exceptions import RecordNotFoundError
 from kinto.core.utils import COMPARISON
 from pyramid.security import Everyone
+from pyramid.settings import aslist
 
 from kinto_signer.serializer import canonical_json
 from kinto_signer.utils import (STATUS, send_resource_events, ensure_resource_exists,
@@ -339,23 +340,33 @@ class LocalUpdater(object):
             old=collection_record)
 
     def invalidate_cloudfront_cache(self, request, timestamp):
-        distribution_id = request.registry.settings.get('signer.distribution_id')
+        settings = request.registry.settings
+        distribution_id = settings.get('signer.distribution_id')
 
-        if distribution_id:
-            # Create a boto client
-            import boto3
-            client = boto3.client('cloudfront')
+        if not distribution_id:
+            return
 
-            # Invalidate
-            try:
-                client.create_invalidation(
-                    DistributionId=distribution_id,
-                    InvalidationBatch={
-                        'Paths': {
-                            'Quantity': 1,
-                            'Items': ['/v1/*']
-                        },
-                        'CallerReference': '{}-{}'.format(timestamp, uuid.uuid4())
-                    })
-            except Exception:
-                logger.exception("Cache invalidation request failed.")
+        paths = aslist(settings.get('signer.invalidation_paths', '/v1/*'))
+
+        # Paths can have placeholders with destination bucket/collection
+        bid = self.destination['bucket']
+        cid = self.destination['collection']
+        paths = [p.format(bucket_id=bid, collection_id=cid) for p in paths]
+
+        # Create a boto client
+        import boto3
+        client = boto3.client('cloudfront')
+
+        # Invalidate
+        try:
+            client.create_invalidation(
+                DistributionId=distribution_id,
+                InvalidationBatch={
+                    'Paths': {
+                        'Quantity': 1,
+                        'Items': paths
+                    },
+                    'CallerReference': '{}-{}'.format(timestamp, uuid.uuid4())
+                })
+        except Exception:
+            logger.exception("Cache invalidation request failed.")

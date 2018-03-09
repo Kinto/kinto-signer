@@ -252,6 +252,27 @@ Or prefixed with bucket and collection:
     kinto.signer.<bucket-id>_<collection-id>.ecdsa.public_key = /path/to/public.pem
 
 
+Cloudfront CDN invalidation
+---------------------------
+
+When a request for review or approval is done, the changes are pushed to the preview
+or destination collection.
+
+For the setups where those public collections are served behind a Cloudfront CDN,
+*kinto-signer* can take care of invalidating some paths.
+
+.. code-block:: ini
+
+    kinto.signer.distribution_id = E155JIFUEHFGY
+
+By default, it invalidates the whole CDN (``/v1/*``). But paths can be configured:
+
+.. code-block:: ini
+
+    kinto.signer.invalidation_paths = /v1/buckets/{bucket_id}/collections/{collection_id}*
+                                      /v1/buckets/monitor/collections/changes*
+                                      /v1/blocklist/*
+
 Usage
 =====
 

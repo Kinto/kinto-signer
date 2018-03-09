@@ -263,3 +263,19 @@ class LocalUpdaterTest(unittest.TestCase):
         with mock.patch('boto3.client') as boto3_client:
             boto3_client.return_value.create_invalidation.side_effect = ValueError
             self.updater.invalidate_cloudfront_cache(request, 'tz_1234')
+
+    def test_invalidation_paths_can_be_configured(self):
+        request = mock.MagicMock()
+        request.registry.settings = {
+            'signer.distribution_id': 'DWIGHTENIS',
+            'signer.invalidation_paths': '/v1/blocklists* '
+                                         '/v1/buckets/{bucket_id}/collections/{collection_id}*'
+        }
+        with mock.patch('boto3.client') as boto3_client:
+            self.updater.invalidate_cloudfront_cache(request, 'tz_1234')
+            call_args = boto3_client.return_value.create_invalidation.call_args
+            params = call_args[1]
+            assert params['InvalidationBatch']['Paths']['Items'] == [
+                '/v1/blocklists*',
+                '/v1/buckets/destbucket/collections/destcollection*'
+            ]

@@ -11,6 +11,11 @@ This document describes changes between each past release.
 - Cloudfront invalidation paths can be configured
 
 
+**Internal changes**
+
+- Got rid of ``six`` since *kinto-signer* is Python 3 only.
+
+
 3.0.0 (2018-03-08)
 ------------------
 

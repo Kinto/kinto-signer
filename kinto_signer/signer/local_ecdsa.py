@@ -3,12 +3,15 @@ import warnings
 
 import ecdsa
 import hashlib
-import six
 from ecdsa import NIST384p, SigningKey, VerifyingKey
 
 from .base import SignerBase
 from .exceptions import BadSignatureError
 from ..utils import get_first_matching_setting
+
+
+# Autograph uses this prefix prior to signing.
+SIGN_PREFIX = b"Content-Signature:\x00"
 
 
 class ECDSASigner(SignerBase):
@@ -20,9 +23,6 @@ class ECDSASigner(SignerBase):
             raise ValueError(msg)
         self.private_key = private_key
         self.public_key = public_key
-
-        # Autograph uses this prefix prior to signing.
-        self.prefix = "Content-Signature:\x00".encode("utf-8")
 
     @classmethod
     def generate_keypair(cls):
@@ -48,10 +48,10 @@ class ECDSASigner(SignerBase):
                 return VerifyingKey.from_pem(key_file.read())
 
     def sign(self, payload):
-        if isinstance(payload, six.text_type):  # pragma: nocover
+        if isinstance(payload, str):  # pragma: nocover
             payload = payload.encode('utf-8')
 
-        payload = self.prefix + payload
+        payload = SIGN_PREFIX + payload
         private_key = self.load_private_key()
         signature = private_key.sign(payload,
                                      hashfunc=hashlib.sha384,
@@ -65,14 +65,12 @@ class ECDSASigner(SignerBase):
         }
 
     def verify(self, payload, signature_bundle):
-        signature = signature_bundle['signature']
-
-        if isinstance(payload, six.text_type):  # pragma: nocover
+        if isinstance(payload, str):  # pragma: nocover
             payload = payload.encode('utf-8')
 
-        payload = self.prefix + payload
-
-        if isinstance(signature, six.text_type):  # pragma: nocover
+        payload = SIGN_PREFIX + payload
+        signature = signature_bundle['signature']
+        if isinstance(signature, str):  # pragma: nocover
             signature = signature.encode('utf-8')
 
         signature_bytes = base64.urlsafe_b64decode(signature)

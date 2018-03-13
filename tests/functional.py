@@ -1,7 +1,7 @@
 import time
 import unittest
 import os.path
-from six.moves.urllib.parse import urljoin
+from urllib.parse import urljoin
 
 import requests
 

@@ -9,7 +9,7 @@ This document describes changes between each past release.
 **New features**
 
 - Cloudfront invalidation paths can be configured
-
+- User does not have to be in the *reviewers* group to refresh a signature (fixes #233)
 
 **Internal changes**
 

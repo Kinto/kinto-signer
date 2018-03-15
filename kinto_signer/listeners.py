@@ -244,7 +244,12 @@ def check_collection_status(event, resources, group_check_enabled,
 
         # 3. to-review -> work-in-progress
         # 3. to-review -> to-sign
+        # 3. signed -> to-sign
         elif new_status == STATUS.TO_SIGN:
+            # Refresh signature (signed -> to-sign) does not require group membership
+            if old_status == STATUS.SIGNED:
+                continue
+
             # Only allow to-sign from to-review if reviewer and no-editor
             if reviewers_group_uri not in user_principals and _group_check_enabled:
                 raise_forbidden(message="Not in %s group" % _reviewers_group)

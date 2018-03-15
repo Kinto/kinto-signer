@@ -222,23 +222,55 @@ class ForceReviewTest(SignoffWebTest, unittest.TestCase):
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
-    def test_editor_can_retrigger_a_signature(self):
+
+class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
+        settings['signer.to_review_enabled'] = 'true'
+        settings['signer.group_check_enabled'] = 'true'
+        return settings
+
+    def setUp(self):
+        super().setUp()
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
                             headers=self.headers)
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
                             headers=self.other_headers)
-
-        # Now collection is signed.
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
+    def test_editor_can_retrigger_a_signature(self):
         # Editor retriggers a signature, without going through review.
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
                             headers=self.headers)
 
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+
+    def test_reviewer_can_retrigger_a_signature(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.other_headers)
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+
+    def test_non_reviewer_can_retrigger_a_signature(self):
+        writer_headers = get_user_headers('walter:white')
+        resp = self.app.get("/", headers=writer_headers)
+        writer_userid = resp.json["user"]["id"]
+        self.app.patch_json(self.source_bucket, {
+            "permissions": {
+                "write": [writer_userid]
+            }
+        }, headers=self.headers)
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=writer_headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 

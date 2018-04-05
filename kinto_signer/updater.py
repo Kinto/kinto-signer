@@ -116,7 +116,8 @@ class LocalUpdater(object):
             self.set_destination_signature(signature, source_attributes, request)
             if next_source_status is not None:
                 self.update_source_status(next_source_status, request)
-            self.invalidate_cloudfront_cache(request, timestamp)
+
+        self.invalidate_cloudfront_cache(request, timestamp)
 
     def create_destination(self, request):
         """Create the destination bucket/collection if they don't already exist.
@@ -369,5 +370,6 @@ class LocalUpdater(object):
                     },
                     'CallerReference': '{}-{}'.format(timestamp, uuid.uuid4())
                 })
+            logger.info("Invalidated CloudFront cache at %s" % ", ".join(paths))
         except Exception:
             logger.exception("Cache invalidation request failed.")

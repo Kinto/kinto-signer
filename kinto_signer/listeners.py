@@ -357,3 +357,14 @@ def create_editors_reviewers_groups(event, resources, editors_group, reviewers_g
                                        record={'id': group, 'members': members},
                                        permissions=group_perms,
                                        matchdict={'bucket_id': bid, 'id': group})
+
+        # Allow those groups to write to the source collection.
+        permission = event.request.registry.permission
+        collection_uri = instance_uri(event.request, "collection",
+                                      bucket_id=bid,
+                                      id=resource["source"]["collection"])
+        for group in (_editors_group, _reviewers_group):
+            group_principal = instance_uri(event.request, "group",
+                                           bucket_id=bid,
+                                           id=group)
+            permission.add_principal_to_ace(collection_uri, 'write', group_principal)

@@ -6,7 +6,9 @@ This document describes changes between each past release.
 3.2.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**New features**
+
+- The preview collection signature is now refreshed along the destination (fixes #236)
 
 
 3.1.0 (2018-03-16)

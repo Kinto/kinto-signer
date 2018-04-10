@@ -422,9 +422,9 @@ class SpecificUserGroupsTest(SignoffWebTest, FormattedErrorMixin, unittest.TestC
             cls.source_collection2.replace("alice", "destination"))
 
         settings['signer.group_check_enabled'] = 'false'
-        settings['signer.alice_cid1.group_check_enabled'] = 'true'
-        settings['signer.alice_cid1.editors_group'] = 'editeurs'
-        settings['signer.alice_cid1.reviewers_group'] = 'revoyeurs'
+        settings['signer.alice.cid1.group_check_enabled'] = 'true'
+        settings['signer.alice.cid1.editors_group'] = 'editeurs'
+        settings['signer.alice.cid1.reviewers_group'] = 'revoyeurs'
         return settings
 
     def setUp(self):
@@ -534,9 +534,9 @@ class PerBucketTest(SignoffWebTest, unittest.TestCase):
             cls.destination_bucket])
 
         settings['signer.to_review_enabled'] = 'true'
-        settings['signer.stage_specific.to_review_enabled'] = 'false'
+        settings['signer.stage.specific.to_review_enabled'] = 'false'
 
-        settings['signer.stage_specific.autograph.hawk_id'] = 'for-specific'
+        settings['signer.stage.specific.autograph.hawk_id'] = 'for-specific'
         return settings
 
     def test_destination_and_preview_collections_are_created_and_signed(self):

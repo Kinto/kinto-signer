@@ -60,9 +60,14 @@ def pick_resource_and_signer(request, resources, bucket_id, collection_id):
 
         # Look-up if a setting overrides a global one here.
         for setting in REVIEW_SETTINGS:
-            setting_key = "signer.%s_%s.%s" % (bucket_id, collection_id, setting)
+            setting_key = "signer.%s.%s.%s" % (bucket_id, collection_id, setting)
             if setting_key in settings:
                 resource[setting] = settings[setting_key]
+            else:  # pragma: no cover
+                # Deprecated underscore separation
+                setting_key = "signer.%s_%s.%s" % (bucket_id, collection_id, setting)
+                if setting_key in settings:
+                    resource[setting] = settings[setting_key]
 
     if collection_key in request.registry.signers:
         signer = request.registry.signers[collection_key]

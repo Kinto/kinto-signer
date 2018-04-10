@@ -1,3 +1,4 @@
+import datetime
 import logging
 import uuid
 
@@ -23,8 +24,11 @@ logger = logging.getLogger(__name__)
 FIELD_ID = 'id'
 FIELD_LAST_MODIFIED = 'last_modified'
 FIELD_LAST_AUTHOR = 'last_author'
+FIELD_LAST_AUTHORED = 'last_authored'
 FIELD_LAST_EDITOR = 'last_editor'
+FIELD_LAST_EDITED = 'last_edited'
 FIELD_LAST_REVIEWER = 'last_reviewer'
+FIELD_LAST_SIGNED = 'last_signed'
 
 
 def _ensure_resource(resource):
@@ -289,17 +293,22 @@ class LocalUpdater(object):
             old=collection_record)
 
     def update_source_editor(self, request):
-        attrs = {FIELD_LAST_EDITOR: request.prefixed_userid}
+        attrs = {FIELD_LAST_EDITOR: request.prefixed_userid,
+                 FIELD_LAST_EDITED: datetime.datetime.now().isoformat()}
         return self._update_source_attributes(request, **attrs)
 
     def update_source_status(self, status, request):
+        current_date = datetime.datetime.now().isoformat()
         attrs = {'status': status.value}
         if status == STATUS.WORK_IN_PROGRESS:
             attrs[FIELD_LAST_AUTHOR] = request.prefixed_userid
+            attrs[FIELD_LAST_AUTHORED] = current_date
         if status == STATUS.TO_REVIEW:
             attrs[FIELD_LAST_EDITOR] = request.prefixed_userid
+            attrs[FIELD_LAST_EDITED] = current_date
         if status == STATUS.SIGNED:
             attrs[FIELD_LAST_REVIEWER] = request.prefixed_userid
+            attrs[FIELD_LAST_SIGNED] = current_date
         return self._update_source_attributes(request, **attrs)
 
     def _update_source_attributes(self, request, **kwargs):

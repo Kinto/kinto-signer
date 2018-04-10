@@ -1,3 +1,4 @@
+import datetime
 import unittest
 
 import mock
@@ -277,27 +278,32 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
 
 class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
 
-    def last_author_is_tracked(self):
+    today = datetime.date.today().strftime("%Y-%m-%d")
+
+    def last_author_and_date_are_tracked(self):
         self.app.post_json(self.source_collection + "/records",
                            {"data": {"title": "Hallo"}},
                            headers=self.headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["last_author"] == self.userid
+        assert resp.json["data"]["last_authored"].startswith(self.today)
 
-    def test_last_editor_is_tracked(self):
+    def test_last_editor_and_date_are_tracked(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
                             headers=self.headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["last_editor"] == self.userid
+        assert resp.json["data"]["last_edited"].startswith(self.today)
 
-    def test_last_reviewer_is_tracked(self):
+    def test_last_reviewer_and_date_are_tracked(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
                             headers=self.headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
         assert resp.json["data"]["last_reviewer"] == self.userid
+        assert resp.json["data"]["last_signed"].startswith(self.today)
 
     def test_editor_can_be_reviewer(self):
         self.app.patch_json(self.source_collection,
@@ -326,7 +332,8 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
         assert source_collection["status"] == "signed"
 
         # All tracking fields are here.
-        expected = ("last_author", "last_editor", "last_reviewer")
+        expected = ("last_author", "last_authored",
+                    "last_edited", "last_editor", "last_signed")
         assert all([f in source_collection for f in expected])
 
         # They cannot be changed nor removed.

@@ -10,7 +10,9 @@ from pyramid import httpexceptions
 from pyramid.interfaces import IAuthorizationPolicy
 
 from kinto_signer.updater import (LocalUpdater, FIELD_LAST_AUTHOR,
-                                  FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER)
+                                  FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER,
+                                  FIELD_LAST_AUTHORED, FIELD_LAST_EDITED,
+                                  FIELD_LAST_SIGNED)
 from kinto_signer import events as signer_events
 from kinto_signer.utils import (STATUS, PLUGIN_USERID, send_resource_events,
                                 ensure_resource_exists)
@@ -284,7 +286,8 @@ def check_collection_tracking(event, resources):
     if event.request.prefixed_userid == PLUGIN_USERID:
         return
 
-    tracking_fields = (FIELD_LAST_AUTHOR, FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER)
+    tracking_fields = (FIELD_LAST_AUTHOR, FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER,
+                       FIELD_LAST_AUTHORED, FIELD_LAST_EDITED, FIELD_LAST_SIGNED)
 
     for impacted in event.impacted_records:
         old_collection = impacted.get("old", {})

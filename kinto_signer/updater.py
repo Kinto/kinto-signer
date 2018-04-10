@@ -28,6 +28,7 @@ FIELD_LAST_AUTHORED = 'last_authored'
 FIELD_LAST_EDITOR = 'last_editor'
 FIELD_LAST_EDITED = 'last_edited'
 FIELD_LAST_REVIEWER = 'last_reviewer'
+FIELD_LAST_REVIEWED = 'last_reviewed'
 FIELD_LAST_SIGNED = 'last_signed'
 
 
@@ -97,7 +98,8 @@ class LocalUpdater(object):
             self.destination['collection'])
 
     def sign_and_update_destination(self, request, source_attributes,
-                                    next_source_status=STATUS.SIGNED):
+                                    next_source_status=STATUS.SIGNED,
+                                    previous_source_status=None):
         """Sign the specified collection.
 
         0. Create the destination bucket / collection
@@ -119,7 +121,7 @@ class LocalUpdater(object):
 
             self.set_destination_signature(signature, source_attributes, request)
             if next_source_status is not None:
-                self.update_source_status(next_source_status, request)
+                self.update_source_status(next_source_status, request, previous_source_status)
 
         self.invalidate_cloudfront_cache(request, timestamp)
 
@@ -297,7 +299,7 @@ class LocalUpdater(object):
                  FIELD_LAST_EDITED: datetime.datetime.now().isoformat()}
         return self._update_source_attributes(request, **attrs)
 
-    def update_source_status(self, status, request):
+    def update_source_status(self, status, request, old_status=None):
         current_date = datetime.datetime.now().isoformat()
         attrs = {'status': status.value}
         if status == STATUS.WORK_IN_PROGRESS:
@@ -307,7 +309,10 @@ class LocalUpdater(object):
             attrs[FIELD_LAST_EDITOR] = request.prefixed_userid
             attrs[FIELD_LAST_EDITED] = current_date
         if status == STATUS.SIGNED:
-            attrs[FIELD_LAST_REVIEWER] = request.prefixed_userid
+            if old_status != STATUS.SIGNED:
+                # Do not keep track of reviewer when refreshing signature.
+                attrs[FIELD_LAST_REVIEWER] = request.prefixed_userid
+                attrs[FIELD_LAST_REVIEWED] = current_date
             attrs[FIELD_LAST_SIGNED] = current_date
         return self._update_source_attributes(request, **attrs)
 

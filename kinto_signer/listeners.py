@@ -12,7 +12,7 @@ from pyramid.interfaces import IAuthorizationPolicy
 from kinto_signer.updater import (LocalUpdater, FIELD_LAST_AUTHOR,
                                   FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER,
                                   FIELD_LAST_AUTHORED, FIELD_LAST_EDITED,
-                                  FIELD_LAST_SIGNED)
+                                  FIELD_LAST_REVIEWED, FIELD_LAST_SIGNED)
 from kinto_signer import events as signer_events
 from kinto_signer.utils import (STATUS, PLUGIN_USERID, send_resource_events,
                                 ensure_resource_exists)
@@ -151,7 +151,8 @@ def sign_collection_data(event, resources):
                 # Run signature process (will set `last_reviewer` field).
                 updater.destination = resource['destination']
                 updater.sign_and_update_destination(event.request,
-                                                    source_attributes=new_collection)
+                                                    source_attributes=new_collection,
+                                                    previous_source_status=old_status)
                 if old_status != STATUS.SIGNED:
                     review_event_cls = signer_events.ReviewApproved
 
@@ -287,7 +288,8 @@ def check_collection_tracking(event, resources):
         return
 
     tracking_fields = (FIELD_LAST_AUTHOR, FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER,
-                       FIELD_LAST_AUTHORED, FIELD_LAST_EDITED, FIELD_LAST_SIGNED)
+                       FIELD_LAST_AUTHORED, FIELD_LAST_EDITED, FIELD_LAST_REVIEWED,
+                       FIELD_LAST_SIGNED)
 
     for impacted in event.impacted_records:
         old_collection = impacted.get("old", {})

@@ -304,6 +304,24 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
         assert resp.json["data"]["status"] == "signed"
         assert resp.json["data"]["last_reviewer"] == self.userid
         assert resp.json["data"]["last_signed"].startswith(self.today)
+        assert resp.json["data"]["last_reviewed"].startswith(self.today)
+
+    def test_last_reviewed_differs_from_last_signed_on_refresh_signature(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+        last_reviewer = resp.json["data"]["last_reviewer"]
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+
+        assert resp.json["data"]["last_signed"] != resp.json["data"]["last_reviewed"]
+        assert last_reviewer == resp.json["data"]["last_reviewer"]
 
     def test_editor_can_be_reviewer(self):
         self.app.patch_json(self.source_collection,
@@ -332,7 +350,7 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
         assert source_collection["status"] == "signed"
 
         # All tracking fields are here.
-        expected = ("last_author", "last_authored",
+        expected = ("last_author", "last_authored", "last_reviewed",
                     "last_edited", "last_editor", "last_signed")
         assert all([f in source_collection for f in expected])
 

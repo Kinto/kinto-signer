@@ -625,6 +625,15 @@ class GroupCreationTest(PostgresWebTest, unittest.TestCase):
         self.app.get(self.editors_group, headers=self.headers)
         self.app.get(self.reviewers_group, headers=self.headers)
 
+    def test_groups_are_allowed_to_write_the_source_collection(self):
+        body = {'data': {'members': [self.other_userid]}}
+        self.app.put_json(self.editors_group, body, headers=self.headers)
+
+        self.app.put(self.source_collection, headers=self.headers)
+
+        self.app.post_json(self.source_collection + '/records',
+                           headers=self.other_headers, status=201)
+
     def test_events_are_sent(self):
         patch = mock.patch('kinto_signer.utils.notify_resource_event')
         mocked = patch.start()
@@ -653,6 +662,19 @@ class GroupCreationTest(PostgresWebTest, unittest.TestCase):
         assert r['data']['members'] == [self.userid]
         r = self.app.get(self.reviewers_group, headers=self.headers).json
         assert r['data']['members'] == []
+
+    def test_groups_are_not_touched_if_already_exist(self):
+        resp = self.app.put(self.editors_group, headers=self.headers)
+        editors_timetamp = resp.json['data']['last_modified']
+        resp = self.app.put(self.reviewers_group, headers=self.headers)
+        reviewers_timetamp = resp.json['data']['last_modified']
+
+        self.app.put(self.source_collection, headers=self.headers)
+
+        r = self.app.get(self.editors_group, headers=self.headers).json
+        assert r['data']['last_modified'] == editors_timetamp
+        r = self.app.get(self.reviewers_group, headers=self.headers).json
+        assert r['data']['last_modified'] == reviewers_timetamp
 
     def test_groups_are_not_created_if_not_allowed(self):
         # Allow this other user to create collections.

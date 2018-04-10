@@ -11,6 +11,10 @@ This document describes changes between each past release.
 - The collection specific settings must now be separated with ``.`` instead of ``_``.
   (eg. use ``kinto.signer.staging.certificates.editors_group`` instead of ``kinto.signer.staging_certificates.editors_group``) (fixes #224)
 
+**New features**
+
+- Give write permission to reviewers/editors groups on newly created collections (fixes #237)
+
 **Internal changes**
 
 - Now log an INFO message when the CloudFront invalidation request is sent (fixes #238)

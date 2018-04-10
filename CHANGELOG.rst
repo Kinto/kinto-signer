@@ -6,7 +6,13 @@ This document describes changes between each past release.
 3.2.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**New features**
+
+- Give write permission to reviewers/editors groups on newly created collections (fixes #237)
+
+**Internal changes**
+
+- Now log an INFO message when the CloudFront invalidation request is sent (fixes #238)
 
 
 3.1.0 (2018-03-16)

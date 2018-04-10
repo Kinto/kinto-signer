@@ -6,7 +6,14 @@ This document describes changes between each past release.
 3.2.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Deprecations**
+
+- The collection specific settings must now be separated with ``.`` instead of ``_``.
+  (eg. use ``kinto.signer.staging.certificates.editors_group`` instead of ``kinto.signer.staging_certificates.editors_group``) (fixes #224)
+
+**Internal changes**
+
+- Now log an INFO message when the CloudFront invalidation request is sent (fixes #238)
 
 
 3.1.0 (2018-03-16)

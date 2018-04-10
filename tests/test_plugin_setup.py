@@ -24,7 +24,7 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
         settings = super().get_app_settings(extras)
         settings['signer.reviewers_group'] = '{bucket_id}-{collection_id}-reviewers'
         settings['signer.alice.reviewers_group'] = 'revoyeurs'
-        settings['signer.alice_source.to_review_enabled'] = 'true'
+        settings['signer.alice.source.to_review_enabled'] = 'true'
         return settings
 
     def test_capability_is_exposed(self):
@@ -134,10 +134,10 @@ class IncludeMeTest(unittest.TestCase):
             "signer.sb1.signer_backend": "kinto_signer.signer.local_ecdsa",
             "signer.sb1.ecdsa.public_key": "/path/to/key",
             "signer.sb1.ecdsa.private_key": "/path/to/private",
-            "signer.sb1_sc1.signer_backend": "kinto_signer.signer.autograph",
-            "signer.sb1_sc1.autograph.server_url": "http://localhost",
-            "signer.sb1_sc1.autograph.hawk_id": "alice",
-            "signer.sb1_sc1.autograph.hawk_secret": "a-secret",
+            "signer.sb1.sc1.signer_backend": "kinto_signer.signer.autograph",
+            "signer.sb1.sc1.autograph.server_url": "http://localhost",
+            "signer.sb1.sc1.autograph.hawk_id": "alice",
+            "signer.sb1.sc1.autograph.hawk_secret": "a-secret",
         }
         config = self.includeme(settings)
         signer1, signer2 = config.registry.signers.values()
@@ -156,8 +156,8 @@ class IncludeMeTest(unittest.TestCase):
             "signer.autograph.server_url": "http://localhost",
             "signer.sb1.autograph.hawk_id": "bob",
             "signer.sb1.autograph.hawk_secret": "a-secret",
-            "signer.sb1_sc1.autograph.hawk_id": "alice",
-            "signer.sb1_sc1.autograph.hawk_secret": "a-secret",
+            "signer.sb1.sc1.autograph.hawk_id": "alice",
+            "signer.sb1.sc1.autograph.hawk_secret": "a-secret",
         }
         config = self.includeme(settings)
 

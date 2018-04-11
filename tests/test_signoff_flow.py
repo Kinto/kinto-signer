@@ -16,6 +16,7 @@ class PostgresWebTest(BaseWebTest):
         patch = mock.patch('kinto_signer.signer.autograph.requests')
         self.addCleanup(patch.stop)
         self.mocked_autograph = patch.start()
+
         def fake_sign():
             fake_signature = "".join(random.sample(string.ascii_lowercase, 10))
             return [{
@@ -25,6 +26,7 @@ class PostgresWebTest(BaseWebTest):
                 "content-signature": fake_signature,
                 "x5u": ""
             }]
+
         self.mocked_autograph.post.return_value.json.side_effect = fake_sign
 
     @classmethod

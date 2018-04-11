@@ -9,8 +9,7 @@ from kinto.core.errors import ERRORS
 from pyramid import httpexceptions
 from pyramid.interfaces import IAuthorizationPolicy
 
-from kinto_signer.updater import (LocalUpdater, FIELD_LAST_AUTHOR,
-                                  FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER)
+from kinto_signer.updater import LocalUpdater, TRACKING_FIELDS
 from kinto_signer import events as signer_events
 from kinto_signer.utils import (STATUS, PLUGIN_USERID, send_resource_events,
                                 ensure_resource_exists)
@@ -149,7 +148,8 @@ def sign_collection_data(event, resources):
                 # Run signature process (will set `last_reviewer` field).
                 updater.destination = resource['destination']
                 updater.sign_and_update_destination(event.request,
-                                                    source_attributes=new_collection)
+                                                    source_attributes=new_collection,
+                                                    previous_source_status=old_status)
 
                 if old_status == STATUS.SIGNED:
                     # When we refresh the signature, it is mainly in order to make sure that
@@ -158,7 +158,8 @@ def sign_collection_data(event, resources):
                     if 'preview' in resource:
                         updater.destination = resource['preview']
                         updater.sign_and_update_destination(event.request,
-                                                            source_attributes=new_collection)
+                                                            source_attributes=new_collection,
+                                                            previous_source_status=old_status)
                 else:
                     review_event_cls = signer_events.ReviewApproved
 
@@ -172,7 +173,7 @@ def sign_collection_data(event, resources):
                 else:
                     # If no preview collection: just track `last_editor`
                     with send_resource_events(event.request):
-                        updater.update_source_editor(event.request)
+                        updater.update_source_review_request_by(event.request)
                 review_event_cls = signer_events.ReviewRequested
 
             elif old_status == STATUS.TO_REVIEW and new_status == STATUS.WORK_IN_PROGRESS:
@@ -271,7 +272,8 @@ def check_collection_status(event, resources, group_check_enabled,
             if old_status != STATUS.TO_REVIEW and _to_review_enabled:
                 raise_invalid(message="Collection not reviewed")
 
-            is_same_editor = old_collection.get(FIELD_LAST_EDITOR) == current_user_id
+            field_last_requester = TRACKING_FIELDS.LAST_REVIEW_REQUEST_BY.value
+            is_same_editor = old_collection.get(field_last_requester) == current_user_id
             if _to_review_enabled and is_same_editor:
                 raise_forbidden(message="Editor cannot review")
 
@@ -293,8 +295,6 @@ def check_collection_tracking(event, resources):
     if event.request.prefixed_userid == PLUGIN_USERID:
         return
 
-    tracking_fields = (FIELD_LAST_AUTHOR, FIELD_LAST_EDITOR, FIELD_LAST_REVIEWER)
-
     for impacted in event.impacted_records:
         old_collection = impacted.get("old", {})
         new_collection = impacted["new"]
@@ -306,9 +306,9 @@ def check_collection_tracking(event, resources):
         if resource is None:
             continue
 
-        for field in tracking_fields:
-            old = old_collection.get(field)
-            new = new_collection.get(field)
+        for field in TRACKING_FIELDS:
+            old = old_collection.get(field.value)
+            new = new_collection.get(field.value)
             if old != new:
                 raise_invalid(message="Cannot change %r" % field)
 

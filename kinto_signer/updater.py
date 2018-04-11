@@ -1,5 +1,7 @@
+import datetime
 import logging
 import uuid
+from enum import Enum
 
 from kinto.core.events import ACTIONS
 from kinto.core.storage import Filter, Sort
@@ -22,9 +24,17 @@ logger = logging.getLogger(__name__)
 
 FIELD_ID = 'id'
 FIELD_LAST_MODIFIED = 'last_modified'
-FIELD_LAST_AUTHOR = 'last_author'
-FIELD_LAST_EDITOR = 'last_editor'
-FIELD_LAST_REVIEWER = 'last_reviewer'
+
+
+class TRACKING_FIELDS(Enum):
+    LAST_EDIT_BY = 'last_edit_by'
+    LAST_EDIT_DATE = 'last_edit_date'
+    LAST_REVIEW_REQUEST_BY = 'last_review_request_by'
+    LAST_REVIEW_REQUEST_DATE = 'last_review_request_date'
+    LAST_REVIEW_BY = 'last_review_by'
+    LAST_REVIEW_DATE = 'last_review_date'
+    LAST_SIGNATURE_BY = 'last_signature_by'
+    LAST_SIGNATURE_DATE = 'last_signature_date'
 
 
 def _ensure_resource(resource):
@@ -93,7 +103,8 @@ class LocalUpdater(object):
             self.destination['collection'])
 
     def sign_and_update_destination(self, request, source_attributes,
-                                    next_source_status=STATUS.SIGNED):
+                                    next_source_status=STATUS.SIGNED,
+                                    previous_source_status=None):
         """Sign the specified collection.
 
         0. Create the destination bucket / collection
@@ -115,7 +126,7 @@ class LocalUpdater(object):
 
             self.set_destination_signature(signature, source_attributes, request)
             if next_source_status is not None:
-                self.update_source_status(next_source_status, request)
+                self.update_source_status(next_source_status, request, previous_source_status)
 
         self.invalidate_cloudfront_cache(request, timestamp)
 
@@ -288,18 +299,29 @@ class LocalUpdater(object):
             action=ACTIONS.UPDATE,
             old=collection_record)
 
-    def update_source_editor(self, request):
-        attrs = {FIELD_LAST_EDITOR: request.prefixed_userid}
+    def update_source_review_request_by(self, request):
+        current_date = datetime.datetime.now().isoformat()
+        attrs = {TRACKING_FIELDS.LAST_REVIEW_REQUEST_BY.value: request.prefixed_userid,
+                 TRACKING_FIELDS.LAST_REVIEW_REQUEST_DATE.value: current_date}
         return self._update_source_attributes(request, **attrs)
 
-    def update_source_status(self, status, request):
+    def update_source_status(self, status, request, old_status=None):
+        current_userid = request.prefixed_userid
+        current_date = datetime.datetime.now().isoformat()
         attrs = {'status': status.value}
         if status == STATUS.WORK_IN_PROGRESS:
-            attrs[FIELD_LAST_AUTHOR] = request.prefixed_userid
+            attrs[TRACKING_FIELDS.LAST_EDIT_BY.value] = current_userid
+            attrs[TRACKING_FIELDS.LAST_EDIT_DATE.value] = current_date
         if status == STATUS.TO_REVIEW:
-            attrs[FIELD_LAST_EDITOR] = request.prefixed_userid
+            attrs[TRACKING_FIELDS.LAST_REVIEW_REQUEST_BY.value] = current_userid
+            attrs[TRACKING_FIELDS.LAST_REVIEW_REQUEST_DATE.value] = current_date
         if status == STATUS.SIGNED:
-            attrs[FIELD_LAST_REVIEWER] = request.prefixed_userid
+            if old_status != STATUS.SIGNED:
+                # Do not keep track of reviewer when refreshing signature.
+                attrs[TRACKING_FIELDS.LAST_REVIEW_BY.value] = current_userid
+                attrs[TRACKING_FIELDS.LAST_REVIEW_DATE.value] = current_date
+            attrs[TRACKING_FIELDS.LAST_SIGNATURE_BY.value] = current_userid
+            attrs[TRACKING_FIELDS.LAST_SIGNATURE_DATE.value] = current_date
         return self._update_source_attributes(request, **attrs)
 
     def _update_source_attributes(self, request, **kwargs):
@@ -314,11 +336,6 @@ class LocalUpdater(object):
         # Update the collection_record
         new_collection = dict(**collection_record)
         new_collection.update(**kwargs)
-
-        # If nothing was changed, do nothing.
-        # (e.g. same last_editor)
-        if new_collection == collection_record:
-            return
 
         # Remove last_modified to be sure it's bumped.
         new_collection.pop('last_modified', None)

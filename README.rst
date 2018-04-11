@@ -353,6 +353,25 @@ The *destination* collection metadata now contains the signature:
        }
    }
 
+Tracking fields
+---------------
+
+During the review process, the *source* collection metadata will receive the following read-only fields:
+
+- ``last_edit_by``: last user to perform change on records in the source collection
+- ``last_edit_date``: date of the last records change
+- ``last_review_request_by``: last user to request a review
+- ``last_review_request_date``: date of the last review request
+- ``last_review_by``: last user to approve a review
+- ``last_review_date``: date of the last review approval
+- ``last_signature_by``: last user to trigger a signature
+- ``last_signature_date``: date of the last signature
+
+.. note:
+
+  ``last_signed_by`` can be different from ``last_review_by`` when the signature is refreshed
+  (ie. status changed directly from ``signed`` to ``to-sign``).
+
 
 Events
 ======

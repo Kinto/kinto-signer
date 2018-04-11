@@ -329,22 +329,22 @@ class HistoryTest(unittest.TestCase):
 
         # status: to-review (by user)
         assert collection_entries[2]['target']['data']['status'] == 'to-review'
-        assert 'last_editor' not in collection_entries[2]['target']['data']
+        assert 'last_review_request_by' not in collection_entries[2]['target']['data']
         assert 'basicauth:' in collection_entries[2]['user_id']
 
         # update of last_editor (by plugin)
         assert collection_entries[3]['target']['data']['status'] == 'to-review'
-        assert 'basicauth:' in collection_entries[3]['target']['data']['last_editor']
+        assert 'basicauth:' in collection_entries[3]['target']['data']['last_review_request_by']
         assert 'kinto-signer' in collection_entries[3]['user_id']
 
         # status: to-sign
         assert collection_entries[4]['target']['data']['status'] == 'to-sign'
-        assert 'last_reviewer' not in collection_entries[4]['target']['data']
+        assert 'last_review_by' not in collection_entries[4]['target']['data']
         assert 'basicauth:' in collection_entries[4]['user_id']
 
         # status: signed (by plugin)
         assert collection_entries[5]['target']['data']['status'] == 'signed'
-        assert 'basicauth:' in collection_entries[5]['target']['data']['last_reviewer']
+        assert 'basicauth:' in collection_entries[5]['target']['data']['last_review_by']
         assert 'kinto-signer' in collection_entries[5]['user_id']
 
 
@@ -456,7 +456,7 @@ class WorkflowTest(unittest.TestCase):
         self.client.patch_collection(data={'status': 'to-review'})
 
         resp = self.client.get_collection()
-        assert resp['data']['last_editor'] == self.client_principal
+        assert resp['data']['last_review_request_by'] == self.client_principal
 
         # Client cannot review since he is the last_editor.
         with self.assertRaises(KintoException):

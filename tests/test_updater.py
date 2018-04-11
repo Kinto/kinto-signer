@@ -187,7 +187,10 @@ class LocalUpdaterTest(unittest.TestCase):
     def test_update_source_status_modifies_the_source_collection(self):
         self.storage.get.return_value = {'id': 1234, 'last_modified': 1234,
                                          'status': 'to-sign'}
-        self.updater.update_source_status(STATUS.SIGNED, DummyRequest())
+
+        with mock.patch("kinto_signer.updater.datetime") as mocked:
+            mocked.datetime.now().isoformat.return_value = "2018-04-09"
+            self.updater.update_source_status(STATUS.SIGNED, DummyRequest())
 
         self.storage.update.assert_called_with(
             collection_id='collection',
@@ -195,7 +198,10 @@ class LocalUpdaterTest(unittest.TestCase):
             parent_id='/buckets/sourcebucket',
             record={
                 'id': 1234,
-                'last_reviewer': 'basicauth:bob',
+                'last_review_by': 'basicauth:bob',
+                'last_review_date': '2018-04-09',
+                'last_signature_by': 'basicauth:bob',
+                'last_signature_date': '2018-04-09',
                 'status': "signed"
             })
 

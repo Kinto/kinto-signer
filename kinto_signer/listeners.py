@@ -150,7 +150,16 @@ def sign_collection_data(event, resources):
                 updater.destination = resource['destination']
                 updater.sign_and_update_destination(event.request,
                                                     source_attributes=new_collection)
-                if old_status != STATUS.SIGNED:
+
+                if old_status == STATUS.SIGNED:
+                    # When we refresh the signature, it is mainly in order to make sure that
+                    # the latest signer certificate was used. When a preview collection
+                    # is configured, we also want to refresh its signature.
+                    if 'preview' in resource:
+                        updater.destination = resource['preview']
+                        updater.sign_and_update_destination(event.request,
+                                                            source_attributes=new_collection)
+                else:
                     review_event_cls = signer_events.ReviewApproved
 
             elif new_status == STATUS.TO_REVIEW:

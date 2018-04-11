@@ -1,3 +1,5 @@
+import random
+import string
 import unittest
 
 import mock
@@ -14,12 +16,18 @@ class PostgresWebTest(BaseWebTest):
         patch = mock.patch('kinto_signer.signer.autograph.requests')
         self.addCleanup(patch.stop)
         self.mocked_autograph = patch.start()
-        self.mocked_autograph.post.return_value.json.return_value = [{
-            "signature": "",
-            "hash_algorithm": "",
-            "signature_encoding": "",
-            "content-signature": "",
-            "x5u": ""}]
+
+        def fake_sign():
+            fake_signature = "".join(random.sample(string.ascii_lowercase, 10))
+            return [{
+                "signature": "",
+                "hash_algorithm": "",
+                "signature_encoding": "",
+                "content-signature": fake_signature,
+                "x5u": ""
+            }]
+
+        self.mocked_autograph.post.return_value.json.side_effect = fake_sign
 
     @classmethod
     def get_app_settings(cls, extras=None):
@@ -514,6 +522,33 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
 
         resp = self.app.get(self.preview_collection, headers=self.headers)
         assert resp.json['data']['displayFields'] == ['age']
+
+    def test_the_preview_collection_is_also_resigned(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+        resp = self.app.get(self.preview_collection, headers=self.headers)
+        signature_preview_before = resp.json['data']['signature']
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.other_headers)
+        resp = self.app.get(self.destination_collection, headers=self.headers)
+        signature_destination_before = resp.json['data']['signature']
+        # status is signed.
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json['data']['status'] == 'signed'
+
+        # Resign.
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
+
+        resp = self.app.get(self.destination_collection, headers=self.headers)
+        signature_destination_after = resp.json['data']['signature']
+        assert signature_destination_before != signature_destination_after
+        resp = self.app.get(self.preview_collection, headers=self.headers)
+        signature_preview_after = resp.json['data']['signature']
+        assert signature_preview_before != signature_preview_after
 
 
 class PerBucketTest(SignoffWebTest, unittest.TestCase):

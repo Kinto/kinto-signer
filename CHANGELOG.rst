@@ -3,7 +3,7 @@ Changelog
 
 This document describes changes between each past release.
 
-3.2.0 (unreleased)
+3.2.0 (2018-04-11)
 ------------------
 
 **Deprecations**

@@ -329,11 +329,6 @@ class LocalUpdater(object):
         new_collection = dict(**collection_record)
         new_collection.update(**kwargs)
 
-        # If nothing was changed, do nothing.
-        # (e.g. same last_editor)
-        if new_collection == collection_record:
-            return
-
         # Remove last_modified to be sure it's bumped.
         new_collection.pop('last_modified', None)
 

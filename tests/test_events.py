@@ -92,12 +92,16 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
                   e.payload["collection_id"] == "scid" and
                   e.payload["action"] == "update"]
 
-        self.assertEqual(events[-1].payload["user_id"], "plugin:kinto-signer")
-        self.assertEqual(events[-1].impacted_records[0]["new"]["status"],
+        # We created two records, for each of them we updated the ``last_authored``
+        # field, so we received two events.
+        self.assertIsNone(events[0].impacted_records[0]["old"].get("status"))
+        self.assertIsNone(events[0].impacted_records[0]["old"].get("last_author"))
+        self.assertEqual(events[0].payload["user_id"], "plugin:kinto-signer")
+        self.assertEqual(events[0].impacted_records[0]["new"]["status"],
                          "work-in-progress")
-        self.assertIsNone(events[-1].impacted_records[0]["old"].get("status"))
-        self.assertIn("basicauth:", events[-1].impacted_records[0]["new"]["last_author"])
-        self.assertIsNone(events[-1].impacted_records[0]["old"].get("last_author"))
+        self.assertIn("basicauth:", events[0].impacted_records[0]["new"]["last_author"])
+        self.assertNotEqual(events[0].impacted_records[0]["new"]["last_authored"],
+                            events[-1].impacted_records[0]["new"]["last_authored"])
 
     def test_resource_changed_is_triggered_for_to_review(self):
         before = len(listener.received)

@@ -14,6 +14,7 @@ This document describes changes between each past release.
 **New features**
 
 - Give write permission to reviewers/editors groups on newly created collections (fixes #237)
+- The preview collection signature is now refreshed along the destination (fixes #236)
 - Add new tracking fields ``last_authored``, ``last_edited``, ``last_reviewed`` and ``last_signed`` (fixes #137)
 
 **Internal changes**

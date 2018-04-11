@@ -300,8 +300,9 @@ class LocalUpdater(object):
             old=collection_record)
 
     def update_source_review_request_by(self, request):
+        current_date = datetime.datetime.now().isoformat()
         attrs = {TRACKING_FIELDS.LAST_REVIEW_REQUEST_BY.value: request.prefixed_userid,
-                 TRACKING_FIELDS.LAST_REVIEW_REQUEST_DATE.value: datetime.datetime.now().isoformat()}
+                 TRACKING_FIELDS.LAST_REVIEW_REQUEST_DATE.value: current_date}
         return self._update_source_attributes(request, **attrs)
 
     def update_source_status(self, status, request, old_status=None):

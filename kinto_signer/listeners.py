@@ -272,8 +272,8 @@ def check_collection_status(event, resources, group_check_enabled,
             if old_status != STATUS.TO_REVIEW and _to_review_enabled:
                 raise_invalid(message="Collection not reviewed")
 
-            last_review_request_by = old_collection.get(TRACKING_FIELDS.LAST_REVIEW_REQUEST_BY.value)
-            is_same_editor = last_review_request_by == current_user_id
+            field_last_requester = TRACKING_FIELDS.LAST_REVIEW_REQUEST_BY.value
+            is_same_editor = old_collection.get(field_last_requester) == current_user_id
             if _to_review_enabled and is_same_editor:
                 raise_forbidden(message="Editor cannot review")
 

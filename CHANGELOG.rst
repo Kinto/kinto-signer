@@ -6,9 +6,19 @@ This document describes changes between each past release.
 3.2.0 (unreleased)
 ------------------
 
+**Deprecations**
+
+- The collection specific settings must now be separated with ``.`` instead of ``_``.
+  (eg. use ``kinto.signer.staging.certificates.editors_group`` instead of ``kinto.signer.staging_certificates.editors_group``) (fixes #224)
+
 **New features**
 
+- Give write permission to reviewers/editors groups on newly created collections (fixes #237)
 - The preview collection signature is now refreshed along the destination (fixes #236)
+
+**Internal changes**
+
+- Now log an INFO message when the CloudFront invalidation request is sent (fixes #238)
 
 
 3.1.0 (2018-03-16)

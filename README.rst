@@ -201,9 +201,9 @@ For example:
 
     kinto.signer.staging.group_check_enabled = true
     kinto.signer.staging.to_review_enabled = true
-    kinto.signer.staging_certificates.group_check_enabled = false
-    kinto.signer.staging_certificates.to_review_enabled = false
-    kinto.signer.staging_certificates.reviewers_group = certificates-reviewers
+    kinto.signer.staging.certificates.group_check_enabled = false
+    kinto.signer.staging.certificates.to_review_enabled = false
+    kinto.signer.staging.certificates.reviewers_group = certificates-reviewers
 
 If the review process is enabled, it is possible to configure a *preview*
 collection, that will be updated and signed when the status is set to ``to-review``.
@@ -247,9 +247,9 @@ Or prefixed with bucket and collection:
 
 .. code-block:: ini
 
-    kinto.signer.<bucket-id>_<collection-id>.signer_backend = kinto_signer.signer.local_ecdsa
-    kinto.signer.<bucket-id>_<collection-id>.ecdsa.private_key = /path/to/private.pem
-    kinto.signer.<bucket-id>_<collection-id>.ecdsa.public_key = /path/to/public.pem
+    kinto.signer.<bucket-id>.<collection-id>.signer_backend = kinto_signer.signer.local_ecdsa
+    kinto.signer.<bucket-id>.<collection-id>.ecdsa.private_key = /path/to/private.pem
+    kinto.signer.<bucket-id>.<collection-id>.ecdsa.public_key = /path/to/public.pem
 
 
 Cloudfront CDN invalidation

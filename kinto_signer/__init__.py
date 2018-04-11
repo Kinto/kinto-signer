@@ -48,8 +48,9 @@ def includeme(config):
         bucket_wide = 'signer.{bucket}.'.format(**resource['source'])
 
         if resource['source']['collection'] is not None:
-            collection_wide = 'signer.{bucket}_{collection}.'.format(**resource['source'])
-            signers_prefixes = [(key, [collection_wide, bucket_wide, server_wide])]
+            collection_wide = 'signer.{bucket}.{collection}.'.format(**resource['source'])
+            deprecated = 'signer.{bucket}_{collection}.'.format(**resource['source'])
+            signers_prefixes = [(key, [collection_wide, deprecated, bucket_wide, server_wide])]
         else:
             # If collection is None, it means the resource was configured for the whole bucket.
             signers_prefixes = [(key, [bucket_wide, server_wide])]
@@ -57,7 +58,7 @@ def includeme(config):
             # a collection within this bucket.
             bid = resource['source']['bucket']
             # Match setting names like signer.stage_specific.autograph.hawk_id
-            matched = [re.search('signer\.{0}_([^\.]+)\.(.+)'.format(bid), k)
+            matched = [re.search(r'signer\.{0}\.([^\.]+)\.(.+)'.format(bid), k)
                        for k, v in settings.items()]
             for cid, unprefixed_setting_name in [m.groups() for m in matched if m]:
                 if unprefixed_setting_name in listeners.REVIEW_SETTINGS:
@@ -68,7 +69,8 @@ def includeme(config):
                 signer_key = "/buckets/{0}/collections/{1}".format(bid, cid)
                 # Define the list of prefixes for this collection. This will allow
                 # to mix collection specific with global defaults for signer settings.
-                collection_wide = 'signer.{0}_{1}.'.format(bid, cid)
+                collection_wide = 'signer.{0}.{1}.'.format(bid, cid)
+                deprecated = 'signer.{0}_{1}.'.format(bid, cid)
                 signers_prefixes += [(signer_key, [collection_wide, bucket_wide, server_wide])]
 
         # Instantiates the signers associated to this resource.

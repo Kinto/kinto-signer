@@ -60,9 +60,14 @@ def pick_resource_and_signer(request, resources, bucket_id, collection_id):
 
         # Look-up if a setting overrides a global one here.
         for setting in REVIEW_SETTINGS:
-            setting_key = "signer.%s_%s.%s" % (bucket_id, collection_id, setting)
+            setting_key = "signer.%s.%s.%s" % (bucket_id, collection_id, setting)
             if setting_key in settings:
                 resource[setting] = settings[setting_key]
+            else:  # pragma: no cover
+                # Deprecated underscore separation
+                setting_key = "signer.%s_%s.%s" % (bucket_id, collection_id, setting)
+                if setting_key in settings:
+                    resource[setting] = settings[setting_key]
 
     if collection_key in request.registry.signers:
         signer = request.registry.signers[collection_key]
@@ -366,3 +371,14 @@ def create_editors_reviewers_groups(event, resources, editors_group, reviewers_g
                                        record={'id': group, 'members': members},
                                        permissions=group_perms,
                                        matchdict={'bucket_id': bid, 'id': group})
+
+        # Allow those groups to write to the source collection.
+        permission = event.request.registry.permission
+        collection_uri = instance_uri(event.request, "collection",
+                                      bucket_id=bid,
+                                      id=resource["source"]["collection"])
+        for group in (_editors_group, _reviewers_group):
+            group_principal = instance_uri(event.request, "group",
+                                           bucket_id=bid,
+                                           id=group)
+            permission.add_principal_to_ace(collection_uri, 'write', group_principal)

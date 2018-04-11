@@ -1,6 +1,7 @@
 import datetime
 import logging
 import uuid
+from enum import Enum
 
 from kinto.core.events import ACTIONS
 from kinto.core.storage import Filter, Sort
@@ -23,13 +24,17 @@ logger = logging.getLogger(__name__)
 
 FIELD_ID = 'id'
 FIELD_LAST_MODIFIED = 'last_modified'
-FIELD_LAST_AUTHOR = 'last_author'
-FIELD_LAST_AUTHORED = 'last_authored'
-FIELD_LAST_EDITOR = 'last_editor'
-FIELD_LAST_EDITED = 'last_edited'
-FIELD_LAST_REVIEWER = 'last_reviewer'
-FIELD_LAST_REVIEWED = 'last_reviewed'
-FIELD_LAST_SIGNED = 'last_signed'
+
+
+class TRACKING_FIELDS(Enum):
+    LAST_EDIT_BY = 'last_edit_by'
+    LAST_EDIT_DATE = 'last_edit_date'
+    LAST_REVIEW_REQUEST_BY = 'last_review_request_by'
+    LAST_REVIEW_REQUEST_DATE = 'last_review_request_date'
+    LAST_REVIEW_BY = 'last_review_by'
+    LAST_REVIEW_DATE = 'last_review_date'
+    LAST_SIGNATURE_BY = 'last_signature_by'
+    LAST_SIGNATURE_DATE = 'last_signature_date'
 
 
 def _ensure_resource(resource):
@@ -294,26 +299,28 @@ class LocalUpdater(object):
             action=ACTIONS.UPDATE,
             old=collection_record)
 
-    def update_source_editor(self, request):
-        attrs = {FIELD_LAST_EDITOR: request.prefixed_userid,
-                 FIELD_LAST_EDITED: datetime.datetime.now().isoformat()}
+    def update_source_review_request_by(self, request):
+        attrs = {TRACKING_FIELDS.LAST_REVIEW_REQUEST_BY.value: request.prefixed_userid,
+                 TRACKING_FIELDS.LAST_REVIEW_REQUEST_DATE.value: datetime.datetime.now().isoformat()}
         return self._update_source_attributes(request, **attrs)
 
     def update_source_status(self, status, request, old_status=None):
+        current_userid = request.prefixed_userid
         current_date = datetime.datetime.now().isoformat()
         attrs = {'status': status.value}
         if status == STATUS.WORK_IN_PROGRESS:
-            attrs[FIELD_LAST_AUTHOR] = request.prefixed_userid
-            attrs[FIELD_LAST_AUTHORED] = current_date
+            attrs[TRACKING_FIELDS.LAST_EDIT_BY.value] = current_userid
+            attrs[TRACKING_FIELDS.LAST_EDIT_DATE.value] = current_date
         if status == STATUS.TO_REVIEW:
-            attrs[FIELD_LAST_EDITOR] = request.prefixed_userid
-            attrs[FIELD_LAST_EDITED] = current_date
+            attrs[TRACKING_FIELDS.LAST_REVIEW_REQUEST_BY.value] = current_userid
+            attrs[TRACKING_FIELDS.LAST_REVIEW_REQUEST_DATE.value] = current_date
         if status == STATUS.SIGNED:
             if old_status != STATUS.SIGNED:
                 # Do not keep track of reviewer when refreshing signature.
-                attrs[FIELD_LAST_REVIEWER] = request.prefixed_userid
-                attrs[FIELD_LAST_REVIEWED] = current_date
-            attrs[FIELD_LAST_SIGNED] = current_date
+                attrs[TRACKING_FIELDS.LAST_REVIEW_BY.value] = current_userid
+                attrs[TRACKING_FIELDS.LAST_REVIEW_DATE.value] = current_date
+            attrs[TRACKING_FIELDS.LAST_SIGNATURE_BY.value] = current_userid
+            attrs[TRACKING_FIELDS.LAST_SIGNATURE_DATE.value] = current_date
         return self._update_source_attributes(request, **attrs)
 
     def _update_source_attributes(self, request, **kwargs):

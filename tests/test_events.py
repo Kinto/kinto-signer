@@ -92,16 +92,16 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
                   e.payload["collection_id"] == "scid" and
                   e.payload["action"] == "update"]
 
-        # We created two records, for each of them we updated the ``last_authored``
+        # We created two records, for each of them we updated the ``last_edit_datr``
         # field, so we received two events.
         self.assertIsNone(events[0].impacted_records[0]["old"].get("status"))
-        self.assertIsNone(events[0].impacted_records[0]["old"].get("last_author"))
+        self.assertIsNone(events[0].impacted_records[0]["old"].get("last_edit_date"))
         self.assertEqual(events[0].payload["user_id"], "plugin:kinto-signer")
         self.assertEqual(events[0].impacted_records[0]["new"]["status"],
                          "work-in-progress")
-        self.assertIn("basicauth:", events[0].impacted_records[0]["new"]["last_author"])
-        self.assertNotEqual(events[0].impacted_records[0]["new"]["last_authored"],
-                            events[-1].impacted_records[0]["new"]["last_authored"])
+        self.assertIn("basicauth:", events[0].impacted_records[0]["new"]["last_edit_by"])
+        self.assertNotEqual(events[0].impacted_records[0]["new"]["last_edit_date"],
+                            events[-1].impacted_records[0]["new"]["last_edit_date"])
 
     def test_resource_changed_is_triggered_for_to_review(self):
         before = len(listener.received)
@@ -121,7 +121,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         self.assertNotIn("last_editor", events[0].impacted_records[0]["new"])
 
         self.assertEqual(events[1].payload["user_id"], "plugin:kinto-signer")
-        self.assertIn("basicauth:", events[1].impacted_records[0]["new"]["last_editor"])
+        self.assertIn("basicauth:", events[1].impacted_records[0]["new"]["last_review_request_by"])
         self.assertEqual(events[1].impacted_records[0]["old"]["status"], "to-review")
 
     def test_resource_changed_is_triggered_for_source_collection(self):

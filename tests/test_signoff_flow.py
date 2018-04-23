@@ -1,4 +1,3 @@
-import datetime
 import random
 import string
 import unittest
@@ -286,34 +285,33 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
 
 class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
 
-    today = datetime.date.today().strftime("%Y-%m-%d")
-
-    def last_edit_by_and_date_are_tracked(self):
+    def last_edit_by_and_timestamp_are_tracked(self):
         self.app.post_json(self.source_collection + "/records",
                            {"data": {"title": "Hallo"}},
                            headers=self.headers)
-        resp = self.app.get(self.source_collection, headers=self.headers)
-        assert resp.json["data"]["last_edit_by"] == self.userid
-        assert resp.json["data"]["last_edit_date"].startswith(self.today)
+        data = self.app.get(self.source_collection, headers=self.headers).json["data"]
+        assert data["last_edit_by"] == self.userid
+        assert abs(data["last_edit_at"] - data["last_modified"]) < 100
 
-    def test_last_review_request_by_and_date_are_tracked(self):
+    def test_last_review_request_by_and_timestamp_are_tracked(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-review"}},
                             headers=self.headers)
-        resp = self.app.get(self.source_collection, headers=self.headers)
-        assert resp.json["data"]["last_review_request_by"] == self.userid
-        assert resp.json["data"]["last_review_request_date"].startswith(self.today)
+        data = self.app.get(self.source_collection, headers=self.headers).json["data"]
+        assert data["last_review_request_by"] == self.userid
+        assert data["last_review_request_at"] > data["last_edit_at"]
+        assert abs(data["last_review_request_at"] - data["last_modified"]) < 100
 
-    def test_last_review_by_and_date_are_tracked(self):
+    def test_last_review_by_and_timestamp_are_tracked(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
                             headers=self.headers)
-        resp = self.app.get(self.source_collection, headers=self.headers)
-        assert resp.json["data"]["status"] == "signed"
-        assert resp.json["data"]["last_review_by"] == self.userid
-        assert resp.json["data"]["last_review_date"].startswith(self.today)
-        assert resp.json["data"]["last_signature_by"] == self.userid
-        assert resp.json["data"]["last_signature_date"].startswith(self.today)
+        data = self.app.get(self.source_collection, headers=self.headers).json["data"]
+        assert data["status"] == "signed"
+        assert data["last_review_by"] == self.userid
+        assert abs(data["last_review_at"] - data["last_modified"]) < 100
+        assert data["last_signature_by"] == self.userid
+        assert data["last_signature_at"] == data["last_review_at"]
 
     def test_last_review_differs_from_last_signature_on_refresh_signature(self):
         self.app.patch_json(self.source_collection,
@@ -329,7 +327,7 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
         metadata = self.app.get(self.source_collection, headers=self.headers).json["data"]
         assert metadata["status"] == "signed"
 
-        assert metadata["last_signature_date"] != metadata["last_review_date"]
+        assert metadata["last_signature_at"] != metadata["last_review_at"]
         assert last_reviewer == metadata["last_review_by"]
 
     def test_editor_can_be_reviewer(self):
@@ -359,9 +357,9 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
         assert source_collection["status"] == "signed"
 
         # All tracking fields are here.
-        expected = ("last_edit_by", "last_edit_date", "last_review_request_by",
-                    "last_review_request_date", "last_review_by", "last_review_date",
-                    "last_signature_by", "last_signature_date")
+        expected = ("last_edit_by", "last_edit_at", "last_review_request_by",
+                    "last_review_request_at", "last_review_by", "last_review_at",
+                    "last_signature_by", "last_signature_at")
         assert all([f in source_collection for f in expected])
 
         # They cannot be changed nor removed.

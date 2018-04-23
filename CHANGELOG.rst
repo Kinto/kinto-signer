@@ -6,7 +6,7 @@ This document describes changes between each past release.
 3.3.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Tracking fields with dates were renamed and changed to timestamps (``last_edit_at``, ``last_request_review_at``, ``last_review_at`` and ``last_signature_at``)
 
 
 3.2.0 (2018-04-11)

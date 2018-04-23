@@ -188,8 +188,8 @@ class LocalUpdaterTest(unittest.TestCase):
         self.storage.get.return_value = {'id': 1234, 'last_modified': 1234,
                                          'status': 'to-sign'}
 
-        with mock.patch("kinto_signer.updater.datetime") as mocked:
-            mocked.datetime.now().isoformat.return_value = "2018-04-09"
+        with mock.patch("kinto_signer.updater.msec_time") as mocked:
+            mocked.return_value = 12345
             self.updater.update_source_status(STATUS.SIGNED, DummyRequest())
 
         self.storage.update.assert_called_with(
@@ -199,9 +199,9 @@ class LocalUpdaterTest(unittest.TestCase):
             record={
                 'id': 1234,
                 'last_review_by': 'basicauth:bob',
-                'last_review_date': '2018-04-09',
+                'last_review_at': 12345,
                 'last_signature_by': 'basicauth:bob',
-                'last_signature_date': '2018-04-09',
+                'last_signature_at': 12345,
                 'status': "signed"
             })
 

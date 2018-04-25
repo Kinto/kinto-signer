@@ -150,6 +150,13 @@ def includeme(config):
         for_actions=(ACTIONS.CREATE,),
         for_resources=('collection',))
 
+    config.add_subscriber(
+        functools.partial(listeners.cleanup_preview_destination,
+                          resources=resources),
+        ResourceChanged,
+        for_actions=(ACTIONS.DELETE,),
+        for_resources=('collection',))
+
     sign_data_listener = functools.partial(listeners.sign_collection_data,
                                            resources=resources)
 

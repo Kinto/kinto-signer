@@ -338,3 +338,64 @@ class SigningErrorTest(BaseWebTest, unittest.TestCase):
                           {"data": {"status": "to-sign"}},
                           headers=self.headers,
                           status=503)
+
+
+class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):
+
+    def setUp(self):
+        super().setUp()
+        self.headers = get_user_headers('me')
+
+        self.other_headers = get_user_headers('Sam:Wan Heilss')
+        resp = self.app.get("/", headers=self.other_headers)
+        self.other_userid = resp.json["user"]["id"]
+
+        self.app.put_json("/buckets/stage", headers=self.headers)
+        self.create_records_and_sign()
+
+        resp = self.app.get("/buckets/prod/collections/a", headers=self.headers)
+        signature_before = resp.json["data"]["signature"]["signature"]
+        # Delete source collection.
+        self.app.delete("/buckets/stage/collections/a", headers=self.headers)
+        # Signature was refreshed.
+        resp = self.app.get("/buckets/prod/collections/a", headers=self.headers)
+        assert signature_before != resp.json["data"]["signature"]["signature"]
+
+    def create_records_and_sign(self):
+        body = {"permissions": {"write": [self.other_userid]}}
+        self.app.put_json("/buckets/stage/collections/a", body, headers=self.headers)
+        for i in range(5):
+            self.app.post_json(f"/buckets/stage/collections/a/records",
+                               headers=self.headers)
+        self.app.patch_json("/buckets/stage/collections/a", {"data": {"status": "to-review"}},
+                            headers=self.other_headers)
+        self.app.patch_json("/buckets/stage/collections/a", {"data": {"status": "to-sign"}},
+                            headers=self.headers)
+
+    def test_destination_content_is_deleted_when_source_is_deleted(self):
+        # Destination is empty.
+        resp = self.app.get("/buckets/prod/collections/a/records", headers=self.headers)
+        assert len(resp.json["data"]) == 0
+        # Tombstones were created.
+        resp = self.app.get("/buckets/prod/collections/a/records?_since=0",
+                            headers=self.headers)
+        assert len(resp.json["data"]) == 5
+        # Recreate source collection.
+        self.create_records_and_sign()
+        # Destination has 5 records.
+        resp = self.app.get("/buckets/prod/collections/a/records", headers=self.headers)
+        assert len(resp.json["data"]) == 5
+
+    def test_preview_content_is_deleted_when_source_is_deleted(self):
+        # Preview is empty.
+        resp = self.app.get("/buckets/preview/collections/a/records", headers=self.headers)
+        assert len(resp.json["data"]) == 0
+        # Tombstones were created.
+        resp = self.app.get("/buckets/preview/collections/a/records?_since=0",
+                            headers=self.headers)
+        assert len(resp.json["data"]) == 5
+        # Recreate source collection.
+        self.create_records_and_sign()
+        # Preview has 5 records.
+        resp = self.app.get("/buckets/preview/collections/a/records", headers=self.headers)
+        assert len(resp.json["data"]) == 5

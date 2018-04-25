@@ -385,6 +385,11 @@ class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):
         self.app.patch_json("/buckets/stage/collections/a", {"data": {"status": "to-sign"}},
                             headers=self.headers)
 
+    def test_unsigned_collection_are_not_affected(self):
+        self.app.put_json("/buckets/bid", headers=self.headers)
+        self.app.put_json("/buckets/bid/collections/a", headers=self.headers)
+        self.app.delete("/buckets/bid/collections/a", headers=self.headers)
+
     def test_destination_content_is_deleted_when_source_is_deleted(self):
         # Destination is empty.
         resp = self.app.get("/buckets/prod/collections/a/records", headers=self.headers)

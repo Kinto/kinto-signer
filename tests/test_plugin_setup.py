@@ -1,4 +1,5 @@
 import unittest
+import uuid
 
 import mock
 import pytest
@@ -344,6 +345,18 @@ class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):
 
     def setUp(self):
         super().setUp()
+
+        # Patch calls to Autograph.
+        patch = mock.patch('kinto_signer.signer.autograph.requests')
+        self.mock = patch.start()
+        self.addCleanup(patch.stop)
+        self.mock.post.return_value.json.side_effect = lambda: [{
+            "signature": uuid.uuid4().hex.encode("utf-8"),
+            "hash_algorithm": "",
+            "signature_encoding": "",
+            "content-signature": "",
+            "x5u": ""}]
+
         self.headers = get_user_headers('me')
 
         self.other_headers = get_user_headers('Sam:Wan Heilss')

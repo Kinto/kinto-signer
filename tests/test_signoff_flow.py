@@ -1,5 +1,5 @@
-import datetime
 import random
+import re
 import string
 import unittest
 
@@ -8,6 +8,9 @@ import mock
 from kinto.core.testing import FormattedErrorMixin
 from kinto.core.errors import ERRORS
 from .support import BaseWebTest, get_user_headers
+
+
+RE_ISO8601 = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}\+00:00")
 
 
 class PostgresWebTest(BaseWebTest):
@@ -286,15 +289,13 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
 
 class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
 
-    today = datetime.date.today().strftime("%Y-%m-%d")
-
     def last_edit_by_and_date_are_tracked(self):
         self.app.post_json(self.source_collection + "/records",
                            {"data": {"title": "Hallo"}},
                            headers=self.headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["last_edit_by"] == self.userid
-        assert resp.json["data"]["last_edit_date"].startswith(self.today)
+        assert RE_ISO8601.match(resp.json["data"]["last_edit_date"])
 
     def test_last_review_request_by_and_date_are_tracked(self):
         self.app.patch_json(self.source_collection,
@@ -302,7 +303,7 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
                             headers=self.headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["last_review_request_by"] == self.userid
-        assert resp.json["data"]["last_review_request_date"].startswith(self.today)
+        assert RE_ISO8601.match(resp.json["data"]["last_review_request_date"])
 
     def test_last_review_by_and_date_are_tracked(self):
         self.app.patch_json(self.source_collection,
@@ -311,9 +312,9 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
         assert resp.json["data"]["last_review_by"] == self.userid
-        assert resp.json["data"]["last_review_date"].startswith(self.today)
+        assert RE_ISO8601.match(resp.json["data"]["last_review_date"])
         assert resp.json["data"]["last_signature_by"] == self.userid
-        assert resp.json["data"]["last_signature_date"].startswith(self.today)
+        assert RE_ISO8601.match(resp.json["data"]["last_signature_date"])
 
     def test_last_review_differs_from_last_signature_on_refresh_signature(self):
         self.app.patch_json(self.source_collection,

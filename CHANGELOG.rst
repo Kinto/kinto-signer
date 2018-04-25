@@ -6,7 +6,9 @@ This document describes changes between each past release.
 3.3.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Make sure the dates in tracking fields are given on the UTC timezone
 
 
 3.2.0 (2018-04-11)

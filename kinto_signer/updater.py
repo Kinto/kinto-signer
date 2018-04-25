@@ -300,14 +300,14 @@ class LocalUpdater(object):
             old=collection_record)
 
     def update_source_review_request_by(self, request):
-        current_date = datetime.datetime.now().isoformat()
+        current_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
         attrs = {TRACKING_FIELDS.LAST_REVIEW_REQUEST_BY.value: request.prefixed_userid,
                  TRACKING_FIELDS.LAST_REVIEW_REQUEST_DATE.value: current_date}
         return self._update_source_attributes(request, **attrs)
 
     def update_source_status(self, status, request, old_status=None):
         current_userid = request.prefixed_userid
-        current_date = datetime.datetime.now().isoformat()
+        current_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
         attrs = {'status': status.value}
         if status == STATUS.WORK_IN_PROGRESS:
             attrs[TRACKING_FIELDS.LAST_EDIT_BY.value] = current_userid

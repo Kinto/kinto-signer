@@ -382,3 +382,33 @@ def create_editors_reviewers_groups(event, resources, editors_group, reviewers_g
                                            bucket_id=bid,
                                            id=group)
             permission.add_principal_to_ace(collection_uri, 'write', group_principal)
+
+
+def cleanup_preview_destination(event, resources):
+    storage = event.request.registry.storage
+
+    for impacted in event.impacted_records:
+        old_collection = impacted["old"]
+
+        resource, signer = pick_resource_and_signer(event.request, resources,
+                                                    bucket_id=event.payload["bucket_id"],
+                                                    collection_id=old_collection["id"])
+        if resource is None:
+            continue
+
+        for k in resource.keys():
+            if k == "source":
+                continue
+            bid = resource[k]["bucket"]
+            cid = resource[k]["collection"]
+            collection_uri = instance_uri(event.request, "collection", bucket_id=bid, id=cid)
+            storage.delete_all("record", collection_uri, with_deleted=True)
+
+            updater = LocalUpdater(signer=signer,
+                                   storage=storage,
+                                   permission=event.request.registry.permission,
+                                   source=resource['source'],
+                                   destination=resource[k])
+            updater.sign_and_update_destination(event.request,
+                                                source_attributes=old_collection,
+                                                next_source_status=None)

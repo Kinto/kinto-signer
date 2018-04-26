@@ -6,7 +6,9 @@ This document describes changes between each past release.
 3.3.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Cleanup preview and destination when source collection is deleted (fixes #114)
 
 
 3.2.1 (2018-04-25)

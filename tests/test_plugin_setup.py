@@ -348,9 +348,9 @@ class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):
 
         # Patch calls to Autograph.
         patch = mock.patch('kinto_signer.signer.autograph.requests')
-        self.mock = patch.start()
+        mocked = patch.start()
         self.addCleanup(patch.stop)
-        self.mock.post.return_value.json.side_effect = lambda: [{
+        mocked.post.return_value.json.side_effect = lambda: [{
             "signature": uuid.uuid4().hex.encode("utf-8"),
             "hash_algorithm": "",
             "signature_encoding": "",
@@ -388,7 +388,14 @@ class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):
     def test_unsigned_collection_are_not_affected(self):
         self.app.put_json("/buckets/bid", headers=self.headers)
         self.app.put_json("/buckets/bid/collections/a", headers=self.headers)
+
+        patch = mock.patch('kinto_signer.updater.LocalUpdater.sign_and_update_destination')
+        mocked = patch.start()
+        self.addCleanup(patch.stop)
+
         self.app.delete("/buckets/bid/collections/a", headers=self.headers)
+
+        assert not mocked.called
 
     def test_destination_content_is_deleted_when_source_is_deleted(self):
         # Destination is empty.

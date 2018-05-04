@@ -88,9 +88,10 @@ class BaseTestFunctional(object):
             bucket=cls.source_bucket,
             collection=cls.source_collection)
 
-    def tearDown(self):
+    @classmethod
+    def tearDown(cls):
         # Delete all the created objects.
-        flush_server(self.server_url)
+        flush_server(cls.server_url)
 
     def setUp(self):
         # Give the permission to write in collection to anybody
@@ -485,25 +486,30 @@ class PerBucketTest(unittest.TestCase):
         super(PerBucketTest, cls).setUpClass()
         client_kw = dict(server_url=cls.server_url, bucket="stage")
         cls.client = Client(auth=DEFAULT_AUTH, **client_kw)
-        cls.anon_client = Client(auth=(), **client_kw)
+        cls.anon_client = Client(auth=tuple(), **client_kw)
         cls.julia_client = Client(auth=('julia', ''), **client_kw)
         cls.joan_client = Client(auth=('joan', ''), **client_kw)
         cls.julia_principal = user_principal(cls.julia_client)
         cls.joan_principal = user_principal(cls.joan_client)
 
-        cls.client.create_bucket(permissions={
+    def setUp(self):
+        self.client.create_bucket(permissions={
             "collection:create": ["system.Authenticated"],
             "group:create": ["system.Authenticated"],
         })
+
+    def tearDown(cls):
+        # Delete all the created objects.
+        flush_server(cls.server_url)
 
     def test_anyone_can_create_collections(self):
         collection = self.julia_client.create_collection(id="pim")
         assert self.julia_principal in collection["permissions"]["write"]
 
     def test_editors_and_reviewers_groups_are_created(self):
-        collection = self.julia_client.create_collection(id="pam")
-        editors_group = self.julia_client.get_group(id="{data[id]}-editors".format(**collection))
-        reviewers_group = self.julia_client.get_group(id="{data[id]}-reviewers".format(**collection))
+        self.julia_client.create_collection(id="pam")
+        editors_group = self.julia_client.get_group(id="editors")
+        reviewers_group = self.julia_client.get_group(id="reviewers")
         assert self.julia_principal in editors_group["data"]["members"]
         assert self.julia_principal not in reviewers_group["data"]["members"]
 
@@ -524,16 +530,19 @@ class PerBucketTest(unittest.TestCase):
         # The following objects are still here, thus not raising:
         self.anon_client.get_collection(bucket="preview", id="poum")
         self.anon_client.get_collection(bucket="prod", id="poum")
-        self.julia_client.get_group(id="poum-editors")
-        self.julia_client.get_group(id="poum-reviewers")
+        self.julia_client.get_group(id="editors")
+        self.julia_client.get_group(id="reviewers")
 
     def test_full_review_test(self):
         # Create a collection.
         self.julia_client.create_collection(id="pim")
 
         # Add Joan to reviewers.
-        data = JSONPatch([{'op': 'add', 'path': '/data/members/0', 'value': self.joan_principal}])
-        self.julia_client.patch_group(id='pim-reviewers', changes=data)
+        data = JSONPatch([{
+            'op': 'add', 'path': '/data/members/0',
+            'value': self.joan_principal
+        }])
+        self.julia_client.patch_group(id='reviewers', changes=data)
 
         # Create some records.
         self.julia_client.create_record(id="abc", collection="pim")

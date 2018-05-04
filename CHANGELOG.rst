@@ -6,7 +6,9 @@ This document describes changes between each past release.
 3.3.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Fix crash on collection delete (fixes #248)
 
 
 3.2.2 (2018-05-02)

@@ -343,6 +343,12 @@ class SigningErrorTest(BaseWebTest, unittest.TestCase):
 
 class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):
 
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super(cls, SourceCollectionDeletion).get_app_settings(extras)
+        settings['signer.stage.editors_group'] = 'something'
+        return settings
+
     def setUp(self):
         super().setUp()
 

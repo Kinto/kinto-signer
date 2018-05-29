@@ -281,6 +281,7 @@ class LocalUpdaterTest(unittest.TestCase):
             self.updater.invalidate_cloudfront_cache(request, 'tz_1234')
             call_args = boto3_client.return_value.create_invalidation.call_args
             params = call_args[1]
+            assert params['InvalidationBatch']['Paths']['Quantity'] == 2
             assert params['InvalidationBatch']['Paths']['Items'] == [
                 '/v1/blocklists*',
                 '/v1/buckets/destbucket/collections/destcollection*'

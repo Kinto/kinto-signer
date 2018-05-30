@@ -6,7 +6,9 @@ This document describes changes between each past release.
 3.3.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Fix CloudFront invalidation request with multiple paths (fixes #253)
 
 
 3.2.3 (2018-05-07)

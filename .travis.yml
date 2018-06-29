@@ -17,7 +17,7 @@ script:
     - tox -e $TOX_ENV
 matrix:
   include:
-    - go: 1.8
+    - go: 1.10
       language: go
       addons:
         postgresql: "9.5"
@@ -35,7 +35,7 @@ matrix:
         - make run-autograph &
         - make run-kinto &
         - sleep 5
-    - go: 1.8
+    - go: 1.10
       language: go
       addons:
         postgresql: "9.5"

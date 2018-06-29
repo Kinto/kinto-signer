@@ -10,10 +10,8 @@ from kinto_signer.signer.local_ecdsa import ECDSASigner
 
 DEFAULT_SERVER = 'http://localhost:8888/v1'
 DEFAULT_AUTH = 'user:pass'
-SOURCE_BUCKET = 'alice'
-DEST_BUCKET = SOURCE_BUCKET
-SOURCE_COL = 'source'
-DEST_COL = 'destination'
+DEFAULT_SOURCE_BUCKET = 'alice'
+DEFAULT_SOURCE_COL = 'source'
 
 
 def _rand(size=10):
@@ -52,10 +50,10 @@ def _get_args():
                         type=str, default=DEFAULT_SERVER)
 
     parser.add_argument('--source-bucket', help='Source bucket',
-                        type=str, default=SOURCE_BUCKET)
+                        type=str, default=DEFAULT_SOURCE_BUCKET)
 
     parser.add_argument('--source-col', help='Source collection',
-                        type=str, default=SOURCE_COL)
+                        type=str, default=DEFAULT_SOURCE_COL)
 
     parser.add_argument('--reset', help='Reset collection data',
                         type=bool, default=False)
@@ -96,27 +94,29 @@ def main():
 
     # 0. check that this collection is well configured.
     signer_capabilities = server_info['capabilities']['signer']
-    to_review_enabled = signer_capabilities.get('to_review_enabled', False)
-    group_check_enabled = signer_capabilities.get('group_check_enabled', False)
 
     resources = [r for r in signer_capabilities['resources']
-                 if (args.source_bucket, args.source_col) == (r['source']['bucket'], r['source']['collection'])]
+                 if (args.source_bucket, args.source_col) == (r['source']['bucket'], r['source']['collection']) or
+                    (args.source_bucket, None) == (r['source']['bucket'], r['source']['collection'])]
     assert len(resources) > 0, 'Specified source not configured to be signed'
     resource = resources[0]
-    if to_review_enabled and 'preview' in resource:
+    if 'preview' in resource:
         print('Signoff: {source[bucket]}/{source[collection]} => {preview[bucket]}/{preview[collection]} => {destination[bucket]}/{destination[collection]}'.format(**resource))
     else:
         print('Signoff: {source[bucket]}/{source[collection]} => {destination[bucket]}/{destination[collection]}'.format(**resource))
-    print('Group check: {0}'.format(group_check_enabled))
-    print('Review workflow: {0}'.format(to_review_enabled))
 
     print('_' * 80)
 
     bucket = client.create_bucket(if_not_exists=True)
-    client.patch_bucket(permissions={'write': [editor_id, reviewer_id] + bucket['permissions']['write']},
-                        if_match=bucket['data']['last_modified'], safe=True)
+    client.create_collection(permissions={'write': [editor_id, reviewer_id] + bucket['permissions']['write']}, if_not_exists=True)
 
-    client.create_collection(if_not_exists=True)
+    editors_group = resource.get('editors_group') or signer_capabilities['editors_group']
+    editors_group = editors_group.format(collection_id=args.source_col)
+    client.patch_group(id=editors_group, data={'members': [editor_id]})
+
+    reviewers_group = resource.get('reviewers_group') or signer_capabilities['reviewers_group']
+    reviewers_group = reviewers_group.format(collection_id=args.source_col)
+    client.patch_group(id=reviewers_group, data={'members': [reviewer_id]})
 
     if args.reset:
         client.delete_records()
@@ -125,20 +125,15 @@ def main():
         existing_records = client.get_records()
         existing = len(existing_records)
 
-    if group_check_enabled:
-        editors_group = signer_capabilities['editors_group']
-        client.patch_group(id=editors_group, data={'members': [editor_id]})
-        reviewers_group = signer_capabilities['reviewers_group']
-        client.patch_group(id=reviewers_group, data={'members': [reviewer_id]})
-
+    dest_col = resource['destination'].get('collection') or args.source_col
     dest_client = Client(server_url=args.server,
                          bucket=resource['destination']['bucket'],
-                         collection=resource['destination']['collection'])
+                         collection=dest_col)
 
     preview_client = None
-    if to_review_enabled and 'preview' in resource:
+    if 'preview' in resource:
         preview_bucket = resource['preview']['bucket']
-        preview_collection = resource['preview']['collection']
+        preview_collection = resource['preview'].get('collection') or args.source_col
         preview_client = Client(server_url=args.server,
                                 bucket=preview_bucket,
                                 collection=preview_collection)
@@ -216,8 +211,7 @@ def main():
 
     # 7. get back the signed hash
 
-    dest_col = dest_client.get_collection()
-    signature = dest_col['data']['signature']
+    signature = dest_client.get_collection()['data']['signature']
 
     with open('pub', 'w') as f:
         f.write(signature['public_key'])

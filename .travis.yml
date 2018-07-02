@@ -26,6 +26,7 @@ matrix:
         - docker pull mozilla/autograph
         - docker run -v `pwd`/tests/config/autograph.yaml:/app/autograph.yaml -d -p 8000:8000 mozilla/autograph
       install:
+        - pip install tox
         - make install
         - make run-kinto &
         - sleep 5
@@ -36,8 +37,9 @@ matrix:
         - docker pull mozilla/autograph
         - docker run -v `pwd`/tests/config/autograph.yaml:/app/autograph.yaml -d -p 8000:8000 mozilla/autograph
       install:
+        - pip install tox
         - make install
-        - .venv/bin/pip install -U https://github.com/Kinto/kinto/zipball/master
+        - pip install -U https://github.com/Kinto/kinto/zipball/master
         - make run-kinto &
         - sleep 5
 

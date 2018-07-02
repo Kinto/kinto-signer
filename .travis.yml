@@ -17,9 +17,9 @@ before_script:
     - psql -c "CREATE DATABASE testdb ENCODING 'UTF8' TEMPLATE template0;" -U postgres
 
 before_install:
+    - cat `pwd`/tests/config/autograph.yaml
     - docker pull mozilla/autograph
-    - cat $HOME/tests/config/autograph.yaml
-    - docker run -v $HOME/tests/config/autograph.yaml:/app/autograph.yaml -d -p 8000:8000 mozilla/autograph
+    - docker run -v `pwd`/tests/config/autograph.yaml:/app/autograph.yaml -d -p 8000:8000 mozilla/autograph
 
 script:
     - tox -e $TOX_ENV

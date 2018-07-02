@@ -28,7 +28,6 @@ matrix:
     - env:
         - TOX_ENV=functional
       install:
-        - pip install --user virtualenv tox
         - make install
         - make run-kinto &
         - sleep 5
@@ -36,7 +35,6 @@ matrix:
         - TOX_ENV=functional
           WITH=kinto-master
       install:
-        - pip install --user virtualenv tox
         - make install
         - .venv/bin/pip install -U https://github.com/Kinto/kinto/zipball/master
         - make run-kinto &

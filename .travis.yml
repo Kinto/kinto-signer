@@ -16,17 +16,15 @@ install:
 before_script:
     - psql -c "CREATE DATABASE testdb ENCODING 'UTF8' TEMPLATE template0;" -U postgres
 
-before_install:
-    - cat `pwd`/tests/config/autograph.yaml
-    - docker pull mozilla/autograph
-    - docker run -v `pwd`/tests/config/autograph.yaml:/app/autograph.yaml -d -p 8000:8000 mozilla/autograph
-
 script:
     - tox -e $TOX_ENV
 matrix:
   include:
     - env:
         - TOX_ENV=functional
+      before_install:
+        - docker pull mozilla/autograph
+        - docker run -v `pwd`/tests/config/autograph.yaml:/app/autograph.yaml -d -p 8000:8000 mozilla/autograph
       install:
         - make install
         - make run-kinto &
@@ -34,6 +32,9 @@ matrix:
     - env:
         - TOX_ENV=functional
           WITH=kinto-master
+      before_install:
+        - docker pull mozilla/autograph
+        - docker run -v `pwd`/tests/config/autograph.yaml:/app/autograph.yaml -d -p 8000:8000 mozilla/autograph
       install:
         - make install
         - .venv/bin/pip install -U https://github.com/Kinto/kinto/zipball/master

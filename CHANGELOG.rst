@@ -6,7 +6,9 @@ This document describes changes between each past release.
 3.3.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Fix ``scripts/e2e.py`` script to work with per-bucket configuration
 
 
 3.2.4 (2018-05-30)

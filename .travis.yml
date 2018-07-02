@@ -4,6 +4,8 @@ python: 3.6
 cache: pip
 addons:
   postgresql: "9.5"
+services:
+  - docker
 env:
     - TOX_ENV=py36
     - TOX_ENV=kinto-master
@@ -13,47 +15,33 @@ install:
     - pip install tox
 before_script:
     - psql -c "CREATE DATABASE testdb ENCODING 'UTF8' TEMPLATE template0;" -U postgres
+
 script:
     - tox -e $TOX_ENV
 matrix:
   include:
-    - go: 1.8
-      language: go
-      addons:
-        postgresql: "9.5"
-        apt:
-          sources:
-            - deadsnakes # source required so it finds the package definition below
-          packages:
-            - python3.6
-            - python3.6-dev
-      env:
+    - env:
         - TOX_ENV=functional
+      before_install:
+        - docker pull mozilla/autograph
+        - docker run -v `pwd`/tests/config/autograph.yaml:/app/autograph.yaml -d -p 8000:8000 mozilla/autograph
       install:
-        - pip install --user virtualenv tox
+        - pip install tox
         - make install
-        - make run-autograph &
         - make run-kinto &
         - sleep 5
-    - go: 1.8
-      language: go
-      addons:
-        postgresql: "9.5"
-        apt:
-          sources:
-            - deadsnakes # source required so it finds the package definition below
-          packages:
-            - python3.6
-            - python3.6-dev
-      env:
+    - env:
         - TOX_ENV=functional
           WITH=kinto-master
+      before_install:
+        - docker pull mozilla/autograph
+        - docker run -v `pwd`/tests/config/autograph.yaml:/app/autograph.yaml -d -p 8000:8000 mozilla/autograph
       install:
-        - pip install --user virtualenv tox
+        - pip install tox
         - make install
-        - .venv/bin/pip install -U https://github.com/Kinto/kinto/zipball/master
-        - make run-autograph &
+        - pip install -U https://github.com/Kinto/kinto/zipball/master
         - make run-kinto &
+        - sleep 5
 
 after_success:
     # Report coverage results to coveralls.io

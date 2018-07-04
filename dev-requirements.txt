@@ -9,3 +9,4 @@ statsd
 tox
 webtest
 kinto[postgresql]
+kinto-attachment

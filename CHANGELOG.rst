@@ -15,7 +15,7 @@ This document describes changes between each past release.
 **Bug fixes**
 
 - Fix ``scripts/e2e.py`` script to work with per-bucket configuration
-
+- Prevent kinto-attachment to raise errors when attachments are updated (fixes #256)i
 
 3.2.4 (2018-05-30)
 ------------------

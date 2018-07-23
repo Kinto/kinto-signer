@@ -325,7 +325,7 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
         last_reviewer = resp.json["data"]["last_review_by"]
 
         self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-sign"}},
+                            {"data": {"status": "to-refresh"}},
                             headers=self.headers)
         metadata = self.app.get(self.source_collection, headers=self.headers).json["data"]
         assert metadata["status"] == "signed"
@@ -568,7 +568,7 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
 
         # Resign.
         self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-sign"}},
+                            {"data": {"status": "to-refresh"}},
                             headers=self.headers)
 
         resp = self.app.get(self.destination_collection, headers=self.headers)

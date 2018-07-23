@@ -1,3 +1,4 @@
+import datetime
 import mock
 import pytest
 import unittest
@@ -242,12 +243,42 @@ class LocalUpdaterTest(unittest.TestCase):
         self.patch(self.updater, 'push_records_to_destination')
         self.patch(self.updater, 'set_destination_signature')
         self.patch(self.updater, 'invalidate_cloudfront_cache')
+
         self.updater.sign_and_update_destination(DummyRequest(), {'id': 'source'})
 
         assert self.updater.get_destination_records.call_count == 1
         assert self.updater.push_records_to_destination.call_count == 1
         assert self.updater.set_destination_signature.call_count == 1
         assert self.updater.invalidate_cloudfront_cache.call_count == 1
+
+    def test_refresh_signature_does_not_push_records(self):
+        self.storage.get_all.return_value = ([], 2)
+        self.patch(self.updater, 'set_destination_signature')
+        self.patch(self.updater, 'push_records_to_destination')
+        self.patch(self.updater, 'invalidate_cloudfront_cache')
+
+        self.updater.refresh_signature(DummyRequest(), 'signed')
+
+        assert self.updater.invalidate_cloudfront_cache.call_count == 1
+        assert self.updater.set_destination_signature.call_count == 1
+        assert self.updater.push_records_to_destination.call_count == 0
+
+    def test_refresh_signature_restores_status_on_source(self):
+        self.storage.get_all.return_value = ([], 2)
+        with mock.patch('kinto_signer.updater.datetime') as mocked:
+            mocked.datetime.now.return_value = datetime.datetime(2010, 10, 31)
+
+            self.updater.refresh_signature(DummyRequest(), 'work-in-progress')
+
+        new_attrs = {
+            'status': 'work-in-progress',
+            'last_signature_by': 'basicauth:bob',
+            'last_signature_date': '2010-10-31T00:00:00'
+        }
+        self.storage.update.assert_any_call(collection_id='collection',
+                                            parent_id='/buckets/sourcebucket',
+                                            object_id='sourcecollection',
+                                            record=new_attrs)
 
     def test_if_distribution_id_a_cloudfront_invalidation_request_is_triggered(self):
         request = mock.MagicMock()

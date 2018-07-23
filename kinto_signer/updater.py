@@ -130,6 +130,26 @@ class LocalUpdater(object):
 
         self.invalidate_cloudfront_cache(request, timestamp)
 
+    def refresh_signature(self, request, next_source_status):
+        """Refresh the signature without moving records.
+        """
+        with send_resource_events(request):
+            records, timestamp = self.get_destination_records(empty_none=False)
+            serialized_records = canonical_json(records, timestamp)
+            logger.debug("{}:\t'{}'".format(self.source_collection_uri, serialized_records))
+            signature = self.signer.sign(serialized_records)
+            self.set_destination_signature(signature, request=request, source_attributes={})
+
+            current_userid = request.prefixed_userid
+            current_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            attrs = {'status': next_source_status}
+            attrs[TRACKING_FIELDS.LAST_SIGNATURE_BY.value] = current_userid
+            attrs[TRACKING_FIELDS.LAST_SIGNATURE_DATE.value] = current_date
+            self._update_source_attributes(request, **attrs)
+
+        self.invalidate_cloudfront_cache(request, timestamp)
+
+
     def create_destination(self, request):
         """Create the destination bucket/collection if they don't already exist.
         """

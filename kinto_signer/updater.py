@@ -149,7 +149,6 @@ class LocalUpdater(object):
 
         self.invalidate_cloudfront_cache(request, timestamp)
 
-
     def create_destination(self, request):
         """Create the destination bucket/collection if they don't already exist.
         """

@@ -92,6 +92,13 @@ class SignoffWebTest(PostgresWebTest):
 
 
 class CollectionStatusTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCase):
+    def test_status_cannot_be_refresh_if_never_signed(self):
+        r = self.app.patch_json(self.source_collection,
+                                {"data": {"status": "to-refresh"}},
+                                headers=self.headers,
+                                status=400)
+        assert r.json["message"] == "Collection never signed."
+
     def test_status_cannot_be_set_to_unknown_value(self):
         resp = self.app.patch_json(self.source_collection,
                                    {"data": {"status": "married"}},
@@ -613,6 +620,15 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
         signature_destination_after = resp.json['data']['signature']
         assert signature_destination_before != signature_destination_after
         resp = self.app.get(self.preview_collection, headers=self.headers)
+        signature_preview_after = resp.json['data']['signature']
+        assert signature_preview_before != signature_preview_after
+
+        # Resign the old way.
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
+        resp = self.app.get(self.preview_collection, headers=self.headers)
+        signature_preview_before = signature_preview_after
         signature_preview_after = resp.json['data']['signature']
         assert signature_preview_before != signature_preview_after
 

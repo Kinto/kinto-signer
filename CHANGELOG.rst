@@ -6,7 +6,9 @@ This document describes changes between each past release.
 3.3.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**New features**
+
+- Allow to refresh the signature when the collection has pending changes (fixes #245)
 
 
 3.2.5 (2018-07-05)

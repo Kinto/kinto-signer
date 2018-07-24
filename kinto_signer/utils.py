@@ -17,6 +17,7 @@ FIELD_LAST_MODIFIED = 'last_modified'
 class STATUS(Enum):
     WORK_IN_PROGRESS = 'work-in-progress'
     TO_SIGN = 'to-sign'
+    TO_REFRESH = 'to-resign'
     TO_REVIEW = 'to-review'
     SIGNED = 'signed'
 

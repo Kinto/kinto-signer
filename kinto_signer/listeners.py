@@ -179,6 +179,12 @@ def sign_collection_data(event, resources):
             elif old_status == STATUS.TO_REVIEW and new_status == STATUS.WORK_IN_PROGRESS:
                 review_event_cls = signer_events.ReviewRejected
 
+            elif new_status == STATUS.TO_REFRESH:
+                updater.refresh_signature(event.request, next_source_status=old_status)
+                if 'preview' in resource:
+                    updater.destination = resource['preview']
+                    updater.refresh_signature(event.request, next_source_status=old_status)
+
         except Exception:
             logger.exception("Could not sign '{0}'".format(uri))
             event.request.response.status = 503
@@ -280,6 +286,11 @@ def check_collection_status(event, resources, group_check_enabled,
         # 4. to-sign -> signed
         elif new_status == STATUS.SIGNED:
             raise_invalid(message="Cannot set status to '%s'" % new_status)
+
+        # 5. Refresh signature
+        elif new_status == STATUS.TO_REFRESH:
+            if TRACKING_FIELDS.LAST_SIGNATURE_DATE.value not in old_collection:
+                raise_invalid(message="Collection never signed.")
 
         # Nobody can remove the status
         elif new_status is None:

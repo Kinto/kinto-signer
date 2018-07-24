@@ -373,6 +373,20 @@ During the review process, the *source* collection metadata will receive the fol
   (ie. status changed directly from ``signed`` to ``to-sign``).
 
 
+Refresh signature
+-----------------
+
+In order to refresh the signature, set the source to ``to-refresh``, the content signature
+metadata will be recomputed and updated and the status restore to its previous value
+(eg. ``signed`` or ``to-review``...).
+
+This is useful when the signer certificates are rotated etc.
+
+.. code-block:: bash
+
+    echo '{"data": {"status": "to-refresh"}}' | http PATCH http://0.0.0.0:8888/v1/buckets/source/collections/collection1 --auth user:pass
+
+
 Events
 ======
 

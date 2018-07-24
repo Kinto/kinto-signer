@@ -433,7 +433,7 @@ class WorkflowTest(unittest.TestCase):
 
     def test_status_cannot_be_refresh_if_never_signed(self):
         with self.assertRaises(KintoException) as e:
-            self.elsa_client.patch_collection(data={'status': 'to-refresh'})
+            self.elsa_client.patch_collection(data={'status': 'to-resign'})
         assert "Collection never signed." in e.exception.message
 
     def test_review_can_be_cancelled_by_editor(self):
@@ -574,7 +574,7 @@ class PerBucketTest(unittest.TestCase):
         assert len(records) == 2
 
         # Refresh signature
-        self.joan_client.patch_collection(id="pim", data={"status": "to-refresh"})
+        self.joan_client.patch_collection(id="pim", data={"status": "to-resign"})
 
         # Delete source collection.
         self.julia_client.delete_collection(id="pim")

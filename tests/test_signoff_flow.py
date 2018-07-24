@@ -94,7 +94,7 @@ class SignoffWebTest(PostgresWebTest):
 class CollectionStatusTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCase):
     def test_status_cannot_be_refresh_if_never_signed(self):
         r = self.app.patch_json(self.source_collection,
-                                {"data": {"status": "to-refresh"}},
+                                {"data": {"status": "to-resign"}},
                                 headers=self.headers,
                                 status=400)
         assert r.json["message"] == "Collection never signed."
@@ -264,7 +264,7 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
     def test_editor_can_retrigger_a_signature(self):
         # Editor retriggers a signature, without going through review.
         self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-refresh"}},
+                            {"data": {"status": "to-resign"}},
                             headers=self.headers)
 
         resp = self.app.get(self.source_collection, headers=self.headers)
@@ -279,7 +279,7 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
 
     def test_reviewer_can_retrigger_a_signature(self):
         self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-refresh"}},
+                            {"data": {"status": "to-resign"}},
                             headers=self.other_headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
@@ -302,7 +302,7 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
         }, headers=self.headers)
 
         self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-refresh"}},
+                            {"data": {"status": "to-resign"}},
                             headers=writer_headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
@@ -323,7 +323,7 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
         before_signature = resp.json["data"]["signature"]["content-signature"]
 
         self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-refresh"}},
+                            {"data": {"status": "to-resign"}},
                             headers=self.headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "work-in-progress"
@@ -370,7 +370,7 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
         last_reviewer = resp.json["data"]["last_review_by"]
 
         self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-refresh"}},
+                            {"data": {"status": "to-resign"}},
                             headers=self.headers)
         metadata = self.app.get(self.source_collection, headers=self.headers).json["data"]
         assert metadata["status"] == "signed"
@@ -613,7 +613,7 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
 
         # Resign.
         self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-refresh"}},
+                            {"data": {"status": "to-resign"}},
                             headers=self.headers)
 
         resp = self.app.get(self.destination_collection, headers=self.headers)

@@ -3,7 +3,7 @@ pytest
 mock
 pytest-watch
 pytest-cache
-pytest-cover
+pytest-cov
 pytest-sugar
 statsd
 tox

@@ -11,7 +11,7 @@ from pyramid.interfaces import IAuthorizationPolicy
 
 from kinto_signer.updater import LocalUpdater, TRACKING_FIELDS
 from kinto_signer import events as signer_events
-from kinto_signer.utils import (STATUS, PLUGIN_USERID, send_resource_events,
+from kinto_signer.utils import (STATUS, PLUGIN_USERID,
                                 ensure_resource_exists)
 
 
@@ -172,8 +172,7 @@ def sign_collection_data(event, resources):
                                                         next_source_status=STATUS.TO_REVIEW)
                 else:
                     # If no preview collection: just track `last_editor`
-                    with send_resource_events(event.request):
-                        updater.update_source_review_request_by(event.request)
+                    updater.update_source_review_request_by(event.request)
                 review_event_cls = signer_events.ReviewRequested
 
             elif old_status == STATUS.TO_REVIEW and new_status == STATUS.WORK_IN_PROGRESS:
@@ -339,8 +338,7 @@ def set_work_in_progress_status(event, resources):
                            permission=event.request.registry.permission,
                            source=resource['source'],
                            destination=resource['destination'])
-    with send_resource_events(event.request):
-        updater.update_source_status(STATUS.WORK_IN_PROGRESS, event.request)
+    updater.update_source_status(STATUS.WORK_IN_PROGRESS, event.request)
 
 
 def create_editors_reviewers_groups(event, resources, editors_group, reviewers_group):
@@ -374,14 +372,13 @@ def create_editors_reviewers_groups(event, resources, editors_group, reviewers_g
             return
 
         group_perms = {'write': [current_user_id]}
-        with send_resource_events(event.request):
-            for group, members in ((_editors_group, [current_user_id]), (_reviewers_group, [])):
-                ensure_resource_exists(request=event.request,
-                                       resource_name='group',
-                                       parent_id=bucket_uri,
-                                       record={'id': group, 'members': members},
-                                       permissions=group_perms,
-                                       matchdict={'bucket_id': bid, 'id': group})
+        for group, members in ((_editors_group, [current_user_id]), (_reviewers_group, [])):
+            ensure_resource_exists(request=event.request,
+                                   resource_name='group',
+                                   parent_id=bucket_uri,
+                                   record={'id': group, 'members': members},
+                                   permissions=group_perms,
+                                   matchdict={'bucket_id': bid, 'id': group})
 
         # Allow those groups to write to the source collection.
         permission = event.request.registry.permission

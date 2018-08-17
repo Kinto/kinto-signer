@@ -3,10 +3,10 @@ Changelog
 
 This document describes changes between each past release.
 
-3.4.0 (unreleased)
+3.3.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Support kinto 10.0.0, which allowed some simplifications (#264).
 
 
 3.3.0 (2018-07-24)

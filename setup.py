@@ -8,7 +8,7 @@ with codecs.open(os.path.join(here, 'README.rst'), encoding='utf-8') as f:
     README = f.read()
 
 REQUIREMENTS = [
-    'kinto>=7.1.0',
+    'kinto>=10.0.0',
     'boto3',
     'ecdsa',
     'requests-hawk',

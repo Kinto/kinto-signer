@@ -11,7 +11,7 @@ from pyramid.security import Everyone
 from pyramid.settings import aslist
 
 from kinto_signer.serializer import canonical_json
-from kinto_signer.utils import (STATUS, send_resource_events, ensure_resource_exists,
+from kinto_signer.utils import (STATUS, ensure_resource_exists,
                                 notify_resource_event)
 
 try:
@@ -114,38 +114,36 @@ class LocalUpdater(object):
         4. Ask the signer for a signature
         5. Send the signature to the destination.
         """
-        with send_resource_events(request):
-            self.create_destination(request)
+        self.create_destination(request)
 
-            self.push_records_to_destination(request)
+        self.push_records_to_destination(request)
 
-            records, timestamp = self.get_destination_records(empty_none=False)
-            serialized_records = canonical_json(records, timestamp)
-            logger.debug("{}:\t'{}'".format(self.source_collection_uri, serialized_records))
-            signature = self.signer.sign(serialized_records)
+        records, timestamp = self.get_destination_records(empty_none=False)
+        serialized_records = canonical_json(records, timestamp)
+        logger.debug("{}:\t'{}'".format(self.source_collection_uri, serialized_records))
+        signature = self.signer.sign(serialized_records)
 
-            self.set_destination_signature(signature, source_attributes, request)
-            if next_source_status is not None:
-                self.update_source_status(next_source_status, request, previous_source_status)
+        self.set_destination_signature(signature, source_attributes, request)
+        if next_source_status is not None:
+            self.update_source_status(next_source_status, request, previous_source_status)
 
         self.invalidate_cloudfront_cache(request, timestamp)
 
     def refresh_signature(self, request, next_source_status):
         """Refresh the signature without moving records.
         """
-        with send_resource_events(request):
-            records, timestamp = self.get_destination_records(empty_none=False)
-            serialized_records = canonical_json(records, timestamp)
-            logger.debug("{}:\t'{}'".format(self.source_collection_uri, serialized_records))
-            signature = self.signer.sign(serialized_records)
-            self.set_destination_signature(signature, request=request, source_attributes={})
+        records, timestamp = self.get_destination_records(empty_none=False)
+        serialized_records = canonical_json(records, timestamp)
+        logger.debug("{}:\t'{}'".format(self.source_collection_uri, serialized_records))
+        signature = self.signer.sign(serialized_records)
+        self.set_destination_signature(signature, request=request, source_attributes={})
 
-            current_userid = request.prefixed_userid
-            current_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
-            attrs = {'status': next_source_status}
-            attrs[TRACKING_FIELDS.LAST_SIGNATURE_BY.value] = current_userid
-            attrs[TRACKING_FIELDS.LAST_SIGNATURE_DATE.value] = current_date
-            self._update_source_attributes(request, **attrs)
+        current_userid = request.prefixed_userid
+        current_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        attrs = {'status': next_source_status}
+        attrs[TRACKING_FIELDS.LAST_SIGNATURE_BY.value] = current_userid
+        attrs[TRACKING_FIELDS.LAST_SIGNATURE_DATE.value] = current_date
+        self._update_source_attributes(request, **attrs)
 
         self.invalidate_cloudfront_cache(request, timestamp)
 

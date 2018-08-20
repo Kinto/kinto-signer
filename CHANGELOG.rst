@@ -3,10 +3,16 @@ Changelog
 
 This document describes changes between each past release.
 
-3.3.1 (2018-08-17)
+3.3.2 (2018-08-20)
 ------------------
 
 - Support kinto 10.0.0, which allowed some simplifications (#264).
+
+
+3.3.1 (2018-08-17)
+------------------
+
+- Failed artifact produced by mistake. Please ignore.
 
 
 3.3.0 (2018-07-24)

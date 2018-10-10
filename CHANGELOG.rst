@@ -6,7 +6,7 @@ This document describes changes between each past release.
 3.3.3 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Allow refresh of signature even if the collection was never signed (#267)
 
 
 3.3.2 (2018-08-20)

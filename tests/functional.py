@@ -431,11 +431,6 @@ class WorkflowTest(unittest.TestCase):
         with self.assertRaises(KintoException):
             self.elsa_client.patch_collection(data={'status': 'to-sign'})
 
-    def test_status_cannot_be_refresh_if_never_signed(self):
-        with self.assertRaises(KintoException) as e:
-            self.elsa_client.patch_collection(data={'status': 'to-resign'})
-        assert "Collection never signed." in e.exception.message
-
     def test_review_can_be_cancelled_by_editor(self):
         create_records(self.client)
         self.anna_client.patch_collection(data={'status': 'to-review'})
@@ -481,6 +476,31 @@ class WorkflowTest(unittest.TestCase):
         create_records(self.client)
         status = self.client.get_collection()['data']['status']
         assert status == 'work-in-progress'
+
+    def test_can_refresh_if_never_signed(self):
+        create_records(self.elsa_client)
+        source_data = self.client.get_collection()['data']
+        assert source_data['status'] == 'work-in-progress'
+        destination_data = self.client.get_collection(id='to')['data']
+        before_signature = destination_data.get('signature')
+
+        self.elsa_client.patch_collection(data={'status': 'to-resign'})
+
+        source_data = self.client.get_collection()['data']
+        assert source_data['status'] == 'work-in-progress'
+        assert 'last_review_request_date' not in source_data
+        assert 'last_signature_date' in source_data
+        destination_data = self.client.get_collection(id='to')['data']
+        assert destination_data['signature'] != before_signature
+
+    def test_refresh_signs_preview_collection(self):
+        preview_data = self.client.get_collection(id='preview')['data']
+        before_signature = preview_data.get('signature')
+
+        self.elsa_client.patch_collection(data={'status': 'to-resign'})
+
+        preview_data = self.client.get_collection(id='preview')['data']
+        assert preview_data['signature'] != before_signature
 
 
 class PerBucketTest(unittest.TestCase):

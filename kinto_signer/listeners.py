@@ -288,8 +288,9 @@ def check_collection_status(event, resources, group_check_enabled,
 
         # 5. Refresh signature
         elif new_status == STATUS.TO_REFRESH:
-            if TRACKING_FIELDS.LAST_SIGNATURE_DATE.value not in old_collection:
-                raise_invalid(message="Collection never signed.")
+            # Before here we would raise a 400 if the collection had never been
+            # signed, but after some thought it does not really make sense.
+            pass
 
         # Nobody can remove the status
         elif new_status is None:

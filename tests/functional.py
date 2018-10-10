@@ -492,6 +492,9 @@ class WorkflowTest(unittest.TestCase):
         assert 'last_signature_date' in source_data
         destination_data = self.client.get_collection(id='to')['data']
         assert destination_data['signature'] != before_signature
+        # Refresh does not copy records.
+        destination_records = self.client.get_records(collection='to')
+        assert len(destination_records) == 0
 
     def test_refresh_signs_preview_collection(self):
         preview_data = self.client.get_collection(id='preview')['data']

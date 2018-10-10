@@ -3,7 +3,7 @@ Changelog
 
 This document describes changes between each past release.
 
-3.3.3 (unreleased)
+3.3.3 (2018-10-10)
 ------------------
 
 - Allow refresh of signature even if the collection was never signed (#267)

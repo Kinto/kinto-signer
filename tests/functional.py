@@ -431,11 +431,6 @@ class WorkflowTest(unittest.TestCase):
         with self.assertRaises(KintoException):
             self.elsa_client.patch_collection(data={'status': 'to-sign'})
 
-    def test_status_cannot_be_refresh_if_never_signed(self):
-        with self.assertRaises(KintoException) as e:
-            self.elsa_client.patch_collection(data={'status': 'to-resign'})
-        assert "Collection never signed." in e.exception.message
-
     def test_review_can_be_cancelled_by_editor(self):
         create_records(self.client)
         self.anna_client.patch_collection(data={'status': 'to-review'})
@@ -481,6 +476,14 @@ class WorkflowTest(unittest.TestCase):
         create_records(self.client)
         status = self.client.get_collection()['data']['status']
         assert status == 'work-in-progress'
+
+    def test_can_refresh_if_never_signed(self):
+        create_records(self.elsa_client)
+        self.elsa_client.patch_collection(data={'status': 'to-resign'})
+        data = self.client.get_collection()['data']
+        assert data['status'] == 'work-in-progress'
+        assert 'last_review_request_date' not in data
+        assert 'last_signature_date' in data
 
 
 class PerBucketTest(unittest.TestCase):

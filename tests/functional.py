@@ -479,11 +479,28 @@ class WorkflowTest(unittest.TestCase):
 
     def test_can_refresh_if_never_signed(self):
         create_records(self.elsa_client)
+        source_data = self.client.get_collection()['data']
+        assert source_data['status'] == 'work-in-progress'
+        destination_data = self.client.get_collection(id='to')['data']
+        before_signature = destination_data.get('signature')
+
         self.elsa_client.patch_collection(data={'status': 'to-resign'})
-        data = self.client.get_collection()['data']
-        assert data['status'] == 'work-in-progress'
-        assert 'last_review_request_date' not in data
-        assert 'last_signature_date' in data
+
+        source_data = self.client.get_collection()['data']
+        assert source_data['status'] == 'work-in-progress'
+        assert 'last_review_request_date' not in source_data
+        assert 'last_signature_date' in source_data
+        destination_data = self.client.get_collection(id='to')['data']
+        assert destination_data['signature'] != before_signature
+
+    def test_refresh_signs_preview_collection(self):
+        preview_data = self.client.get_collection(id='preview')['data']
+        before_signature = preview_data.get('signature')
+
+        self.elsa_client.patch_collection(data={'status': 'to-resign'})
+
+        preview_data = self.client.get_collection(id='preview')['data']
+        assert preview_data['signature'] != before_signature
 
 
 class PerBucketTest(unittest.TestCase):

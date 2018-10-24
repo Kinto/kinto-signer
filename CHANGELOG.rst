@@ -6,8 +6,9 @@ This document describes changes between each past release.
 3.4.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Internal Changes**
 
+- Enable Wheel distribution (fixes #271)
 
 3.3.3 (2018-10-10)
 ------------------

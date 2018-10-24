@@ -6,7 +6,7 @@ This document describes changes between each past release.
 3.4.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Rewrite e2e to use ``.get_records_timestamp()`` (#258)
 
 
 3.3.3 (2018-10-10)

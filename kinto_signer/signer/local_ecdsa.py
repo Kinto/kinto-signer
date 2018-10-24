@@ -98,7 +98,7 @@ def load_from_settings(settings, prefix='', *, prefixes=None):
     public_key = get_first_matching_setting('ecdsa.public_key', settings, prefixes)
     try:
         return ECDSASigner(private_key=private_key, public_key=public_key)
-    except ValueError as e:
+    except ValueError:
         msg = ("Please specify either kinto.signer.ecdsa.private_key or "
                "kinto.signer.ecdsa.public_key in the settings.")
         raise ValueError(msg)

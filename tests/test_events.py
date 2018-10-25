@@ -290,6 +290,16 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
                             headers=self.headers)
         assert isinstance(self.events[-1], signer_events.ReviewRejected)
 
+    def test_review_requested_is_not_triggered_if_already_set(self):
+        r = self.app.get(self.source_collection, headers=self.headers)
+        assert r.json["data"]["status"] == "to-review"
+
+        del self.events[:]
+        self.app.patch_json(self.source_collection,
+                            {"data": {"foo": "baz"}},
+                            headers=self.headers)
+        assert len(self.events) == 0
+
     def test_review_rejected_is_not_triggered_if_not_waiting_review(self):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},

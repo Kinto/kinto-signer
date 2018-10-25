@@ -10,6 +10,10 @@ This document describes changes between each past release.
 
 - Prevent events to be sent if status is not changed (#268)
 
+**Internal Changes**
+
+- Rewrite e2e to use ``.get_records_timestamp()`` (#258)
+
 3.3.3 (2018-10-10)
 ------------------
 

@@ -144,6 +144,9 @@ def sign_collection_data(event, resources):
                                                     source_attributes=new_collection,
                                                     next_source_status=None)
 
+            if old_status == new_status:
+                continue
+
             if new_status == STATUS.TO_SIGN:
                 # Run signature process (will set `last_reviewer` field).
                 updater.destination = resource['destination']

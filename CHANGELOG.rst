@@ -6,8 +6,9 @@ This document describes changes between each past release.
 3.4.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
 
+- Prevent events to be sent if status is not changed (#268)
 
 3.3.3 (2018-10-10)
 ------------------

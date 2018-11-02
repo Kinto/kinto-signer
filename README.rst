@@ -85,7 +85,7 @@ Standard canonical JSON:
     '[{"a":"","id":"26"},{"a":"\\"quoted\\"","b":"Ich \\u2665 B\\u00fccher","id":"4"}]'
 
 
-* See `Internet-Draft Predictable Serialization for JSON Tools <http://webpki.org/ietf/draft-rundgren-predictable-serialization-for-json-tools-00.html>`_
+* See `Internet-Draft Predictable Serialization for JSON Tools <https://tools.ietf.org/html/draft-rundgren-predictable-serialization-for-json-00>`_
 * See `jsesc <https://github.com/mathiasbynens/jsesc>`_ to obtain similar output
   for escape sequences in JavaScript.
 

@@ -72,6 +72,22 @@ def test_preserves_data():
     assert records == json.loads(serialized)['data']
 
 
+def test_uses_scientific_notation():
+    samples = [
+        (.00099, "0.00099"),
+        (.00001, "1e-5"),
+        (.000000930258908, "9.30258908e-7"),
+        (.000068272, "6.8272e-5"),
+        (.00000000000068272, "6.8272e-13"),
+        (10**15 + 0.1, "1000000000000000.1"),
+        (10**16 * 1.1, "1.1e+16"),
+    ]
+    for number, string in samples:
+        records = [{"id": "1", "rate": number}]
+        serialized = canonical_json(records, '45678')
+        assert ',"rate":%s}' % string in serialized
+
+
 def test_uses_lowercase_unicode():
     records = [{'id': '4', 'a': '"quoted"', 'b': 'Ich ♥ Bücher'},
                {'id': '26', 'd': None, 'a': ''}]

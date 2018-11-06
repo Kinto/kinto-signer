@@ -22,6 +22,7 @@ def test_uses_scientific_notation():
         (10 ** 21, "1e+21"),
         # (10**15 + 0.1, "1000000000000000.1"),  # XXX: fails 1000000000000000.125
         (10 ** 16 * 1.1, "11000000000000000"),
+        ("frequency at 10.0e+04", '"frequency at 10.0e+04"'),
     ]
     for number, string in samples:
         assert canonicaljson.dumps(number) == string

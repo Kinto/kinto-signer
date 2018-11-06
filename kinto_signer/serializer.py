@@ -1,5 +1,6 @@
-import json
 import operator
+
+from kinto_signer import canonicaljson
 
 
 def canonical_json(records, last_modified):
@@ -8,12 +9,6 @@ def canonical_json(records, last_modified):
 
     payload = {'data': records, 'last_modified': '%s' % last_modified}
 
-    dump = json.dumps(payload, sort_keys=True, separators=(',', ':'))
-
-    # Fix scientific notations of Python JSON to conform with ECMAScript v6
-    # 9.30258908e-07 --> 9.30258908e-7
-    # https://www.ecma-international.org/ecma-262/6.0/#sec-tostring-applied-to-the-number-type
-    # ("no leading zero")
-    dump = dump.replace("e-0", "e-")
+    dump = canonicaljson.dumps(payload)
 
     return dump

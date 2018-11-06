@@ -6,7 +6,9 @@ This document describes changes between each past release.
 3.4.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Fix Canonical JSON about float numbers to conform with `ECMAScript V6 notation <https://www.ecma-international.org/ecma-262/6.0/#sec-tostring-applied-to-the-number-type>`_
 
 
 3.3.4 (2018-10-25)

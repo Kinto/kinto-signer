@@ -75,6 +75,14 @@ Standard canonical JSON:
 * Hexadecimal character escape sequences are used
 * The alphabetical hexadecimal digits are lowercase
 * Duplicate or empty properties are omitted
+* ``NaN`` and ``Infinity`` are serialized as ``null``
+
+About numbers:
+
+* Scientific notation is used for numbers < 10e-6 and >= 10e21
+* Exponents use a lowercase ``e`` and have no leading zeros
+* Only significant numbers are kept (no fractional zeros)
+* Float are serialized with 8 significant numbers at most
 
 .. code-block:: python
 
@@ -85,7 +93,9 @@ Standard canonical JSON:
     '[{"a":"","id":"26"},{"a":"\\"quoted\\"","b":"Ich \\u2665 B\\u00fccher","id":"4"}]'
 
 
-* See `Internet-Draft Predictable Serialization for JSON Tools <http://webpki.org/ietf/draft-rundgren-predictable-serialization-for-json-tools-00.html>`_
+* `Gecko client side code <https://searchfox.org/mozilla-central/rev/7c848ac7630df5baf1314b0c03e015683599efb9/toolkit/modules/CanonicalJSON.jsm>`_
+* `ES6 Number#toString() <https://www.ecma-international.org/ecma-262/6.0/#sec-tostring-applied-to-the-number-type>`_ to obtain similar output for floats
+* See `Internet-Draft Predictable Serialization for JSON Tools <https://tools.ietf.org/html/draft-rundgren-predictable-serialization-for-json-00>`_
 * See `jsesc <https://github.com/mathiasbynens/jsesc>`_ to obtain similar output
   for escape sequences in JavaScript.
 

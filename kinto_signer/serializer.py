@@ -1,5 +1,6 @@
-import json
 import operator
+
+from kinto_signer import canonicaljson
 
 
 def canonical_json(records, last_modified):
@@ -8,4 +9,6 @@ def canonical_json(records, last_modified):
 
     payload = {'data': records, 'last_modified': '%s' % last_modified}
 
-    return json.dumps(payload, sort_keys=True, separators=(',', ':'))
+    dump = canonicaljson.dumps(payload)
+
+    return dump

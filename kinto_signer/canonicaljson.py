@@ -12,7 +12,7 @@ def numberstr(o):
     """
     if o != o or o == json_encoder.INFINITY or o == -json_encoder.INFINITY:
         return "null"
-    elif o < 10 ** -6 or o >= 10 ** 21:
+    elif 0 < o < 10 ** -6 or o >= 10 ** 21:
         fnative = format(o, ".8e")
         # 1.0e-04 --> 1e-4
         return re.sub(r"(\.?0*)e([\-+])0?", r"e\2", fnative)

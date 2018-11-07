@@ -2,16 +2,6 @@ import re
 import pkg_resources
 import functools
 
-import transaction
-from kinto.core.events import ACTIONS, ResourceChanged
-from pyramid.exceptions import ConfigurationError
-from pyramid.events import NewRequest
-from pyramid.settings import asbool
-
-from kinto_signer.signer import heartbeat
-from kinto_signer import utils
-from kinto_signer import listeners
-
 #: Module version, as defined in PEP-0396.
 __version__ = pkg_resources.get_distribution(__package__).version
 
@@ -20,6 +10,18 @@ DEFAULT_SIGNER = "kinto_signer.signer.local_ecdsa"
 
 
 def includeme(config):
+    # We import stuff here, so that kinto-signer can be installed with `--no-deps`
+    # and used without having this Pyramid ecosystem installed.
+    import transaction
+    from kinto.core.events import ACTIONS, ResourceChanged
+    from pyramid.exceptions import ConfigurationError
+    from pyramid.events import NewRequest
+    from pyramid.settings import asbool
+
+    from kinto_signer.signer import heartbeat
+    from kinto_signer import utils
+    from kinto_signer import listeners
+
     # Register heartbeat to check signer integration.
     config.registry.heartbeats['signer'] = heartbeat
 

@@ -6,7 +6,9 @@ This document describes changes between each past release.
 3.4.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Fix Canonical JSON serialization of zero
 
 
 3.3.5 (2018-11-06)

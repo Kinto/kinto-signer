@@ -10,6 +10,7 @@ def test_serialize_nan_and_infinity_as_null():
 
 def test_uses_scientific_notation():
     samples = [
+        (0, "0"),
         (0.00099, "0.00099"),
         (0.000011, "0.000011"),
         (0.0000011, "0.0000011"),

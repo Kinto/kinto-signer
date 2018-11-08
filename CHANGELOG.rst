@@ -9,6 +9,7 @@ This document describes changes between each past release.
 **Bug fixes**
 
 - Fix Canonical JSON serialization of zero
+- Allow installing ``kinto-signer`` with ``--no-deps`` in order to import ``kinto_signer.serializer.canonical_json()`` without the Pyramid ecosystem
 
 
 3.3.5 (2018-11-06)

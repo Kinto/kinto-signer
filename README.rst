@@ -60,6 +60,16 @@ The content signature is validated in Firefox using the `Personal Security Manag
 Notes on canonical JSON
 -----------------------
 
+The ``canonical_json()`` can be used in projects with:
+
+.. code-block:: bash
+
+    pip install --no-deps kinto-signer
+
+.. code-block:: python
+
+    from kinto_signer.serializer import canonical_json
+
 Specific to Kinto:
 
 * The payload to be signed has two attributes: ``last_modified`` with the

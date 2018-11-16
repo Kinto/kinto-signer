@@ -145,6 +145,25 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
                          "signed")
         self.assertGreater(event_signed.payload['timestamp'], event_tosign.payload['timestamp'])
 
+    def test_resource_changed_is_triggered_for_resign(self):
+        self._sign()
+        before = len(listener.received)
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-resign"}},
+                            headers=self.headers)
+
+        events = [e for e in listener.received[before:]
+                  if e.payload["collection_id"] == "scid"]
+        assert len(events) == 2
+        event_tosign = events[0]
+        assert len(event_tosign.impacted_records) == 1
+        assert event_tosign.impacted_records[0]["new"]["status"] == "to-resign"
+        event_signed = events[1]
+        assert len(event_signed.impacted_records) == 1
+        assert event_signed.impacted_records[0]["old"]["status"] == "to-resign"
+        assert event_signed.impacted_records[0]["new"]["status"] == "signed"
+
     def test_resource_changed_is_triggered_for_destination_collection(self):
         before = len(listener.received)
 

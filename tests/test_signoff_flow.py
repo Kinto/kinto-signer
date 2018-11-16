@@ -641,6 +641,65 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
         assert signature_preview_before != signature_preview_after
 
 
+class NoReviewNoPreviewTest(SignoffWebTest, unittest.TestCase):
+    """
+    If review is disabled for a collection, we don't create the preview collection
+    nor copy the records there.
+    """
+    source_bucket = "/buckets/stage"
+    source_collection = "/buckets/stage/collections/normandy"
+
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
+
+        settings['signer.to_review_enabled'] = 'true'
+        settings['signer.to_review_enabled'] = 'false'
+        settings['kinto.signer.resources'] = '/buckets/stage -> /buckets/preview -> /buckets/prod'
+
+        settings['signer.stage.normandy.to_review_enabled'] = 'true'
+        settings['signer.stage.normandy.group_check_enabled'] = 'true'
+
+        return settings
+
+    def test_the_preview_collection_is_not_created(self):
+        self.app.put_json("/buckets/stage/collections/onecrl", status=201, headers=self.headers)
+        self.app.put_json(self.source_collection, headers=self.headers)
+
+        self.app.get("/buckets/preview/collections/onecrl", status=200, headers=self.headers)
+        self.app.get("/buckets/preview/collections/normandy", status=404,
+                     headers=self.headers)
+
+    def test_the_preview_collection_is_not_updated(self):
+        self.app.put_json(self.source_collection, headers=self.headers)
+        self.app.post_json(self.source_collection + "/records",
+                           {"data": {"title": "Hallo"}},
+                           headers=self.headers)
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
+
+        # The preview still does not exist :)
+        self.app.get("/buckets/preview/collections/normandy", status=404)
+        # Prod was updated.
+        r = self.app.get("/buckets/prod/collections/normandy", headers=self.headers)
+        assert len(r.json()["data"]) == 1
+
+    def test_cannot_set_status_to_review_if_disabled(self):
+        self.app.put_json(self.source_collection, headers=self.headers)
+        self.app.post_json(self.source_collection + "/records",
+                           {"data": {"title": "Hallo"}},
+                           headers=self.headers)
+
+        r = self.app.patch_json(self.source_collection,
+                                {"data": {"status": "to-review"}},
+                                headers=self.headers,
+                                status=403)
+
+        assert r.json()["message"] == "Cannot request review disabled blablabla"
+
+
 class PerBucketTest(SignoffWebTest, unittest.TestCase):
     @classmethod
     def get_app_settings(cls, extras=None):

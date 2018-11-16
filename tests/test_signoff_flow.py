@@ -641,6 +641,55 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
         assert signature_preview_before != signature_preview_after
 
 
+class NoReviewNoPreviewTest(SignoffWebTest, unittest.TestCase):
+    """
+    If review is disabled for a collection, we don't create the preview collection
+    nor copy the records there.
+    """
+    preview_collection = "/buckets/alice/collections/pcid"
+
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
+
+        settings['signer.to_review_enabled'] = 'true'
+        settings['signer.group_check_enabled'] = 'true'
+
+        settings['kinto.signer.resources'] = '%s -> %s -> %s' % (
+            cls.source_collection,
+            cls.preview_collection,
+            cls.destination_collection)
+
+        settings['signer.alice.scid.to_review_enabled'] = 'false'
+        settings['signer.alice.scid.group_check_enabled'] = 'false'
+
+        return settings
+
+    def test_the_preview_collection_is_not_created(self):
+        # self.app.put_json("/buckets/stage/collections/onecrl", status=201, headers=self.headers)
+        self.app.put_json(self.source_collection, headers=self.headers)
+
+        # self.app.get("/buckets/preview/collections/onecrl", status=200, headers=self.headers)
+        self.app.get(self.preview_collection, status=404, headers=self.headers)
+
+    def test_the_preview_collection_is_not_updated(self):
+        r = self.app.get(self.destination_collection + "/records", headers=self.headers)
+        before = len(r.json["data"])
+        self.app.post_json(self.source_collection + "/records",
+                           {"data": {"title": "Hallo"}},
+                           headers=self.headers)
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
+
+        # The preview still does not exist :)
+        self.app.get(self.preview_collection, status=404, headers=self.headers)
+        # Prod was updated.
+        r = self.app.get(self.destination_collection + "/records", headers=self.headers)
+        assert len(r.json["data"]) > before
+
+
 class PerBucketTest(SignoffWebTest, unittest.TestCase):
     @classmethod
     def get_app_settings(cls, extras=None):
@@ -662,6 +711,7 @@ class PerBucketTest(SignoffWebTest, unittest.TestCase):
         settings['signer.stage.specific.to_review_enabled'] = 'false'
 
         settings['signer.stage.specific.autograph.hawk_id'] = 'for-specific'
+
         return settings
 
     def test_destination_and_preview_collections_are_created_and_signed(self):
@@ -704,6 +754,8 @@ class GroupCreationTest(PostgresWebTest, unittest.TestCase):
         cls.source_bucket = "/buckets/stage"
         cls.preview_bucket = "/buckets/preview"
         cls.destination_bucket = "/buckets/prod"
+
+        settings['signer.to_review_enabled'] = 'true'
 
         settings['kinto.signer.editors_group'] = 'best-editors'
         settings['kinto.signer.reviewers_group'] = '{collection_id}-reviewers'

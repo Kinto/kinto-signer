@@ -126,7 +126,6 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
 
         has_review_enabled = ('preview' in resource and
                               resource.get('to_review_enabled', to_review_enabled))
-        print(resource, has_review_enabled, to_review_enabled)
 
         review_event_cls = None
 

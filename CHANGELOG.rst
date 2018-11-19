@@ -6,7 +6,9 @@ This document describes changes between each past release.
 3.4.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- If ``to_review_enabled`` is False, the preview collection is not created, no updated (fixes #279)
 
 
 3.3.6 (2018-11-08)

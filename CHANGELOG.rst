@@ -9,6 +9,7 @@ This document describes changes between each past release.
 **Bug fixes**
 
 - If ``to_review_enabled`` is False, the preview collection is not created, no updated (fixes #279)
+- Show collections with specific settings in capabilities
 
 
 3.3.6 (2018-11-08)

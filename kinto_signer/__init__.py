@@ -1,3 +1,4 @@
+import copy
 import re
 import pkg_resources
 import functools
@@ -34,6 +35,36 @@ def includeme(config):
         raise ConfigurationError(error_msg)
     resources = utils.parse_resources(raw_resources)
 
+    # Expand the resources with the ones that come from per-bucket resources
+    # and have specific settings.
+    # For example, resource is ``/buckets/dev -> /buckets/prod``
+    # and there is a setting ``signer.dev.recipes.signer_backend = foo``
+    for key, resource in resources.items():
+        # If collection is not None, there is nothing to expand :)
+        if resource['source']['collection'] is not None:
+            continue
+        bid = resource['source']['bucket']
+        # Match setting names like signer.stage.specific.autograph.hawk_id
+        matches = [(k, re.search(r'signer\.{0}\.([^\.]+)\.(.+)'.format(bid), k))
+                   for k, v in settings.items()]
+        found = [(k, m.group(1), m.group(2)) for (k, m) in matches if m]
+        if len(found) == 0:
+            # No specific collection setting for this bucket
+            continue
+        # Expand the list of resources with the ones that contain collection
+        # specific settings.
+        for setting, cid, setting_name in found:
+            setting_value = settings[setting]
+            signer_key = "/buckets/{0}/collections/{1}".format(bid, cid)
+            if signer_key not in resources:
+                specific = copy.deepcopy(resource)
+                specific["source"]["collection"] = cid
+                specific["destination"]["collection"] = cid
+                if "preview" in specific:
+                    specific["preview"]["collection"] = cid
+                resources[signer_key] = specific
+            resources[signer_key][setting_name] = setting_value
+
     defaults = {
         "reviewers_group": "reviewers",
         "editors_group": "editors",
@@ -49,7 +80,7 @@ def includeme(config):
         global_settings[setting] = value
 
     config.registry.signers = {}
-    for key, resource in resources.items():
+    for signer_key, resource in resources.items():
 
         server_wide = 'signer.'
         bucket_wide = 'signer.{bucket}.'.format(**resource['source'])
@@ -61,40 +92,15 @@ def includeme(config):
             collection_wide = 'signer.{bucket}.{collection}.'.format(**resource['source'])
             deprecated = 'signer.{bucket}_{collection}.'.format(**resource['source'])
             prefixes = [collection_wide, deprecated] + prefixes
-            signer_keys = [key]
-        else:
-            # If collection is None, it means the resource was configured for the whole bucket.
-            signer_keys = [key]
-            # Iterate on settings to see if a specific signer config exists for
-            # a collection within this bucket.
-            bid = resource['source']['bucket']
-            # Match setting names like signer.stage_specific.autograph.hawk_id
-            matched = [re.search(r'signer\.{0}\.([^\.]+)\.(.+)'.format(bid), k)
-                       for k, v in settings.items()]
-            for cid, unprefixed_setting_name in [m.groups() for m in matched if m]:
-                # Define the list of prefixes for this collection. This will allow
-                # to mix collection specific with global defaults for signer settings.
-                collection_wide = 'signer.{0}.{1}.'.format(bid, cid)
-                deprecated = 'signer.{0}_{1}.'.format(bid, cid)
-                prefixes = [collection_wide, deprecated] + prefixes
-
-                if unprefixed_setting_name in listeners.REVIEW_SETTINGS:
-                    # No need to have a custom signer for specific review settings.
-                    continue
-                # A specific signer will be instantiated and stored in the registry
-                # with collection URI key since at least one of its parameter is specific.
-                signer_key = "/buckets/{0}/collections/{1}".format(bid, cid)
-                signer_keys += [signer_key]
 
         # Instantiates the signers associated to this resource.
-        for signer_key in signer_keys:
-            dotted_location = utils.get_first_matching_setting('signer_backend',
-                                                               settings,
-                                                               prefixes,
-                                                               default=DEFAULT_SIGNER)
-            signer_module = config.maybe_dotted(dotted_location)
-            backend = signer_module.load_from_settings(settings, prefixes=prefixes)
-            config.registry.signers[signer_key] = backend
+        dotted_location = utils.get_first_matching_setting('signer_backend',
+                                                           settings,
+                                                           prefixes,
+                                                           default=DEFAULT_SIGNER)
+        signer_module = config.maybe_dotted(dotted_location)
+        backend = signer_module.load_from_settings(settings, prefixes=prefixes)
+        config.registry.signers[signer_key] = backend
 
         # Load the setttings associated to each resource.
         for setting in listeners.REVIEW_SETTINGS:
@@ -105,14 +111,11 @@ def includeme(config):
             if setting.endswith("_enabled"):
                 value = asbool(value)
 
-            should_expose_setting = not per_bucket_config
-
             # Resolve placeholder with source info.
             if setting.endswith("_group"):
                 # If configured per bucket, then we leave the placeholder.
                 # It will be resolved in listeners during group checking and
                 # by Kinto-Admin when matching user groups with info from capabilities.
-                should_expose_setting = True
                 collection_id = resource['source']['collection'] or "{collection_id}"
                 try:
                     value = value.format(bucket_id=resource['source']['bucket'],
@@ -121,8 +124,10 @@ def includeme(config):
                     raise ConfigurationError("Unknown group placeholder %s" % e)
 
             # Only expose if relevant.
-            if should_expose_setting and value != global_settings[setting]:
+            if value != global_settings[setting]:
                 resource[setting] = value
+            else:
+                resource.pop(setting, None)
 
     # Expose the capabilities in the root endpoint.
     message = "Digital signatures for integrity and authenticity of records."

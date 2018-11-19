@@ -26,6 +26,9 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
         settings['signer.reviewers_group'] = '{bucket_id}-{collection_id}-reviewers'
         settings['signer.alice.reviewers_group'] = 'revoyeurs'
         settings['signer.alice.source.to_review_enabled'] = 'true'
+
+        settings['signer.stage.normandy.to_review_enabled'] = 'false'
+        settings['signer.stage.normandy.group_check_enabled'] = 'true'
         return settings
 
     def test_capability_is_exposed(self):
@@ -70,6 +73,15 @@ class HelloViewTest(BaseWebTest, unittest.TestCase):
                 "destination": {"bucket": "prod",
                                 "collection": None},
                 "reviewers_group": "stage-{collection_id}-reviewers",
+            }, {
+                "source": {"bucket": "stage",
+                           "collection": "normandy"},
+                "preview": {"bucket": "preview",
+                            "collection": "normandy"},
+                "destination": {"bucket": "prod",
+                                "collection": "normandy"},
+                "reviewers_group": "stage-normandy-reviewers",
+                "group_check_enabled": True,
             }]
         }
         self.assertEqual(expected, capabilities['signer'])

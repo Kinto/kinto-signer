@@ -91,13 +91,13 @@ def includeme(config):
             # Global to all collections.
             global_settings[setting] = settings.get("signer.%s" % setting, default)
             # Per collection/bucket:
-            value = utils.get_first_matching_setting(setting, settings, prefixes)
-            if value is None:
-                value = default
-            config_value = value
+            value = utils.get_first_matching_setting(setting, settings, prefixes,
+                                                     default=global_settings[setting])
 
             if setting.endswith("_enabled"):
                 value = asbool(value)
+                global_settings[setting] = asbool(global_settings[setting])
+
             # Resolve placeholder with source info.
             if setting.endswith("_group"):
                 # If configured per bucket, then we leave the placeholder.
@@ -111,7 +111,7 @@ def includeme(config):
                     raise ConfigurationError("Unknown group placeholder %s" % e)
 
             # Only store if relevant.
-            if config_value != default:
+            if value != global_settings[setting]:
                 resource[setting] = value
 
     # Expose the capabilities in the root endpoint.
@@ -160,7 +160,8 @@ def includeme(config):
         for_resources=('collection',))
 
     sign_data_listener = functools.partial(listeners.sign_collection_data,
-                                           resources=resources)
+                                           resources=resources,
+                                           **global_settings)
 
     # If StatsD is enabled, monitor execution time of listener.
     if config.registry.statsd:

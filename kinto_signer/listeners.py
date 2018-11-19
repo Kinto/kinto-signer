@@ -83,7 +83,7 @@ def resource_group(resource, name, default):
     return group.format(collection_id=resource["source"]["collection"])
 
 
-def sign_collection_data(event, resources):
+def sign_collection_data(event, resources, to_review_enabled, **kwargs):
     """
     Listen to resource change events, to check if a new signature is
     requested.
@@ -124,6 +124,8 @@ def sign_collection_data(event, resources):
         uri = instance_uri(event.request, "collection", bucket_id=payload['bucket_id'],
                            id=new_collection['id'])
 
+        _to_review_enabled = resource.get('to_review_enabled', to_review_enabled)
+
         review_event_cls = None
 
         new_status = new_collection.get("status")
@@ -134,7 +136,7 @@ def sign_collection_data(event, resources):
 
         try:
             if is_new_collection:
-                if 'preview' in resource:
+                if _to_review_enabled and 'preview' in resource:
                     updater.destination = resource['preview']
                     updater.sign_and_update_destination(event.request,
                                                         source_attributes=new_collection,
@@ -262,6 +264,10 @@ def check_collection_status(event, resources, group_check_enabled,
 
         # 2. work-in-progress -> to-review
         elif new_status == STATUS.TO_REVIEW:
+            if not _to_review_enabled:
+                cid = "{source[bucket]}/{source[collection]}".format(**resource)
+                raise_forbidden(message="Review not enabled for {}".format(cid))
+
             if editors_group_uri not in user_principals and _group_check_enabled:
                 raise_forbidden(message="Not in %s group" % _editors_group)
 

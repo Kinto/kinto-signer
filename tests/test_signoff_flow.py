@@ -646,32 +646,35 @@ class NoReviewNoPreviewTest(SignoffWebTest, unittest.TestCase):
     If review is disabled for a collection, we don't create the preview collection
     nor copy the records there.
     """
-    source_bucket = "/buckets/stage"
-    source_collection = "/buckets/stage/collections/normandy"
+    preview_collection = "/buckets/alice/collections/pcid"
 
     @classmethod
     def get_app_settings(cls, extras=None):
         settings = super().get_app_settings(extras)
 
         settings['signer.to_review_enabled'] = 'true'
-        settings['signer.to_review_enabled'] = 'false'
-        settings['kinto.signer.resources'] = '/buckets/stage -> /buckets/preview -> /buckets/prod'
+        settings['signer.group_check_enabled'] = 'true'
 
-        settings['signer.stage.normandy.to_review_enabled'] = 'true'
-        settings['signer.stage.normandy.group_check_enabled'] = 'true'
+        settings['kinto.signer.resources'] = '%s -> %s -> %s' % (
+            cls.source_collection,
+            cls.preview_collection,
+            cls.destination_collection)
+
+        settings['signer.alice.scid.to_review_enabled'] = 'false'
+        settings['signer.alice.scid.group_check_enabled'] = 'false'
 
         return settings
 
     def test_the_preview_collection_is_not_created(self):
-        self.app.put_json("/buckets/stage/collections/onecrl", status=201, headers=self.headers)
+        # self.app.put_json("/buckets/stage/collections/onecrl", status=201, headers=self.headers)
         self.app.put_json(self.source_collection, headers=self.headers)
 
-        self.app.get("/buckets/preview/collections/onecrl", status=200, headers=self.headers)
-        self.app.get("/buckets/preview/collections/normandy", status=404,
-                     headers=self.headers)
+        # self.app.get("/buckets/preview/collections/onecrl", status=200, headers=self.headers)
+        self.app.get(self.preview_collection, status=404, headers=self.headers)
 
     def test_the_preview_collection_is_not_updated(self):
-        self.app.put_json(self.source_collection, headers=self.headers)
+        r = self.app.get(self.destination_collection + "/records", headers=self.headers)
+        before = len(r.json["data"])
         self.app.post_json(self.source_collection + "/records",
                            {"data": {"title": "Hallo"}},
                            headers=self.headers)
@@ -681,10 +684,10 @@ class NoReviewNoPreviewTest(SignoffWebTest, unittest.TestCase):
                             headers=self.headers)
 
         # The preview still does not exist :)
-        self.app.get("/buckets/preview/collections/normandy", status=404)
+        self.app.get(self.preview_collection, status=404, headers=self.headers)
         # Prod was updated.
-        r = self.app.get("/buckets/prod/collections/normandy", headers=self.headers)
-        assert len(r.json()["data"]) == 1
+        r = self.app.get(self.destination_collection + "/records", headers=self.headers)
+        assert len(r.json["data"]) > before
 
     def test_cannot_set_status_to_review_if_disabled(self):
         self.app.put_json(self.source_collection, headers=self.headers)
@@ -697,7 +700,7 @@ class NoReviewNoPreviewTest(SignoffWebTest, unittest.TestCase):
                                 headers=self.headers,
                                 status=403)
 
-        assert r.json()["message"] == "Cannot request review disabled blablabla"
+        assert r.json["message"] == "Review not enabled for alice/scid"
 
 
 class PerBucketTest(SignoffWebTest, unittest.TestCase):

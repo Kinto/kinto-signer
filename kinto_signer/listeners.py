@@ -265,10 +265,6 @@ def check_collection_status(event, resources, group_check_enabled,
 
         # 2. work-in-progress -> to-review
         elif new_status == STATUS.TO_REVIEW:
-            # if not _to_review_enabled:
-            #     cid = "{source[bucket]}/{source[collection]}".format(**resource)
-            #     raise_forbidden(message="Review not enabled for {}".format(cid))
-
             if editors_group_uri not in user_principals and _group_check_enabled:
                 raise_forbidden(message="Not in %s group" % _editors_group)
 

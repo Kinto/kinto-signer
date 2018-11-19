@@ -689,19 +689,6 @@ class NoReviewNoPreviewTest(SignoffWebTest, unittest.TestCase):
         r = self.app.get(self.destination_collection + "/records", headers=self.headers)
         assert len(r.json["data"]) > before
 
-    # def test_cannot_set_status_to_review_if_disabled(self):
-    #     self.app.put_json(self.source_collection, headers=self.headers)
-    #     self.app.post_json(self.source_collection + "/records",
-    #                        {"data": {"title": "Hallo"}},
-    #                        headers=self.headers)
-    #
-    #     r = self.app.patch_json(self.source_collection,
-    #                             {"data": {"status": "to-review"}},
-    #                             headers=self.headers,
-    #                             status=403)
-    #
-    #     assert r.json["message"] == "Review not enabled for alice/scid"
-
 
 class PerBucketTest(SignoffWebTest, unittest.TestCase):
     @classmethod

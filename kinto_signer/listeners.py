@@ -124,7 +124,9 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
         uri = instance_uri(event.request, "collection", bucket_id=payload['bucket_id'],
                            id=new_collection['id'])
 
-        _to_review_enabled = resource.get('to_review_enabled', to_review_enabled)
+        has_review_enabled = ('preview' in resource and
+                              resource.get('to_review_enabled', to_review_enabled))
+        print(resource, has_review_enabled, to_review_enabled)
 
         review_event_cls = None
 
@@ -136,7 +138,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
 
         try:
             if is_new_collection:
-                if _to_review_enabled and 'preview' in resource:
+                if has_review_enabled:
                     updater.destination = resource['preview']
                     updater.sign_and_update_destination(event.request,
                                                         source_attributes=new_collection,
@@ -160,7 +162,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
                     # When we refresh the signature, it is mainly in order to make sure that
                     # the latest signer certificate was used. When a preview collection
                     # is configured, we also want to refresh its signature.
-                    if 'preview' in resource:
+                    if has_review_enabled:
                         updater.destination = resource['preview']
                         updater.sign_and_update_destination(event.request,
                                                             source_attributes=new_collection,
@@ -169,7 +171,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
                     review_event_cls = signer_events.ReviewApproved
 
             elif new_status == STATUS.TO_REVIEW:
-                if 'preview' in resource:
+                if has_review_enabled:
                     # If preview collection: update and sign preview collection
                     updater.destination = resource['preview']
                     updater.sign_and_update_destination(event.request,
@@ -185,7 +187,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
 
             elif new_status == STATUS.TO_REFRESH:
                 updater.refresh_signature(event.request, next_source_status=old_status)
-                if 'preview' in resource:
+                if has_review_enabled:
                     updater.destination = resource['preview']
                     updater.refresh_signature(event.request, next_source_status=old_status)
 
@@ -264,9 +266,9 @@ def check_collection_status(event, resources, group_check_enabled,
 
         # 2. work-in-progress -> to-review
         elif new_status == STATUS.TO_REVIEW:
-            if not _to_review_enabled:
-                cid = "{source[bucket]}/{source[collection]}".format(**resource)
-                raise_forbidden(message="Review not enabled for {}".format(cid))
+            # if not _to_review_enabled:
+            #     cid = "{source[bucket]}/{source[collection]}".format(**resource)
+            #     raise_forbidden(message="Review not enabled for {}".format(cid))
 
             if editors_group_uri not in user_principals and _group_check_enabled:
                 raise_forbidden(message="Not in %s group" % _editors_group)

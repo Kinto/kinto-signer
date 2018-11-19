@@ -42,20 +42,29 @@ def includeme(config):
     }
 
     global_settings = {}
+    for setting in listeners.REVIEW_SETTINGS:
+        value = settings.get("signer.%s" % setting, defaults[setting])
+        if setting.endswith("_enabled"):
+            value = asbool(value)
+        global_settings[setting] = value
 
     config.registry.signers = {}
     for key, resource in resources.items():
 
         server_wide = 'signer.'
         bucket_wide = 'signer.{bucket}.'.format(**resource['source'])
+        prefixes = [bucket_wide, server_wide]
 
-        if resource['source']['collection'] is not None:
+        per_bucket_config = resource['source']['collection'] is None
+
+        if not per_bucket_config:
             collection_wide = 'signer.{bucket}.{collection}.'.format(**resource['source'])
             deprecated = 'signer.{bucket}_{collection}.'.format(**resource['source'])
-            signers_prefixes = [(key, [collection_wide, deprecated, bucket_wide, server_wide])]
+            prefixes = [collection_wide, deprecated] + prefixes
+            signer_keys = [key]
         else:
             # If collection is None, it means the resource was configured for the whole bucket.
-            signers_prefixes = [(key, [bucket_wide, server_wide])]
+            signer_keys = [key]
             # Iterate on settings to see if a specific signer config exists for
             # a collection within this bucket.
             bid = resource['source']['bucket']
@@ -63,20 +72,22 @@ def includeme(config):
             matched = [re.search(r'signer\.{0}\.([^\.]+)\.(.+)'.format(bid), k)
                        for k, v in settings.items()]
             for cid, unprefixed_setting_name in [m.groups() for m in matched if m]:
+                # Define the list of prefixes for this collection. This will allow
+                # to mix collection specific with global defaults for signer settings.
+                collection_wide = 'signer.{0}.{1}.'.format(bid, cid)
+                deprecated = 'signer.{0}_{1}.'.format(bid, cid)
+                prefixes = [collection_wide, deprecated] + prefixes
+
                 if unprefixed_setting_name in listeners.REVIEW_SETTINGS:
                     # No need to have a custom signer for specific review settings.
                     continue
                 # A specific signer will be instantiated and stored in the registry
                 # with collection URI key since at least one of its parameter is specific.
                 signer_key = "/buckets/{0}/collections/{1}".format(bid, cid)
-                # Define the list of prefixes for this collection. This will allow
-                # to mix collection specific with global defaults for signer settings.
-                collection_wide = 'signer.{0}.{1}.'.format(bid, cid)
-                deprecated = 'signer.{0}_{1}.'.format(bid, cid)
-                signers_prefixes += [(signer_key, [collection_wide, bucket_wide, server_wide])]
+                signer_keys += [signer_key]
 
         # Instantiates the signers associated to this resource.
-        for signer_key, prefixes in signers_prefixes:
+        for signer_key in signer_keys:
             dotted_location = utils.get_first_matching_setting('signer_backend',
                                                                settings,
                                                                prefixes,
@@ -87,22 +98,21 @@ def includeme(config):
 
         # Load the setttings associated to each resource.
         for setting in listeners.REVIEW_SETTINGS:
-            default = defaults[setting]
-            # Global to all collections.
-            global_settings[setting] = settings.get("signer.%s" % setting, default)
             # Per collection/bucket:
             value = utils.get_first_matching_setting(setting, settings, prefixes,
                                                      default=global_settings[setting])
 
             if setting.endswith("_enabled"):
                 value = asbool(value)
-                global_settings[setting] = asbool(global_settings[setting])
+
+            should_expose_setting = not per_bucket_config
 
             # Resolve placeholder with source info.
             if setting.endswith("_group"):
                 # If configured per bucket, then we leave the placeholder.
                 # It will be resolved in listeners during group checking and
                 # by Kinto-Admin when matching user groups with info from capabilities.
+                should_expose_setting = True
                 collection_id = resource['source']['collection'] or "{collection_id}"
                 try:
                     value = value.format(bucket_id=resource['source']['bucket'],
@@ -110,8 +120,8 @@ def includeme(config):
                 except KeyError as e:
                     raise ConfigurationError("Unknown group placeholder %s" % e)
 
-            # Only store if relevant.
-            if value != global_settings[setting]:
+            # Only expose if relevant.
+            if should_expose_setting and value != global_settings[setting]:
                 resource[setting] = value
 
     # Expose the capabilities in the root endpoint.

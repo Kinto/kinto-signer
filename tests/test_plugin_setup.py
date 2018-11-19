@@ -216,14 +216,16 @@ class OnCollectionChangedTest(unittest.TestCase):
 
     def test_nothing_happens_when_resource_is_not_configured(self):
         evt = mock.MagicMock(payload={"action": "update", "bucket_id": "a", "collection_id": "b"})
-        sign_collection_data(evt, resources=utils.parse_resources("c/d -> e/f"))
+        sign_collection_data(evt, resources=utils.parse_resources("c/d -> e/f"),
+                             to_review_enabled=True)
         assert not self.updater_mocked.called
 
     def test_nothing_happens_when_status_is_not_to_sign(self):
         evt = mock.MagicMock(payload={"action": "update", "bucket_id": "a", "collection_id": "b"},
                              impacted_records=[{
                                  "new": {"id": "b", "status": "signed"}}])
-        sign_collection_data(evt, resources=utils.parse_resources("a/b -> c/d"))
+        sign_collection_data(evt, resources=utils.parse_resources("a/b -> c/d"),
+                             to_review_enabled=True)
         assert not self.updater_mocked.sign_and_update_destination.called
 
     def test_updater_is_called_when_resource_and_status_matches(self):
@@ -236,7 +238,8 @@ class OnCollectionChangedTest(unittest.TestCase):
             "/buckets/a/collections/b": mock.sentinel.signer
         }
         evt.request.route_path.return_value = "/v1/buckets/a/collections/b"
-        sign_collection_data(evt, resources=utils.parse_resources("a/b -> c/d"))
+        sign_collection_data(evt, resources=utils.parse_resources("a/b -> c/d"),
+                             to_review_enabled=True)
         self.updater_mocked.assert_called_with(
             signer=mock.sentinel.signer,
             storage=mock.sentinel.storage,
@@ -257,13 +260,15 @@ class OnCollectionChangedTest(unittest.TestCase):
             "/buckets/a/collections/b": mock.sentinel.signer
         }
         evt.request.route_path.return_value = "/v1/buckets/a/collections/b"
-        sign_collection_data(evt, resources=utils.parse_resources("a/b -> c/d"))
+        sign_collection_data(evt, resources=utils.parse_resources("a/b -> c/d"),
+                             to_review_enabled=True)
         assert evt.request._attachment_auto_save is True
 
     def test_updater_does_not_fail_when_payload_is_inconsistent(self):
         # This happens with events on default bucket for kinto < 3.3
         evt = mock.MagicMock(payload={"action": "update", "subpath": "collections/boom"})
-        sign_collection_data(evt, resources=utils.parse_resources("a/b -> c/d"))
+        sign_collection_data(evt, resources=utils.parse_resources("a/b -> c/d"),
+                             to_review_enabled=True)
 
 
 class BatchTest(BaseWebTest, unittest.TestCase):
@@ -346,6 +351,7 @@ class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):
     @classmethod
     def get_app_settings(cls, extras=None):
         settings = super(cls, SourceCollectionDeletion).get_app_settings(extras)
+        settings['signer.to_review_enabled'] = 'true'
         settings['signer.stage.editors_group'] = 'something'
         return settings
 

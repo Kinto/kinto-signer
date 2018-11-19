@@ -8,7 +8,7 @@ This document describes changes between each past release.
 
 **Bug fixes**
 
-- If ``to_review_enabled`` is False, the preview collection is not created, no updated (fixes #279)
+- If ``to_review_enabled`` is False, the preview collection is not created, nor updated (fixes #279)
 - Show collections with specific settings in capabilities
 
 

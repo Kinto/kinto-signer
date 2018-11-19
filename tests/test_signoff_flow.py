@@ -711,7 +711,6 @@ class PerBucketTest(SignoffWebTest, unittest.TestCase):
         settings['signer.stage.specific.to_review_enabled'] = 'false'
 
         settings['signer.stage.specific.autograph.hawk_id'] = 'for-specific'
-
         return settings
 
     def test_destination_and_preview_collections_are_created_and_signed(self):

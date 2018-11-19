@@ -37,7 +37,7 @@ def includeme(config):
 
     # Expand the resources with the ones that come from per-bucket resources
     # and have specific settings.
-    # For example, resource is ``/buckets/dev -> /buckets/prod``
+    # For example, consider the case where resource is ``/buckets/dev -> /buckets/prod``
     # and there is a setting ``signer.dev.recipes.signer_backend = foo``
     for key, resource in resources.items():
         # If collection is not None, there is nothing to expand :)
@@ -47,14 +47,10 @@ def includeme(config):
         # Match setting names like signer.stage.specific.autograph.hawk_id
         matches = [(k, re.search(r'signer\.{0}\.([^\.]+)\.(.+)'.format(bid), k))
                    for k, v in settings.items()]
-        found = [(k, m.group(1), m.group(2)) for (k, m) in matches if m]
-        if len(found) == 0:
-            # No specific collection setting for this bucket
-            continue
+        found = [(settings[k], m.group(1), m.group(2)) for (k, m) in matches if m]
         # Expand the list of resources with the ones that contain collection
         # specific settings.
-        for setting, cid, setting_name in found:
-            setting_value = settings[setting]
+        for setting_value, cid, setting_name in found:
             signer_key = "/buckets/{0}/collections/{1}".format(bid, cid)
             if signer_key not in resources:
                 specific = copy.deepcopy(resource)
@@ -65,13 +61,13 @@ def includeme(config):
                 resources[signer_key] = specific
             resources[signer_key][setting_name] = setting_value
 
+    # Determine which are the settings that apply to all buckets/collections.
     defaults = {
         "reviewers_group": "reviewers",
         "editors_group": "editors",
         "to_review_enabled": False,
         "group_check_enabled": False,
     }
-
     global_settings = {}
     for setting in listeners.REVIEW_SETTINGS:
         value = settings.get("signer.%s" % setting, defaults[setting])
@@ -79,6 +75,9 @@ def includeme(config):
             value = asbool(value)
         global_settings[setting] = value
 
+    # For each resource that is configured, we determine what signer is
+    # configured and what are the review settings.
+    # Note: the `resource` values are mutated in place.
     config.registry.signers = {}
     for signer_key, resource in resources.items():
 

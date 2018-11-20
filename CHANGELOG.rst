@@ -6,7 +6,10 @@ This document describes changes between each past release.
 3.4.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- If ``to_review_enabled`` is False, the preview collection is not created, nor updated (fixes #279)
+- Show collections with specific settings in capabilities
 
 
 3.3.6 (2018-11-08)

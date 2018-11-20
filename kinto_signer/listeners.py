@@ -39,8 +39,6 @@ def pick_resource_and_signer(request, resources, bucket_id, collection_id):
                                   bucket_id=bucket_id,
                                   id=collection_id)
 
-    settings = request.registry.settings
-
     resource = signer = None
 
     # Review might have been configured explictly for this collection,
@@ -57,17 +55,6 @@ def pick_resource_and_signer(request, resources, bucket_id, collection_id):
         if "preview" in resource:
             resource["preview"]["collection"] = collection_id
 
-        # Look-up if a setting overrides a global one here.
-        for setting in REVIEW_SETTINGS:
-            setting_key = "signer.%s.%s.%s" % (bucket_id, collection_id, setting)
-            if setting_key in settings:
-                resource[setting] = settings[setting_key]
-            else:  # pragma: no cover
-                # Deprecated underscore separation
-                setting_key = "signer.%s_%s.%s" % (bucket_id, collection_id, setting)
-                if setting_key in settings:
-                    resource[setting] = settings[setting_key]
-
     if collection_key in request.registry.signers:
         signer = request.registry.signers[collection_key]
     elif bucket_key in request.registry.signers:
@@ -83,7 +70,7 @@ def resource_group(resource, name, default):
     return group.format(collection_id=resource["source"]["collection"])
 
 
-def sign_collection_data(event, resources):
+def sign_collection_data(event, resources, to_review_enabled, **kwargs):
     """
     Listen to resource change events, to check if a new signature is
     requested.
@@ -124,6 +111,9 @@ def sign_collection_data(event, resources):
         uri = instance_uri(event.request, "collection", bucket_id=payload['bucket_id'],
                            id=new_collection['id'])
 
+        has_review_enabled = ('preview' in resource and
+                              resource.get('to_review_enabled', to_review_enabled))
+
         review_event_cls = None
 
         new_status = new_collection.get("status")
@@ -134,7 +124,7 @@ def sign_collection_data(event, resources):
 
         try:
             if is_new_collection:
-                if 'preview' in resource:
+                if has_review_enabled:
                     updater.destination = resource['preview']
                     updater.sign_and_update_destination(event.request,
                                                         source_attributes=new_collection,
@@ -158,7 +148,7 @@ def sign_collection_data(event, resources):
                     # When we refresh the signature, it is mainly in order to make sure that
                     # the latest signer certificate was used. When a preview collection
                     # is configured, we also want to refresh its signature.
-                    if 'preview' in resource:
+                    if has_review_enabled:
                         updater.destination = resource['preview']
                         updater.sign_and_update_destination(event.request,
                                                             source_attributes=new_collection,
@@ -167,7 +157,7 @@ def sign_collection_data(event, resources):
                     review_event_cls = signer_events.ReviewApproved
 
             elif new_status == STATUS.TO_REVIEW:
-                if 'preview' in resource:
+                if has_review_enabled:
                     # If preview collection: update and sign preview collection
                     updater.destination = resource['preview']
                     updater.sign_and_update_destination(event.request,
@@ -183,7 +173,7 @@ def sign_collection_data(event, resources):
 
             elif new_status == STATUS.TO_REFRESH:
                 updater.refresh_signature(event.request, next_source_status=old_status)
-                if 'preview' in resource:
+                if has_review_enabled:
                     updater.destination = resource['preview']
                     updater.refresh_signature(event.request, next_source_status=old_status)
 

@@ -14,6 +14,11 @@ RE_ISO8601 = re.compile(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}\+00:00")
 
 
 class PostgresWebTest(BaseWebTest):
+    source_bucket = "/buckets/alice"
+    source_collection = "/buckets/alice/collections/scid"
+    destination_bucket = "/buckets/alice"
+    destination_collection = "/buckets/alice/collections/dcid"
+
     def setUp(self):
         super(PostgresWebTest, self).setUp()
         # Patch calls to Autograph.
@@ -43,11 +48,6 @@ class PostgresWebTest(BaseWebTest):
         settings['permission_backend'] = 'kinto.core.permission.postgresql'
         settings['permission_url'] = db
         settings['cache_backend'] = 'kinto.core.cache.memory'
-
-        cls.source_bucket = "/buckets/alice"
-        cls.source_collection = cls.source_bucket + "/collections/scid"
-        cls.destination_bucket = "/buckets/alice"
-        cls.destination_collection = cls.destination_bucket + "/collections/dcid"
 
         settings['kinto.signer.resources'] = '%s -> %s' % (
             cls.source_collection,
@@ -641,6 +641,72 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
         assert signature_preview_before != signature_preview_after
 
 
+class NoReviewNoPreviewTest(SignoffWebTest, unittest.TestCase):
+    """
+    If review is disabled for a collection, we don't create the preview collection
+    nor copy the records there.
+    """
+    source_bucket = "/buckets/dev"
+    source_collection = "/buckets/dev/collections/normandy"
+    preview_bucket = "/buckets/stage"
+    preview_collection = "/buckets/stage/collections/normandy"
+    destination_bucket = "/buckets/prod"
+    destination_collection = "/buckets/prod/collections/normandy"
+
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
+
+        settings['signer.to_review_enabled'] = 'true'
+        settings['signer.group_check_enabled'] = 'true'
+
+        settings['kinto.signer.resources'] = ' -> '.join((
+            cls.source_bucket,
+            cls.preview_bucket,
+            cls.destination_bucket))
+
+        settings['signer.dev.normandy.to_review_enabled'] = 'false'
+        settings['signer.dev.normandy.group_check_enabled'] = 'false'
+
+        return settings
+
+    def setUp(self):
+        super(NoReviewNoPreviewTest, self).setUp()
+        # Make the preview bucket readable (to obtain explicit 404 when collections
+        # don't exist instead of ambiguous 403)
+        self.app.put_json(self.preview_bucket, {
+            "permissions": {
+                "read": ["system.Everyone"]
+            }
+        }, headers=self.headers)
+
+    def test_the_preview_collection_is_not_created(self):
+        self.app.put_json(self.source_bucket + "/collections/onecrl",
+                          status=201, headers=self.headers)
+        self.app.put_json(self.source_collection, headers=self.headers)
+
+        self.app.get(self.preview_bucket + "/collections/onecrl",
+                     status=200, headers=self.headers)
+        self.app.get(self.preview_collection, status=404, headers=self.headers)
+
+    def test_the_preview_collection_is_not_updated(self):
+        r = self.app.get(self.destination_collection + "/records", headers=self.headers)
+        before = len(r.json["data"])
+        self.app.post_json(self.source_collection + "/records",
+                           {"data": {"title": "Hallo"}},
+                           headers=self.headers)
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.headers)
+
+        # The preview still does not exist :)
+        self.app.get(self.preview_collection, status=404, headers=self.headers)
+        # Prod was updated.
+        r = self.app.get(self.destination_collection + "/records", headers=self.headers)
+        assert len(r.json["data"]) > before
+
+
 class PerBucketTest(SignoffWebTest, unittest.TestCase):
     @classmethod
     def get_app_settings(cls, extras=None):
@@ -704,6 +770,8 @@ class GroupCreationTest(PostgresWebTest, unittest.TestCase):
         cls.source_bucket = "/buckets/stage"
         cls.preview_bucket = "/buckets/preview"
         cls.destination_bucket = "/buckets/prod"
+
+        settings['signer.to_review_enabled'] = 'true'
 
         settings['kinto.signer.editors_group'] = 'best-editors'
         settings['kinto.signer.reviewers_group'] = '{collection_id}-reviewers'

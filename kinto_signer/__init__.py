@@ -1,3 +1,4 @@
+import copy
 import re
 import pkg_resources
 import functools
@@ -34,70 +35,81 @@ def includeme(config):
         raise ConfigurationError(error_msg)
     resources = utils.parse_resources(raw_resources)
 
+    # Expand the resources with the ones that come from per-bucket resources
+    # and have specific settings.
+    # For example, consider the case where resource is ``/buckets/dev -> /buckets/prod``
+    # and there is a setting ``signer.dev.recipes.signer_backend = foo``
+    for key, resource in resources.items():
+        # If collection is not None, there is nothing to expand :)
+        if resource['source']['collection'] is not None:
+            continue
+        bid = resource['source']['bucket']
+        # Match setting names like signer.stage.specific.autograph.hawk_id
+        matches = [(v, re.search(r'signer\.{0}\.([^\.]+)\.(.+)'.format(bid), k))
+                   for k, v in settings.items()]
+        found = [(v, m.group(1), m.group(2)) for (v, m) in matches if m]
+        # Expand the list of resources with the ones that contain collection
+        # specific settings.
+        for setting_value, cid, setting_name in found:
+            signer_key = "/buckets/{0}/collections/{1}".format(bid, cid)
+            if signer_key not in resources:
+                specific = copy.deepcopy(resource)
+                specific["source"]["collection"] = cid
+                specific["destination"]["collection"] = cid
+                if "preview" in specific:
+                    specific["preview"]["collection"] = cid
+                resources[signer_key] = specific
+            resources[signer_key][setting_name] = setting_value
+
+    # Determine which are the settings that apply to all buckets/collections.
     defaults = {
         "reviewers_group": "reviewers",
         "editors_group": "editors",
         "to_review_enabled": False,
         "group_check_enabled": False,
     }
-
     global_settings = {}
+    for setting in listeners.REVIEW_SETTINGS:
+        value = settings.get("signer.%s" % setting, defaults[setting])
+        if setting.endswith("_enabled"):
+            value = asbool(value)
+        global_settings[setting] = value
 
+    # For each resource that is configured, we determine what signer is
+    # configured and what are the review settings.
+    # Note: the `resource` values are mutated in place.
     config.registry.signers = {}
-    for key, resource in resources.items():
+    for signer_key, resource in resources.items():
 
         server_wide = 'signer.'
         bucket_wide = 'signer.{bucket}.'.format(**resource['source'])
+        prefixes = [bucket_wide, server_wide]
 
-        if resource['source']['collection'] is not None:
+        per_bucket_config = resource['source']['collection'] is None
+
+        if not per_bucket_config:
             collection_wide = 'signer.{bucket}.{collection}.'.format(**resource['source'])
             deprecated = 'signer.{bucket}_{collection}.'.format(**resource['source'])
-            signers_prefixes = [(key, [collection_wide, deprecated, bucket_wide, server_wide])]
-        else:
-            # If collection is None, it means the resource was configured for the whole bucket.
-            signers_prefixes = [(key, [bucket_wide, server_wide])]
-            # Iterate on settings to see if a specific signer config exists for
-            # a collection within this bucket.
-            bid = resource['source']['bucket']
-            # Match setting names like signer.stage_specific.autograph.hawk_id
-            matched = [re.search(r'signer\.{0}\.([^\.]+)\.(.+)'.format(bid), k)
-                       for k, v in settings.items()]
-            for cid, unprefixed_setting_name in [m.groups() for m in matched if m]:
-                if unprefixed_setting_name in listeners.REVIEW_SETTINGS:
-                    # No need to have a custom signer for specific review settings.
-                    continue
-                # A specific signer will be instantiated and stored in the registry
-                # with collection URI key since at least one of its parameter is specific.
-                signer_key = "/buckets/{0}/collections/{1}".format(bid, cid)
-                # Define the list of prefixes for this collection. This will allow
-                # to mix collection specific with global defaults for signer settings.
-                collection_wide = 'signer.{0}.{1}.'.format(bid, cid)
-                deprecated = 'signer.{0}_{1}.'.format(bid, cid)
-                signers_prefixes += [(signer_key, [collection_wide, bucket_wide, server_wide])]
+            prefixes = [collection_wide, deprecated] + prefixes
 
         # Instantiates the signers associated to this resource.
-        for signer_key, prefixes in signers_prefixes:
-            dotted_location = utils.get_first_matching_setting('signer_backend',
-                                                               settings,
-                                                               prefixes,
-                                                               default=DEFAULT_SIGNER)
-            signer_module = config.maybe_dotted(dotted_location)
-            backend = signer_module.load_from_settings(settings, prefixes=prefixes)
-            config.registry.signers[signer_key] = backend
+        dotted_location = utils.get_first_matching_setting('signer_backend',
+                                                           settings,
+                                                           prefixes,
+                                                           default=DEFAULT_SIGNER)
+        signer_module = config.maybe_dotted(dotted_location)
+        backend = signer_module.load_from_settings(settings, prefixes=prefixes)
+        config.registry.signers[signer_key] = backend
 
         # Load the setttings associated to each resource.
         for setting in listeners.REVIEW_SETTINGS:
-            default = defaults[setting]
-            # Global to all collections.
-            global_settings[setting] = settings.get("signer.%s" % setting, default)
             # Per collection/bucket:
-            value = utils.get_first_matching_setting(setting, settings, prefixes)
-            if value is None:
-                value = default
-            config_value = value
+            value = utils.get_first_matching_setting(setting, settings, prefixes,
+                                                     default=global_settings[setting])
 
             if setting.endswith("_enabled"):
                 value = asbool(value)
+
             # Resolve placeholder with source info.
             if setting.endswith("_group"):
                 # If configured per bucket, then we leave the placeholder.
@@ -110,9 +122,11 @@ def includeme(config):
                 except KeyError as e:
                     raise ConfigurationError("Unknown group placeholder %s" % e)
 
-            # Only store if relevant.
-            if config_value != default:
+            # Only expose if relevant.
+            if value != global_settings[setting]:
                 resource[setting] = value
+            else:
+                resource.pop(setting, None)
 
     # Expose the capabilities in the root endpoint.
     message = "Digital signatures for integrity and authenticity of records."
@@ -160,7 +174,8 @@ def includeme(config):
         for_resources=('collection',))
 
     sign_data_listener = functools.partial(listeners.sign_collection_data,
-                                           resources=resources)
+                                           resources=resources,
+                                           **global_settings)
 
     # If StatsD is enabled, monitor execution time of listener.
     if config.registry.statsd:

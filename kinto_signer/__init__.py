@@ -45,9 +45,9 @@ def includeme(config):
             continue
         bid = resource['source']['bucket']
         # Match setting names like signer.stage.specific.autograph.hawk_id
-        matches = [(k, re.search(r'signer\.{0}\.([^\.]+)\.(.+)'.format(bid), k))
+        matches = [(v, re.search(r'signer\.{0}\.([^\.]+)\.(.+)'.format(bid), k))
                    for k, v in settings.items()]
-        found = [(settings[k], m.group(1), m.group(2)) for (k, m) in matches if m]
+        found = [(v, m.group(1), m.group(2)) for (v, m) in matches if m]
         # Expand the list of resources with the ones that contain collection
         # specific settings.
         for setting_value, cid, setting_name in found:

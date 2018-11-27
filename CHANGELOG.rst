@@ -6,7 +6,7 @@ This document describes changes between each past release.
 3.4.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix "RuntimeError: OrderedDict mutated during iteration" (#283).
 
 
 3.3.7 (2018-11-20)

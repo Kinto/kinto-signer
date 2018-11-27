@@ -39,6 +39,7 @@ def includeme(config):
     # and have specific settings.
     # For example, consider the case where resource is ``/buckets/dev -> /buckets/prod``
     # and there is a setting ``signer.dev.recipes.signer_backend = foo``
+    output_resources = resources.copy()
     for key, resource in resources.items():
         # If collection is not None, there is nothing to expand :)
         if resource['source']['collection'] is not None:
@@ -52,14 +53,15 @@ def includeme(config):
         # specific settings.
         for setting_value, cid, setting_name in found:
             signer_key = "/buckets/{0}/collections/{1}".format(bid, cid)
-            if signer_key not in resources:
+            if signer_key not in output_resources:
                 specific = copy.deepcopy(resource)
                 specific["source"]["collection"] = cid
                 specific["destination"]["collection"] = cid
                 if "preview" in specific:
                     specific["preview"]["collection"] = cid
-                resources[signer_key] = specific
-            resources[signer_key][setting_name] = setting_value
+                output_resources[signer_key] = specific
+            output_resources[signer_key][setting_name] = setting_value
+    resources = output_resources
 
     # Determine which are the settings that apply to all buckets/collections.
     defaults = {

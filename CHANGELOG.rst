@@ -3,7 +3,7 @@ Changelog
 
 This document describes changes between each past release.
 
-3.4.0 (unreleased)
+3.3.8 (2018-11-27)
 ------------------
 
 - Fix "RuntimeError: OrderedDict mutated during iteration" (#283).

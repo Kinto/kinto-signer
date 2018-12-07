@@ -6,7 +6,9 @@ This document describes changes between each past release.
 3.3.9 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Internal Changes**
+
+- Do not use the count value from ``storage.get_all()``
 
 
 3.3.8 (2018-11-27)

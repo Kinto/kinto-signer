@@ -188,13 +188,13 @@ class LocalUpdater(object):
         storage_kwargs['sorting'] = [Sort(FIELD_LAST_MODIFIED, 1)]
         parent_id = "/buckets/{bucket}/collections/{collection}".format(**rc)
 
-        records, count = self.storage.get_all(
+        records, _ = self.storage.get_all(
             parent_id=parent_id,
             collection_id='record',
             include_deleted=True,
             **storage_kwargs)
 
-        if len(records) == count == 0 and empty_none:
+        if len(records) == 0 and empty_none:
             # When the collection empty (no records and no tombstones)
             collection_timestamp = None
         else:

@@ -177,7 +177,7 @@ class LocalUpdater(object):
                                 'id': collection_name
                                })
 
-    def _get_records(self, rc, last_modified=None, empty_none=True):
+    def _get_records(self, resource, last_modified=None, empty_none=True):
         # If last_modified was specified, only retrieve items since then.
         storage_kwargs = {}
         if last_modified is not None:
@@ -186,14 +186,15 @@ class LocalUpdater(object):
             storage_kwargs['filters'] = [gt_last_modified, ]
 
         storage_kwargs['sorting'] = [Sort(FIELD_LAST_MODIFIED, 1)]
-        parent_id = "/buckets/{bucket}/collections/{collection}".format(**rc)
+        parent_id = "/buckets/{bucket}/collections/{collection}".format(**resource)
 
         records = self.storage.list_all(parent_id=parent_id,
                                         resource_name='record',
                                         include_deleted=True,
                                         **storage_kwargs)
+        count_all = self.storage.count_all(parent_id=parent_id, resource_name='record')
 
-        if len(records) == 0 and empty_none:
+        if count_all == 0 and empty_none:
             # When the collection empty (no records and no tombstones)
             collection_timestamp = None
         else:

@@ -6,7 +6,9 @@ This document describes changes between each past release.
 3.4.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Breaking changes**
+
+- Require Kinto >= 12.0.0
 
 
 3.3.9 (2018-12-10)

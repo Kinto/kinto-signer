@@ -146,14 +146,14 @@ def get_first_matching_setting(setting_name, settings, prefixes, default=None):
     return default
 
 
-def ensure_resource_exists(request, resource_name, parent_id, record,
+def ensure_resource_exists(request, resource_name, parent_id, obj,
                            permissions, matchdict):
     storage = request.registry.storage
     permission = request.registry.permission
     try:
-        created = storage.create(collection_id=resource_name,
+        created = storage.create(resource_name=resource_name,
                                  parent_id=parent_id,
-                                 record=record)
+                                 obj=obj)
         object_uri = instance_uri(request, resource_name, **matchdict)
         permission.replace_object_permissions(object_uri, permissions)
         notify_resource_event(request,
@@ -161,14 +161,14 @@ def ensure_resource_exists(request, resource_name, parent_id, record,
                               matchdict=matchdict,
                               resource_name=resource_name,
                               parent_id=parent_id,
-                              record=created,
+                              obj=created,
                               action=ACTIONS.CREATE)
     except UnicityError:
         pass
 
 
 def notify_resource_event(request, request_options, matchdict,
-                          resource_name, parent_id, record, action, old=None):
+                          resource_name, parent_id, obj, action, old=None):
     """Helper that triggers resource events as real requests.
     """
     fakerequest = build_request(request, request_options)
@@ -185,12 +185,12 @@ def notify_resource_event(request, request_options, matchdict,
     # and https://bugzilla.mozilla.org/show_bug.cgi?id=1470812
     has_changed_attachment = (
         resource_name == "record" and action == ACTIONS.UPDATE and
-        "attachment" in old and old["attachment"] != record.get("attachment"))
+        "attachment" in old and old["attachment"] != obj.get("attachment"))
     if has_changed_attachment:
         fakerequest._attachment_auto_save = True
 
     fakerequest.notify_resource_event(parent_id=parent_id,
-                                      timestamp=record[FIELD_LAST_MODIFIED],
-                                      data=record,
+                                      timestamp=obj[FIELD_LAST_MODIFIED],
+                                      data=obj,
                                       action=action,
                                       old=old)

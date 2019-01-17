@@ -214,7 +214,7 @@ class IncludeMeTest(unittest.TestCase):
                        action='update',
                        bucket_id='foo')
         event = ResourceChanged(payload=payload,
-                                impacted_records=[],
+                                impacted_objects=[],
                                 request=mock.MagicMock())
         statsd_client = config.registry.statsd._client
         with mock.patch.object(statsd_client, 'timing') as mocked:

@@ -52,25 +52,21 @@ class LocalUpdaterTest(unittest.TestCase):
                                       "bucket and collection")
 
     def test_get_source_records_asks_storage_for_records(self):
-        records = []
-        count = mock.sentinel.count
-        self.storage.get_all.return_value = (records, count)
+        self.storage.list_all.return_value = []
 
         self.updater.get_source_records(None)
-        self.storage.get_all.assert_called_with(
-            collection_id='record',
+        self.storage.list_all.assert_called_with(
+            resource_name='record',
             parent_id='/buckets/sourcebucket/collections/sourcecollection',
             include_deleted=True,
             sorting=[Sort('last_modified', 1)])
 
     def test_get_source_records_asks_storage_for_last_modified_records(self):
-        records = []
-        count = mock.sentinel.count
-        self.storage.get_all.return_value = (records, count)
+        self.storage.list_all.return_value = []
 
         self.updater.get_source_records(1234)
-        self.storage.get_all.assert_called_with(
-            collection_id='record',
+        self.storage.list_all.assert_called_with(
+            resource_name='record',
             parent_id='/buckets/sourcebucket/collections/sourcecollection',
             include_deleted=True,
             filters=[Filter('last_modified', 1234, COMPARISON.GT)],
@@ -79,14 +75,13 @@ class LocalUpdaterTest(unittest.TestCase):
     def test_get_destination_records(self):
         # We want to test get_destination_records with some records.
         records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
-        count = mock.sentinel.count
-        self.storage.get_all.return_value = (records, count)
+        self.storage.list_all.return_value = records
         self.updater.get_destination_records()
-        self.storage.collection_timestamp.assert_called_with(
-            collection_id='record',
+        self.storage.resource_timestamp.assert_called_with(
+            resource_name='record',
             parent_id='/buckets/destbucket/collections/destcollection')
-        self.storage.get_all.assert_called_with(
-            collection_id='record',
+        self.storage.list_all.assert_called_with(
+            resource_name='record',
             parent_id='/buckets/destbucket/collections/destcollection',
             include_deleted=True,
             sorting=[Sort('last_modified', 1)])
@@ -160,10 +155,10 @@ class LocalUpdaterTest(unittest.TestCase):
                                                DummyRequest())
 
         self.storage.update.assert_called_with(
-            collection_id='collection',
+            resource_name='collection',
             object_id='destcollection',
             parent_id='/buckets/destbucket',
-            record={
+            obj={
                 'id': 1234,
                 'signature': mock.sentinel.signature
             })
@@ -175,10 +170,10 @@ class LocalUpdaterTest(unittest.TestCase):
                                                DummyRequest())
 
         self.storage.update.assert_called_with(
-            collection_id='collection',
+            resource_name='collection',
             object_id='destcollection',
             parent_id='/buckets/destbucket',
-            record={
+            obj={
                 'id': 1234,
                 'signature': mock.sentinel.signature,
                 'sort': '-age',
@@ -194,10 +189,10 @@ class LocalUpdaterTest(unittest.TestCase):
             self.updater.update_source_status(STATUS.SIGNED, DummyRequest())
 
         self.storage.update.assert_called_with(
-            collection_id='collection',
+            resource_name='collection',
             object_id='sourcecollection',
             parent_id='/buckets/sourcebucket',
-            record={
+            obj={
                 'id': 1234,
                 'last_review_by': 'basicauth:bob',
                 'last_review_date': '2018-04-09',
@@ -207,35 +202,35 @@ class LocalUpdaterTest(unittest.TestCase):
             })
 
     def test_create_destination_updates_collection_permissions(self):
-        collection_id = '/buckets/destbucket/collections/destcollection'
+        collection_uri = '/buckets/destbucket/collections/destcollection'
         request = DummyRequest()
-        request.route_path.return_value = collection_id
+        request.route_path.return_value = collection_uri
         self.updater.create_destination(request)
         request.registry.permission.replace_object_permissions.assert_called_with(
-            collection_id,
+            collection_uri,
             {"read": ("system.Everyone",)})
 
     def test_create_destination_creates_bucket(self):
         request = DummyRequest()
         self.updater.create_destination(request)
         request.registry.storage.create.assert_any_call(
-            collection_id='bucket',
+            resource_name='bucket',
             parent_id='',
-            record={"id": 'destbucket'})
+            obj={"id": 'destbucket'})
 
     def test_create_destination_creates_collection(self):
         bucket_id = '/buckets/destbucket'
         request = DummyRequest()
         self.updater.create_destination(request)
         request.registry.storage.create.assert_any_call(
-            collection_id='collection',
+            resource_name='collection',
             parent_id=bucket_id,
-            record={"id": 'destcollection'})
+            obj={"id": 'destcollection'})
 
     def test_sign_and_update_destination(self):
         records = [{'id': idx, 'foo': 'bar %s' % idx, 'last_modified': idx}
                    for idx in range(1, 3)]
-        self.storage.get_all.return_value = (records, 2)
+        self.storage.list_all.return_value = records
 
         self.patch(self.storage, 'update_records')
         self.patch(self.updater, 'get_destination_records',
@@ -252,7 +247,7 @@ class LocalUpdaterTest(unittest.TestCase):
         assert self.updater.invalidate_cloudfront_cache.call_count == 1
 
     def test_refresh_signature_does_not_push_records(self):
-        self.storage.get_all.return_value = ([], 2)
+        self.storage.list_all.return_value = []
         self.patch(self.updater, 'set_destination_signature')
         self.patch(self.updater, 'push_records_to_destination')
         self.patch(self.updater, 'invalidate_cloudfront_cache')
@@ -264,7 +259,7 @@ class LocalUpdaterTest(unittest.TestCase):
         assert self.updater.push_records_to_destination.call_count == 0
 
     def test_refresh_signature_restores_status_on_source(self):
-        self.storage.get_all.return_value = ([], 2)
+        self.storage.list_all.return_value = []
         with mock.patch('kinto_signer.updater.datetime') as mocked:
             mocked.datetime.now.return_value = datetime.datetime(2010, 10, 31)
 
@@ -275,10 +270,10 @@ class LocalUpdaterTest(unittest.TestCase):
             'last_signature_by': 'basicauth:bob',
             'last_signature_date': '2010-10-31T00:00:00'
         }
-        self.storage.update.assert_any_call(collection_id='collection',
+        self.storage.update.assert_any_call(resource_name='collection',
                                             parent_id='/buckets/sourcebucket',
                                             object_id='sourcecollection',
-                                            record=new_attrs)
+                                            obj=new_attrs)
 
     def test_if_distribution_id_a_cloudfront_invalidation_request_is_triggered(self):
         request = mock.MagicMock()

@@ -1,10 +1,14 @@
 class BaseEvent(object):
-    def __init__(self, request, payload, impacted_records, resource, original_event):
+    def __init__(self, request, payload, impacted_objects, resource, original_event):
         self.request = request
         self.payload = payload
-        self.impacted_records = impacted_records
+        self.impacted_objects = impacted_objects
         self.resource = resource
         self.original_event = original_event
+
+    @property
+    def impact_records(self):
+        return self.impacted_objects
 
 
 class ReviewRequested(BaseEvent):

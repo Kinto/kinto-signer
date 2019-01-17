@@ -78,12 +78,12 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         event = [e for e in listener.received
                  if e.payload["uri"] == "/buckets/destination" and
                  e.payload["action"] == "create"][0]
-        self.assertEqual(len(event.impacted_records), 1)
+        self.assertEqual(len(event.impacted_objects), 1)
 
         event = [e for e in listener.received
                  if e.payload["uri"] == self.destination_collection and
                  e.payload["action"] == "create"][0]
-        self.assertEqual(len(event.impacted_records), 1)
+        self.assertEqual(len(event.impacted_objects), 1)
         self.assertEqual(event.payload['user_id'], "plugin:kinto-signer")
 
     def test_resource_changed_is_triggered_for_work_in_progress(self):
@@ -94,14 +94,14 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
 
         # We created two records, for each of them we updated the ``last_edit_datr``
         # field, so we received two events.
-        self.assertIsNone(events[0].impacted_records[0]["old"].get("status"))
-        self.assertIsNone(events[0].impacted_records[0]["old"].get("last_edit_date"))
+        self.assertIsNone(events[0].impacted_objects[0]["old"].get("status"))
+        self.assertIsNone(events[0].impacted_objects[0]["old"].get("last_edit_date"))
         self.assertEqual(events[0].payload["user_id"], "plugin:kinto-signer")
-        self.assertEqual(events[0].impacted_records[0]["new"]["status"],
+        self.assertEqual(events[0].impacted_objects[0]["new"]["status"],
                          "work-in-progress")
-        self.assertIn("basicauth:", events[0].impacted_records[0]["new"]["last_edit_by"])
-        self.assertNotEqual(events[0].impacted_records[0]["new"]["last_edit_date"],
-                            events[-1].impacted_records[0]["new"]["last_edit_date"])
+        self.assertIn("basicauth:", events[0].impacted_objects[0]["new"]["last_edit_by"])
+        self.assertNotEqual(events[0].impacted_objects[0]["new"]["last_edit_date"],
+                            events[-1].impacted_objects[0]["new"]["last_edit_date"])
 
     def test_resource_changed_is_triggered_for_to_review(self):
         before = len(listener.received)
@@ -117,12 +117,12 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
 
         self.assertEqual(len(events), 2)
         self.assertIn("basicauth:", events[0].payload["user_id"])
-        self.assertEqual(events[0].impacted_records[0]["new"]["status"], "to-review")
-        self.assertNotIn("last_editor", events[0].impacted_records[0]["new"])
+        self.assertEqual(events[0].impacted_objects[0]["new"]["status"], "to-review")
+        self.assertNotIn("last_editor", events[0].impacted_objects[0]["new"])
 
         self.assertEqual(events[1].payload["user_id"], "plugin:kinto-signer")
-        self.assertIn("basicauth:", events[1].impacted_records[0]["new"]["last_review_request_by"])
-        self.assertEqual(events[1].impacted_records[0]["old"]["status"], "to-review")
+        self.assertIn("basicauth:", events[1].impacted_objects[0]["new"]["last_review_request_by"])
+        self.assertEqual(events[1].impacted_objects[0]["old"]["status"], "to-review")
 
     def test_resource_changed_is_triggered_for_source_collection(self):
         before = len(listener.received)
@@ -134,14 +134,14 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
                   e.payload["action"] == "update"]
         self.assertEqual(len(events), 2)
         event_tosign = events[0]
-        self.assertEqual(len(event_tosign.impacted_records), 1)
-        self.assertEqual(event_tosign.impacted_records[0]["new"]["status"],
+        self.assertEqual(len(event_tosign.impacted_objects), 1)
+        self.assertEqual(event_tosign.impacted_objects[0]["new"]["status"],
                          "to-sign")
         event_signed = events[1]
-        self.assertEqual(len(event_signed.impacted_records), 1)
-        self.assertEqual(event_signed.impacted_records[0]["old"]["status"],
+        self.assertEqual(len(event_signed.impacted_objects), 1)
+        self.assertEqual(event_signed.impacted_objects[0]["old"]["status"],
                          "to-sign")
-        self.assertEqual(event_signed.impacted_records[0]["new"]["status"],
+        self.assertEqual(event_signed.impacted_objects[0]["new"]["status"],
                          "signed")
         self.assertGreater(event_signed.payload['timestamp'], event_tosign.payload['timestamp'])
 
@@ -154,9 +154,9 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
                  e.payload.get("collection_id") == "dcid" and
                  e.payload["action"] == "update"][0]
 
-        self.assertEqual(len(event.impacted_records), 1)
-        self.assertNotEqual(event.impacted_records[0]["old"].get("signature"),
-                            event.impacted_records[0]["new"]["signature"])
+        self.assertEqual(len(event.impacted_objects), 1)
+        self.assertNotEqual(event.impacted_objects[0]["old"].get("signature"),
+                            event.impacted_objects[0]["new"]["signature"])
 
     def test_resource_changed_is_triggered_for_destination_creation(self):
         before = len(listener.received)
@@ -168,8 +168,8 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
 
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0].payload['action'], 'create')
-        self.assertEqual(len(events[0].impacted_records), 2)
-        updated = events[0].impacted_records[0]
+        self.assertEqual(len(events[0].impacted_objects), 2)
+        updated = events[0].impacted_objects[0]
         self.assertNotIn('old', updated)
         self.assertIn(updated['new']['title'], ('bonjour', 'hello'))
 
@@ -192,8 +192,8 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
 
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0].payload['action'], 'update')
-        self.assertEqual(len(events[0].impacted_records), 1)
-        updated = events[0].impacted_records[0]
+        self.assertEqual(len(events[0].impacted_objects), 1)
+        updated = events[0].impacted_objects[0]
         self.assertIn(updated['old']['title'], 'salam')
         self.assertIn(updated['new']['title'], 'servus')
 
@@ -280,9 +280,13 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         assert e.request.path == '/' + self.api_prefix + self.source_collection
         assert e.payload['uri'] == self.source_collection
         assert e.payload['collection_id'] == 'scid'
-        assert e.impacted_records[0]['new']['id'] == 'scid'
+        assert e.impacted_objects[0]['new']['id'] == 'scid'
         assert e.resource['source']['bucket'] == 'alice'
         assert isinstance(e.original_event, kinto_events.ResourceChanged)
+
+    def test_events_have_details_deprecated_attributes(self):
+        e = self.events[-1]
+        assert e.impacted_records == e.impacted_objects
 
     def test_review_rejected_is_triggered(self):
         self.app.patch_json(self.source_collection,

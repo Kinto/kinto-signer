@@ -188,7 +188,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
             payload["collection_id"] = new_collection['id']
             review_event = review_event_cls(request=event.request,
                                             payload=payload,
-                                            impacted_records=[impacted],
+                                            impacted_objects=[impacted],
                                             resource=resource,
                                             original_event=event)
             event.request.bound_data.setdefault('kinto_signer.events', []).append(review_event)
@@ -370,7 +370,7 @@ def create_editors_reviewers_groups(event, resources, editors_group, reviewers_g
             ensure_resource_exists(request=event.request,
                                    resource_name='group',
                                    parent_id=bucket_uri,
-                                   record={'id': group, 'members': members},
+                                   obj={'id': group, 'members': members},
                                    permissions=group_perms,
                                    matchdict={'bucket_id': bid, 'id': group})
 
@@ -389,7 +389,7 @@ def create_editors_reviewers_groups(event, resources, editors_group, reviewers_g
 def cleanup_preview_destination(event, resources):
     storage = event.request.registry.storage
 
-    for impacted in event.impacted_records:
+    for impacted in event.impacted_objects:
         old_collection = impacted["old"]
 
         resource, signer = pick_resource_and_signer(event.request, resources,
@@ -404,7 +404,7 @@ def cleanup_preview_destination(event, resources):
             bid = resource[k]["bucket"]
             cid = resource[k]["collection"]
             collection_uri = instance_uri(event.request, "collection", bucket_id=bid, id=cid)
-            storage.delete_all("record", collection_uri, with_deleted=True)
+            storage.delete_all(resource_name="record", parent_id=collection_uri, with_deleted=True)
 
             updater = LocalUpdater(signer=signer,
                                    storage=storage,

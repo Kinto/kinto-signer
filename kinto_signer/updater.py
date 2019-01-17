@@ -161,7 +161,7 @@ class LocalUpdater(object):
         ensure_resource_exists(request=request,
                                resource_name='bucket',
                                parent_id='',
-                               record={FIELD_ID: bucket_name},
+                               obj={FIELD_ID: bucket_name},
                                permissions=perms,
                                matchdict={'id': bucket_name})
 
@@ -170,7 +170,7 @@ class LocalUpdater(object):
         ensure_resource_exists(request=request,
                                resource_name='collection',
                                parent_id=self.destination_bucket_uri,
-                               record={FIELD_ID: collection_name},
+                               obj={FIELD_ID: collection_name},
                                permissions=readonly_perms,
                                matchdict={
                                 'bucket_id': bucket_name,
@@ -188,19 +188,17 @@ class LocalUpdater(object):
         storage_kwargs['sorting'] = [Sort(FIELD_LAST_MODIFIED, 1)]
         parent_id = "/buckets/{bucket}/collections/{collection}".format(**rc)
 
-        records, _ = self.storage.get_all(
-            parent_id=parent_id,
-            collection_id='record',
-            include_deleted=True,
-            **storage_kwargs)
+        records = self.storage.list_all(parent_id=parent_id,
+                                        resource_name='record',
+                                        include_deleted=True,
+                                        **storage_kwargs)
 
         if len(records) == 0 and empty_none:
             # When the collection empty (no records and no tombstones)
             collection_timestamp = None
         else:
-            collection_timestamp = self.storage.collection_timestamp(
-                parent_id=parent_id,
-                collection_id='record')
+            collection_timestamp = self.storage.resource_timestamp(parent_id=parent_id,
+                                                                   resource_name='record')
 
         return records, collection_timestamp
 
@@ -223,7 +221,7 @@ class LocalUpdater(object):
         for record in new_records:
             storage_kwargs = {
                 "parent_id": self.destination_collection_uri,
-                "collection_id": 'record',
+                "resource_name": 'record',
             }
             try:
                 before = self.storage.get(object_id=record[FIELD_ID],
@@ -247,13 +245,13 @@ class LocalUpdater(object):
             else:
                 if before is None:
                     pushed = self.storage.create(
-                        record=record,
+                        obj=record,
                         **storage_kwargs)
                     action = ACTIONS.CREATE
                 else:
                     pushed = self.storage.update(
                         object_id=record[FIELD_ID],
-                        record=record,
+                        obj=record,
                         **storage_kwargs)
                     action = ACTIONS.UPDATE
 
@@ -272,7 +270,7 @@ class LocalUpdater(object):
                 matchdict=matchdict,
                 resource_name="record",
                 parent_id=self.destination_collection_uri,
-                record=pushed,
+                obj=pushed,
                 action=action,
                 old=before)
 
@@ -283,7 +281,7 @@ class LocalUpdater(object):
 
         collection_record = self.storage.get(
             parent_id=parent_id,
-            collection_id=collection_id,
+            resource_name=collection_id,
             object_id=self.destination['collection'])
 
         # Update the collection_record
@@ -297,9 +295,9 @@ class LocalUpdater(object):
 
         updated = self.storage.update(
             parent_id=parent_id,
-            collection_id=collection_id,
+            resource_name=collection_id,
             object_id=self.destination['collection'],
-            record=new_collection)
+            obj=new_collection)
 
         matchdict = dict(bucket_id=self.destination['bucket'],
                          id=self.destination['collection'])
@@ -312,7 +310,7 @@ class LocalUpdater(object):
             matchdict=matchdict,
             resource_name="collection",
             parent_id=self.destination_bucket_uri,
-            record=updated,
+            obj=updated,
             action=ACTIONS.UPDATE,
             old=collection_record)
 
@@ -343,11 +341,11 @@ class LocalUpdater(object):
 
     def _update_source_attributes(self, request, **kwargs):
         parent_id = '/buckets/%s' % self.source['bucket']
-        collection_id = 'collection'
+        resource_name = 'collection'
 
         collection_record = self.storage.get(
             parent_id=parent_id,
-            collection_id=collection_id,
+            resource_name=resource_name,
             object_id=self.source['collection'])
 
         # Update the collection_record
@@ -359,9 +357,9 @@ class LocalUpdater(object):
 
         updated = self.storage.update(
             parent_id=parent_id,
-            collection_id=collection_id,
+            resource_name=resource_name,
             object_id=self.source['collection'],
-            record=new_collection)
+            obj=new_collection)
 
         matchdict = dict(bucket_id=self.source['bucket'],
                          id=self.source['collection'])
@@ -374,7 +372,7 @@ class LocalUpdater(object):
             matchdict=matchdict,
             resource_name="collection",
             parent_id=self.source_bucket_uri,
-            record=updated,
+            obj=updated,
             action=ACTIONS.UPDATE,
             old=collection_record)
 

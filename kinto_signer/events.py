@@ -7,7 +7,7 @@ class BaseEvent(object):
         self.original_event = original_event
 
     @property
-    def impact_records(self):
+    def impacted_records(self):
         return self.impacted_objects
 
 

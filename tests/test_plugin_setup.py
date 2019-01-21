@@ -249,7 +249,7 @@ class OnCollectionChangedTest(unittest.TestCase):
 
     def test_nothing_happens_when_status_is_not_to_sign(self):
         evt = mock.MagicMock(payload={"action": "update", "bucket_id": "a", "collection_id": "b"},
-                             impacted_records=[{
+                             impacted_objects=[{
                                  "new": {"id": "b", "status": "signed"}}])
         sign_collection_data(evt, resources=utils.parse_resources("a/b -> c/d"),
                              to_review_enabled=True)
@@ -257,7 +257,7 @@ class OnCollectionChangedTest(unittest.TestCase):
 
     def test_updater_is_called_when_resource_and_status_matches(self):
         evt = mock.MagicMock(payload={"action": "update", "bucket_id": "a", "collection_id": "b"},
-                             impacted_records=[{
+                             impacted_objects=[{
                                  "new": {"id": "b", "status": "to-sign"}}])
         evt.request.registry.storage = mock.sentinel.storage
         evt.request.registry.permission = mock.sentinel.permission
@@ -279,7 +279,7 @@ class OnCollectionChangedTest(unittest.TestCase):
 
     def test_kinto_attachment_property_is_set_to_allow_metadata_updates(self):
         evt = mock.MagicMock(payload={"action": "update", "bucket_id": "a", "collection_id": "b"},
-                             impacted_records=[{
+                             impacted_objects=[{
                                  "new": {"id": "b", "status": "to-sign"}}])
         evt.request.registry.storage = mock.sentinel.storage
         evt.request.registry.permission = mock.sentinel.permission

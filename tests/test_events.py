@@ -351,5 +351,5 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         assert len(self.events) == 0
 
     def test_database_changes_in_subscribers_are_committed(self):
-        _, count = self.storage.get_all(collection_id='custom', parent_id='')
+        count = self.storage.count_all(collection_id='custom', parent_id='')
         assert count == 1

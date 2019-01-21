@@ -89,9 +89,9 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
         return
 
     # Prevent recursivity, since the following operations will alter the current collection.
-    impacted_records = list(event.impacted_records)
+    impacted_objects = list(event.impacted_objects)
 
-    for impacted in impacted_records:
+    for impacted in impacted_objects:
         new_collection = impacted['new']
         old_collection = impacted.get('old', {})
 
@@ -217,7 +217,7 @@ def check_collection_status(event, resources, group_check_enabled,
 
     user_principals = event.request.effective_principals
 
-    for impacted in event.impacted_records:
+    for impacted in event.impacted_objects:
         old_collection = impacted.get("old", {})
         old_status = old_collection.get("status")
         new_collection = impacted["new"]
@@ -299,7 +299,7 @@ def check_collection_tracking(event, resources):
     if event.request.prefixed_userid == PLUGIN_USERID:
         return
 
-    for impacted in event.impacted_records:
+    for impacted in event.impacted_objects:
         old_collection = impacted.get("old", {})
         new_collection = impacted["new"]
 
@@ -347,7 +347,7 @@ def create_editors_reviewers_groups(event, resources, editors_group, reviewers_g
 
     authz = event.request.registry.getUtility(IAuthorizationPolicy)
 
-    for impacted in event.impacted_records:
+    for impacted in event.impacted_objects:
         new_collection = impacted["new"]
 
         # Skip if collection is not configured for review.

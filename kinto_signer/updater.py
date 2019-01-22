@@ -104,7 +104,8 @@ class LocalUpdater(object):
 
     def sign_and_update_destination(self, request, source_attributes,
                                     next_source_status=STATUS.SIGNED,
-                                    previous_source_status=None):
+                                    previous_source_status=None,
+                                    push_records=True):
         """Sign the specified collection.
 
         0. Create the destination bucket / collection
@@ -116,7 +117,8 @@ class LocalUpdater(object):
         """
         self.create_destination(request)
 
-        self.push_records_to_destination(request)
+        if push_records:
+            self.push_records_to_destination(request)
 
         records, timestamp = self.get_destination_records(empty_none=False)
         serialized_records = canonical_json(records, timestamp)

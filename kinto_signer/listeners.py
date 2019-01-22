@@ -411,6 +411,12 @@ def cleanup_preview_destination(event, resources):
                                    permission=event.request.registry.permission,
                                    source=resource['source'],
                                    destination=resource[k])
+
+            # At this point, the DELETE event was sent for the source collection,
+            # but the source records may not have been deleted yet (it happens in an event
+            # listener too). That's why we don't copy the records otherwise it will
+            # recreate the records that were just deleted.
             updater.sign_and_update_destination(event.request,
                                                 source_attributes=old_collection,
-                                                next_source_status=None)
+                                                next_source_status=None,
+                                                push_records=False)

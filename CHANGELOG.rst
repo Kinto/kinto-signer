@@ -6,6 +6,10 @@ This document describes changes between each past release.
 3.4.0 (unreleased)
 ------------------
 
+**Bug fixes**
+
+- Fix inconsistencies when source records are deleted via the DELETE /records endpoint (fixes #287)
+
 **Breaking changes**
 
 - Require Kinto >= 12.0.0

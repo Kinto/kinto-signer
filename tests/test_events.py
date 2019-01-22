@@ -242,7 +242,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         config = Configurator(settings=cls.get_app_settings())
 
         def on_review_received(event):
-            event.request.registry.storage.create(collection_id='custom',
+            event.request.registry.storage.create(resource_name='custom',
                                                   parent_id='',
                                                   record={'pi': 3.14})
 
@@ -351,5 +351,5 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         assert len(self.events) == 0
 
     def test_database_changes_in_subscribers_are_committed(self):
-        count = self.storage.count_all(collection_id='custom', parent_id='')
+        count = self.storage.count_all(resource_name='custom', parent_id='')
         assert count == 1

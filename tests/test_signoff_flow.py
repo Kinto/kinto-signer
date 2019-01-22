@@ -648,7 +648,8 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
                             {"data": {"status": "to-sign"}},
                             headers=self.other_headers)
 
-        records = self.app.get(self.source_collection + "/records", headers=self.headers).json["data"]
+        resp = self.app.get(self.source_collection + "/records", headers=self.headers)
+        records = resp.json["data"]
         for r in records:
             self.app.delete(self.source_collection + "/records/" + r["id"], headers=self.headers)
         self.app.patch_json(self.source_collection,

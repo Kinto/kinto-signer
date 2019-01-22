@@ -194,9 +194,8 @@ class LocalUpdater(object):
                                         resource_name='record',
                                         include_deleted=True,
                                         **storage_kwargs)
-        count_all = self.storage.count_all(parent_id=parent_id, resource_name='record')
 
-        if count_all == 0 and empty_none:
+        if len(records) == 0 and empty_none:
             # When the collection empty (no records and no tombstones)
             collection_timestamp = None
         else:

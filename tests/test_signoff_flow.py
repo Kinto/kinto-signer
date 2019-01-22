@@ -640,6 +640,43 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
         signature_preview_after = resp.json['data']['signature']
         assert signature_preview_before != signature_preview_after
 
+    def test_the_preview_collection_is_emptied_when_source_records_are_deleted(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.other_headers)
+
+        resp = self.app.get(self.source_collection + "/records", headers=self.headers)
+        records = resp.json["data"]
+        for r in records:
+            self.app.delete(self.source_collection + "/records/" + r["id"], headers=self.headers)
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+
+        resp = self.app.get(self.preview_collection + "/records", headers=self.headers)
+        records = resp.json["data"]
+        assert len(records) == 0
+
+    def test_the_preview_collection_is_emptied_when_source_is_deleted(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.other_headers)
+
+        self.app.delete(self.source_collection + "/records", headers=self.headers).json["data"]
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+
+        resp = self.app.get(self.preview_collection + "/records", headers=self.headers)
+        records = resp.json["data"]
+        assert len(records) == 0
+
 
 class NoReviewNoPreviewTest(SignoffWebTest, unittest.TestCase):
     """

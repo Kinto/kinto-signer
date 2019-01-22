@@ -104,7 +104,8 @@ class LocalUpdater(object):
 
     def sign_and_update_destination(self, request, source_attributes,
                                     next_source_status=STATUS.SIGNED,
-                                    previous_source_status=None):
+                                    previous_source_status=None,
+                                    push_records=True):
         """Sign the specified collection.
 
         0. Create the destination bucket / collection
@@ -116,7 +117,8 @@ class LocalUpdater(object):
         """
         self.create_destination(request)
 
-        self.push_records_to_destination(request)
+        if push_records:
+            self.push_records_to_destination(request)
 
         records, timestamp = self.get_destination_records(empty_none=False)
         serialized_records = canonical_json(records, timestamp)
@@ -177,7 +179,7 @@ class LocalUpdater(object):
                                 'id': collection_name
                                })
 
-    def _get_records(self, rc, last_modified=None, empty_none=True):
+    def _get_records(self, resource, last_modified=None, empty_none=True):
         # If last_modified was specified, only retrieve items since then.
         storage_kwargs = {}
         if last_modified is not None:
@@ -186,7 +188,7 @@ class LocalUpdater(object):
             storage_kwargs['filters'] = [gt_last_modified, ]
 
         storage_kwargs['sorting'] = [Sort(FIELD_LAST_MODIFIED, 1)]
-        parent_id = "/buckets/{bucket}/collections/{collection}".format(**rc)
+        parent_id = "/buckets/{bucket}/collections/{collection}".format(**resource)
 
         records = self.storage.list_all(parent_id=parent_id,
                                         resource_name='record',

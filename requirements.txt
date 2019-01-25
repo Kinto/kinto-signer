@@ -15,7 +15,7 @@ hupper==1.4.2
 idna==2.8
 iso8601==0.1.12
 jmespath==0.9.3
-jsonpatch==1.21
+jsonpatch==1.23
 jsonpointer==2.0
 jsonschema==2.6.0
 kinto==10.0.0

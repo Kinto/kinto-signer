@@ -3,10 +3,12 @@ Changelog
 
 This document describes changes between each past release.
 
-4.1.0 (unreleased)
+4.0.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Security issue**
+
+- Signer parameters were displayed in capabilities. Fixed in #326.
 
 
 4.0.0 (2019-01-22)

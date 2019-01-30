@@ -10,6 +10,22 @@ __version__ = pkg_resources.get_distribution(__package__).version
 DEFAULT_SIGNER = "kinto_signer.signer.local_ecdsa"
 
 
+def get_exposed_resources(resource_dict, review_settings):
+    """Compute a set of resources to be shown as part of the server's capabilities.
+
+    This should include review settings for each resource but nothing
+    related to the actual signing parameters for those resources."""
+    out = []
+    for resource in resource_dict.values():
+        sanitized = {}
+        for setting in ["source", "destination", "preview"] + list(review_settings):
+            if setting in resource:
+                sanitized[setting] = resource[setting]
+        out.append(sanitized)
+
+    return out
+
+
 def includeme(config):
     # We import stuff here, so that kinto-signer can be installed with `--no-deps`
     # and used without having this Pyramid ecosystem installed.
@@ -131,11 +147,12 @@ def includeme(config):
                 resource.pop(setting, None)
 
     # Expose the capabilities in the root endpoint.
+    exposed_resources = get_exposed_resources(resources, listeners.REVIEW_SETTINGS)
     message = "Digital signatures for integrity and authenticity of records."
     docs = "https://github.com/Kinto/kinto-signer#kinto-signer"
     config.add_api_capability("signer", message, docs,
                               version=__version__,
-                              resources=resources.values(),
+                              resources=exposed_resources,
                               **global_settings)
 
     config.add_subscriber(

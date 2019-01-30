@@ -153,6 +153,29 @@ class IncludeMeTest(unittest.TestCase):
         }
         self.includeme(settings)
 
+    def test_includeme_sanitizes_exposed_settings(self):
+        settings = {
+            "signer.resources": (
+                "/buckets/sb1 -> /buckets/db1\n"
+                "/buckets/sb2 -> /buckets/db2\n"
+            ),
+            "signer.signer_backend": "kinto_signer.signer.local_ecdsa",
+            "signer.ecdsa.public_key": "/path/to/key",
+            "signer.ecdsa.private_key": "/path/to/private",
+            "signer.sb1.sc1.signer_backend": "kinto_signer.signer.local_ecdsa",
+            "signer.sb1.sc1.ecdsa.public_key": "/path/to/key",
+            "signer.sb1.sc1.ecdsa.private_key": "/path/to/private",
+            "signer.sb2.signer_backend": "kinto_signer.signer.local_ecdsa",
+            "signer.sb2.ecdsa.public_key": "/path/to/key",
+            "signer.sb2.ecdsa.private_key": "/path/to/private",
+        }
+        config = self.includeme(settings)
+        all_capabilities = config.registry.api_capabilities
+        capabilities = all_capabilities["signer"]
+        for resource in capabilities["resources"]:
+            assert "ecdsa.private_key" not in resource
+            assert "private_key" not in resource
+
     def test_defines_a_signer_per_bucket_and_collection(self):
         settings = {
             "signer.resources": (

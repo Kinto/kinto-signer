@@ -16,11 +16,11 @@ def get_exposed_resources(resource_dict, review_settings):
     This should include review settings for each resource but nothing
     related to the actual signing parameters for those resources."""
     out = []
-    for dict in resource_dict.values():
+    for resource in resource_dict.values():
         sanitized = {}
         for setting in ["source", "destination", "preview"] + list(review_settings):
-            if setting in dict:
-                sanitized[setting] = dict[setting]
+            if setting in resource:
+                sanitized[setting] = resource[setting]
         out.append(sanitized)
 
     return out

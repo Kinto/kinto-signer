@@ -254,9 +254,10 @@ class LocalUpdaterTest(unittest.TestCase):
 
         self.updater.refresh_signature(DummyRequest(), 'signed')
 
-        assert self.updater.invalidate_cloudfront_cache.call_count == 1
         assert self.updater.set_destination_signature.call_count == 1
         assert self.updater.push_records_to_destination.call_count == 0
+        # Does not invalidate cloudfront either
+        assert self.updater.invalidate_cloudfront_cache.call_count == 0
 
     def test_refresh_signature_restores_status_on_source(self):
         self.storage.list_all.return_value = []

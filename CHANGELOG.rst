@@ -3,7 +3,7 @@ Changelog
 
 This document describes changes between each past release.
 
-4.0.2 (unreleased)
+5.0.0 (2019-04-04)
 ------------------
 
 **Breaking changes**

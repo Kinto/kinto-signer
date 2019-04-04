@@ -147,8 +147,6 @@ class LocalUpdater(object):
         attrs[TRACKING_FIELDS.LAST_SIGNATURE_DATE.value] = current_date
         self._update_source_attributes(request, **attrs)
 
-        self.invalidate_cloudfront_cache(request, timestamp)
-
     def create_destination(self, request):
         """Create the destination bucket/collection if they don't already exist.
         """

@@ -6,7 +6,9 @@ This document describes changes between each past release.
 4.0.2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Breaking changes**
+
+- Do not invalidate CloudFront on signature refresh (fixes #430)
 
 
 4.0.1 (2019-01-30)

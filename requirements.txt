@@ -18,7 +18,7 @@ jmespath==0.9.4
 jsonpatch==1.23
 jsonpointer==2.0
 jsonschema==3.0.1
-kinto==13.1.0
+kinto==13.1.1
 logging-color-formatter==1.0.2
 mohawk==1.0.0
 PasteDeploy==2.0.1

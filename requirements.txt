@@ -1,6 +1,6 @@
 bcrypt==3.1.6
 boto3==1.9.164
-botocore==1.12.163
+botocore==1.12.164
 certifi==2019.3.9
 cffi==1.12.3
 chardet==3.0.4

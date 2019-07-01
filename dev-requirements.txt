@@ -1,5 +1,5 @@
 kinto-http
-pytest<4.7.0
+pytest<5.1.0
 mock
 pytest-watch
 pytest-cache

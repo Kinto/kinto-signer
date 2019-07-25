@@ -1,6 +1,5 @@
 import copy
 
-import transaction
 from kinto.core import errors
 from kinto.core.events import ACTIONS
 from kinto.core.utils import instance_uri
@@ -19,15 +18,11 @@ REVIEW_SETTINGS = ("reviewers_group", "editors_group",
 
 
 def raise_invalid(**kwargs):
-    # A ``400`` error response does not natively rollback the transaction.
-    transaction.doom()
     kwargs.update(errno=ERRORS.INVALID_POSTED_DATA)
     raise errors.http_error(httpexceptions.HTTPBadRequest(), **kwargs)
 
 
 def raise_forbidden(**kwargs):
-    # A ``403`` error response does not natively rollback the transaction.
-    transaction.doom()
     kwargs.update(errno=ERRORS.FORBIDDEN)
     raise errors.http_error(httpexceptions.HTTPForbidden(), **kwargs)
 

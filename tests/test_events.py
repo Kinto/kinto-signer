@@ -347,7 +347,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-sign"}},
                             headers=self.headers,
-                            status=503)
+                            status=500)
         assert len(self.events) == 0
 
     def test_database_changes_in_subscribers_are_committed(self):

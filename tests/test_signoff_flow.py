@@ -299,6 +299,17 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
+    def test_if_resign_fails_signature_is_rolledback(self):
+        self.mocked_autograph.post.side_effect = ValueError("Boom!")
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-resign"}},
+                            headers=self.other_headers,
+                            status=500)
+
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+
     def test_non_reviewer_can_retrigger_a_signature(self):
         writer_headers = get_user_headers('walter:white')
         resp = self.app.get("/", headers=writer_headers)

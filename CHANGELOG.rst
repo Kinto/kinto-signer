@@ -6,7 +6,9 @@ This document describes changes between each past release.
 5.1.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Bug Fixes**
+
+- Make sure the DB transaction is rolledback when signing fails (fixes #591)
 
 
 5.0.0 (2019-04-04)

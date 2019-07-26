@@ -385,7 +385,7 @@ class BatchTest(BaseWebTest, unittest.TestCase):
 
 
 class SigningErrorTest(BaseWebTest, unittest.TestCase):
-    def test_returns_503_if_autograph_cannot_be_reached(self):
+    def test_returns_5xx_if_autograph_cannot_be_reached(self):
         collection_uri = '/buckets/alice/collections/source'
         self.app.app.registry.signers[collection_uri].server_url = 'http://0.0.0.0:1234'
 
@@ -393,7 +393,7 @@ class SigningErrorTest(BaseWebTest, unittest.TestCase):
         self.app.put_json(collection_uri,
                           {"data": {"status": "to-sign"}},
                           headers=self.headers,
-                          status=503)
+                          status=500)
 
 
 class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):

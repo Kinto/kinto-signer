@@ -1,7 +1,5 @@
 import copy
 
-import transaction
-from kinto import logger
 from kinto.core import errors
 from kinto.core.events import ACTIONS
 from kinto.core.utils import instance_uri
@@ -20,15 +18,11 @@ REVIEW_SETTINGS = ("reviewers_group", "editors_group",
 
 
 def raise_invalid(**kwargs):
-    # A ``400`` error response does not natively rollback the transaction.
-    transaction.doom()
     kwargs.update(errno=ERRORS.INVALID_POSTED_DATA)
     raise errors.http_error(httpexceptions.HTTPBadRequest(), **kwargs)
 
 
 def raise_forbidden(**kwargs):
-    # A ``403`` error response does not natively rollback the transaction.
-    transaction.doom()
     kwargs.update(errno=ERRORS.FORBIDDEN)
     raise errors.http_error(httpexceptions.HTTPForbidden(), **kwargs)
 
@@ -122,64 +116,59 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
         # Autorize kinto-attachment metadata write access. #190
         event.request._attachment_auto_save = True
 
-        try:
-            if is_new_collection:
-                if has_review_enabled:
-                    updater.destination = resource['preview']
-                    updater.sign_and_update_destination(event.request,
-                                                        source_attributes=new_collection,
-                                                        next_source_status=None)
-                updater.destination = resource['destination']
+        if is_new_collection:
+            if has_review_enabled:
+                updater.destination = resource['preview']
                 updater.sign_and_update_destination(event.request,
                                                     source_attributes=new_collection,
                                                     next_source_status=None)
+            updater.destination = resource['destination']
+            updater.sign_and_update_destination(event.request,
+                                                source_attributes=new_collection,
+                                                next_source_status=None)
 
-            if old_status == new_status:
-                continue
+        if old_status == new_status:
+            continue
 
-            if new_status == STATUS.TO_SIGN:
-                # Run signature process (will set `last_reviewer` field).
-                updater.destination = resource['destination']
-                updater.sign_and_update_destination(event.request,
-                                                    source_attributes=new_collection,
-                                                    previous_source_status=old_status)
+        if new_status == STATUS.TO_SIGN:
+            # Run signature process (will set `last_reviewer` field).
+            updater.destination = resource['destination']
+            updater.sign_and_update_destination(event.request,
+                                                source_attributes=new_collection,
+                                                previous_source_status=old_status)
 
-                if old_status == STATUS.SIGNED:
-                    # When we refresh the signature, it is mainly in order to make sure that
-                    # the latest signer certificate was used. When a preview collection
-                    # is configured, we also want to refresh its signature.
-                    if has_review_enabled:
-                        updater.destination = resource['preview']
-                        updater.sign_and_update_destination(event.request,
-                                                            source_attributes=new_collection,
-                                                            previous_source_status=old_status)
-                else:
-                    review_event_cls = signer_events.ReviewApproved
-
-            elif new_status == STATUS.TO_REVIEW:
+            if old_status == STATUS.SIGNED:
+                # When we refresh the signature, it is mainly in order to make sure that
+                # the latest signer certificate was used. When a preview collection
+                # is configured, we also want to refresh its signature.
                 if has_review_enabled:
-                    # If preview collection: update and sign preview collection
                     updater.destination = resource['preview']
                     updater.sign_and_update_destination(event.request,
                                                         source_attributes=new_collection,
-                                                        next_source_status=STATUS.TO_REVIEW)
-                else:
-                    # If no preview collection: just track `last_editor`
-                    updater.update_source_review_request_by(event.request)
-                review_event_cls = signer_events.ReviewRequested
+                                                        previous_source_status=old_status)
+            else:
+                review_event_cls = signer_events.ReviewApproved
 
-            elif old_status == STATUS.TO_REVIEW and new_status == STATUS.WORK_IN_PROGRESS:
-                review_event_cls = signer_events.ReviewRejected
+        elif new_status == STATUS.TO_REVIEW:
+            if has_review_enabled:
+                # If preview collection: update and sign preview collection
+                updater.destination = resource['preview']
+                updater.sign_and_update_destination(event.request,
+                                                    source_attributes=new_collection,
+                                                    next_source_status=STATUS.TO_REVIEW)
+            else:
+                # If no preview collection: just track `last_editor`
+                updater.update_source_review_request_by(event.request)
+            review_event_cls = signer_events.ReviewRequested
 
-            elif new_status == STATUS.TO_REFRESH:
+        elif old_status == STATUS.TO_REVIEW and new_status == STATUS.WORK_IN_PROGRESS:
+            review_event_cls = signer_events.ReviewRejected
+
+        elif new_status == STATUS.TO_REFRESH:
+            updater.refresh_signature(event.request, next_source_status=old_status)
+            if has_review_enabled:
+                updater.destination = resource['preview']
                 updater.refresh_signature(event.request, next_source_status=old_status)
-                if has_review_enabled:
-                    updater.destination = resource['preview']
-                    updater.refresh_signature(event.request, next_source_status=old_status)
-
-        except Exception:
-            logger.exception("Could not sign '{0}'".format(uri))
-            event.request.response.status = 503
 
         # Notify request of review.
         if review_event_cls:

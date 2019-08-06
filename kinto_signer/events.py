@@ -20,4 +20,6 @@ class ReviewRejected(BaseEvent):
 
 
 class ReviewApproved(BaseEvent):
-    pass
+    def __init__(self, changes_count, **kwargs):
+        super().__init__(**kwargs)
+        self.changes_count = changes_count

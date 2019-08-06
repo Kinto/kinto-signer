@@ -3,6 +3,8 @@ import re
 import pkg_resources
 import functools
 
+from kinto_signer.events import ReviewApproved
+
 #: Module version, as defined in PEP-0396.
 __version__ = pkg_resources.get_distribution(__package__).version
 
@@ -24,6 +26,15 @@ def get_exposed_resources(resource_dict, review_settings):
         out.append(sanitized)
 
     return out
+
+
+def on_review_approved(event):
+    statsd_client = event.request.registry.statsd
+    if statsd_client is not None:
+        count = event.changes_count
+        bid = event.resource["destination"]["bucket"]
+        cid = event.resource["destination"]["collection"]
+        statsd_client.count(f"plugins.signer.approved_changes.{bid}.{cid}", count)
 
 
 def includeme(config):
@@ -154,6 +165,8 @@ def includeme(config):
                               version=__version__,
                               resources=exposed_resources,
                               **global_settings)
+
+    config.add_subscriber(on_review_approved, ReviewApproved)
 
     config.add_subscriber(
         functools.partial(listeners.set_work_in_progress_status,

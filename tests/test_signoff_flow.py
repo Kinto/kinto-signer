@@ -49,6 +49,8 @@ class PostgresWebTest(BaseWebTest):
         settings['permission_url'] = db
         settings['cache_backend'] = 'kinto.core.cache.memory'
 
+        settings['statsd_url'] = 'udp://127.0.0.1:8125'
+
         settings['kinto.signer.resources'] = '%s -> %s' % (
             cls.source_collection,
             cls.destination_collection)
@@ -87,7 +89,7 @@ class SignoffWebTest(PostgresWebTest):
                            {"data": {"title": "hello"}},
                            headers=self.headers)
         self.app.post_json(self.source_collection + "/records",
-                           {"data": {"title": "bonjour"}},
+                           {"data": {"id": "in-french", "title": "bonjour"}},
                            headers=self.headers)
 
 
@@ -195,6 +197,20 @@ class CollectionStatusTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCas
                            headers=self.headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "work-in-progress"
+
+    def test_statsd_reports_number_of_records_approved(self):
+        self.app.delete(self.source_collection + "/records/in-french",
+                        headers=self.headers)
+
+        statsd_client = self.app.app.registry.statsd
+        with mock.patch.object(statsd_client, 'count') as mocked:
+            self.app.patch_json(self.source_collection,
+                                {"data": {"status": "to-sign"}},
+                                headers=self.headers)
+        call_args = mocked.call_args_list[0][0]
+
+        # One creation (see SignoffWebTest setup) and one deletion.
+        assert call_args == ('plugins.signer.approved_changes.alice.dcid', 2)
 
 
 class ForceReviewTest(SignoffWebTest, unittest.TestCase):

@@ -6,7 +6,9 @@ This document describes changes between each past release.
 5.1.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**New Features**
+
+- Add StatsD counter for number of changes approved (fixes #606)
 
 
 5.0.1 (2019-07-26)

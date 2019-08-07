@@ -115,6 +115,8 @@ class LocalUpdater(object):
         4. Ask the signer for a signature
         5. Send the signature to the destination.
         """
+        changes_count = 0
+
         self.create_destination(request)
 
         if push_records:

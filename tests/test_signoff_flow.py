@@ -443,6 +443,87 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
                               status=400)
 
 
+class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
+        settings['signer.to_review_enabled'] = 'true'
+        settings['signer.group_check_enabled'] = 'true'
+        return settings
+
+    def setUp(self):
+        super().setUp()
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.other_headers)
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+
+        self.app.put_json(self.source_collection + "/records/r1",
+                          {"data": {"title": "Hallo"}},
+                          headers=self.headers)
+        self.app.put_json(self.source_collection + "/records/r2",
+                          {"data": {"title": "Hallo"}},
+                          headers=self.headers)
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "work-in-progress"
+
+    def test_return_400_if_status_is_signed(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-sign"}},
+                            headers=self.other_headers)
+
+        resp = self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-rollback"}},
+                            headers=self.headers,
+                            status=400)
+
+        assert resp.json["message"] == "Collection has no work-in-progress"
+
+    def test_rollbacks_if_no_pending_changes(self):
+        self.app.delete(self.source_collection + "/records/r1",
+                           headers=self.headers)
+        self.app.delete(self.source_collection + "/records/r2",
+                           headers=self.headers)
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-rollback"}},
+                            headers=self.headers)
+
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+
+    def test_rollbacks_if_review_already_requested(self):
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-rollback"}},
+                            headers=self.headers)
+
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+
+    def test_recreates_deleted_record(self):
+        pass
+
+    def test_reverts_updated_records(self):
+        pass
+
+    def test_removes_created_records(self):
+        pass
+
+    def test_also_resets_changes_on_preview(self):
+        pass
+
+
 class UserGroupsTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCase):
     @classmethod
     def get_app_settings(cls, extras=None):

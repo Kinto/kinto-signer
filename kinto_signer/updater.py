@@ -147,6 +147,10 @@ class LocalUpdater(object):
         attrs[TRACKING_FIELDS.LAST_SIGNATURE_DATE.value] = current_date
         self._update_source_attributes(request, **attrs)
 
+    def rollback_changes(self, request, preview=None):
+        attrs = {'status': STATUS.SIGNED.value}
+        self._update_source_attributes(request, **attrs)
+
     def create_destination(self, request):
         """Create the destination bucket/collection if they don't already exist.
         """

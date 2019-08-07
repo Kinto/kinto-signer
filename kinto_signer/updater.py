@@ -248,6 +248,9 @@ class LocalUpdater(object):
                              "than source collection timestamp. Check that your "
                              "storage backend timezone is UTC.")
 
+        if len(new_records) == 0:
+            return
+
         # Update the destination collection.
         for record in new_records:
             storage_kwargs = {

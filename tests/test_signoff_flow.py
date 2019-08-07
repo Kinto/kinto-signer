@@ -447,8 +447,15 @@ class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
     @classmethod
     def get_app_settings(cls, extras=None):
         settings = super().get_app_settings(extras)
+
+        cls.preview_bucket = "/buckets/preview"
+        cls.preview_collection = cls.preview_bucket + "/collections/pcid"
+
         settings['signer.to_review_enabled'] = 'true'
-        settings['signer.group_check_enabled'] = 'true'
+        settings['kinto.signer.resources'] = ' -> '.join([
+            cls.source_collection,
+            cls.preview_collection,
+            cls.destination_collection])
         return settings
 
     def setUp(self):
@@ -566,7 +573,34 @@ class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
                      status=404)
 
     def test_also_resets_changes_on_preview(self):
-        pass
+        resp = self.app.get(self.preview_collection + "/records", headers=self.headers)
+        size_setup = len(resp.json["data"])
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-review"}},
+                            headers=self.headers)
+        resp = self.app.get(self.preview_collection + "/records", headers=self.headers)
+        size_before = len(resp.json["data"])
+        assert size_setup != size_before
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-rollback"}},
+                            headers=self.headers)
+
+        resp = self.app.get(self.preview_collection + "/records", headers=self.headers)
+        size_after = len(resp.json["data"])
+        assert size_before != size_after
+
+    def test_preview_signature_is_refreshed(self):
+        resp = self.app.get(self.preview_collection, headers=self.headers)
+        sign_before = resp.json["data"]["signature"]["content-signature"]
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-rollback"}},
+                            headers=self.headers)
+
+        resp = self.app.get(self.preview_collection, headers=self.headers)
+        sign_after = resp.json["data"]["signature"]["content-signature"]
+        assert sign_before != sign_after
 
 
 class UserGroupsTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCase):

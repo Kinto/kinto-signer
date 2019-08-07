@@ -171,9 +171,11 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
                 updater.refresh_signature(event.request, next_source_status=old_status)
 
         elif new_status == STATUS.TO_ROLLBACK:
-            preview_resource = resource['preview'] if has_review_enabled else None
             # review_event_cls = signer_events.RollbackChanges
-            updater.rollback_changes(event.request, preview=preview_resource)
+            updater.rollback_changes(event.request)
+            # if has_review_enabled:
+            #     updater.destination = resource['preview']
+            #     updater.rollback_changes(event.request)
 
         # Notify request of review.
         if review_event_cls:

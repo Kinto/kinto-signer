@@ -147,8 +147,35 @@ class LocalUpdater(object):
         attrs[TRACKING_FIELDS.LAST_SIGNATURE_DATE.value] = current_date
         self._update_source_attributes(request, **attrs)
 
-    def rollback_changes(self, request, preview=None):
+    def rollback_changes(self, request):
+        dest_records, dest_timestamp = self.get_destination_records(empty_none=False)
+        dest_by_id = {r["id"]: r for r in dest_records}
+        changes_since_approval, _ = self.get_source_records(last_modified=1)
+
+        storage_kwargs = {
+            "parent_id": self.source_collection_uri,
+            "resource_name": 'record',
+        }
+
+        for record in changes_since_approval:
+            dest_record = dest_by_id.get(record[FIELD_ID])
+            if dest_record is None:
+                if not record.get("deleted"):
+                    self.storage.delete(object_id=record[FIELD_ID],
+                                        last_modified=record[FIELD_LAST_MODIFIED],
+                                        **storage_kwargs)
+            elif record.get("deleted"):
+                self.storage.create(obj=dest_record, **storage_kwargs)
+
+            else:
+                self.storage.update(object_id=record[FIELD_ID], obj=dest_record,
+                                    **storage_kwargs)
+
+        current_userid = request.prefixed_userid
+        current_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
         attrs = {'status': STATUS.SIGNED.value}
+        attrs[TRACKING_FIELDS.LAST_EDIT_BY.value] = current_userid
+        attrs[TRACKING_FIELDS.LAST_EDIT_DATE.value] = current_date
         self._update_source_attributes(request, **attrs)
 
     def create_destination(self, request):

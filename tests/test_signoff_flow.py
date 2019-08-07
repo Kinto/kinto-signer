@@ -466,7 +466,7 @@ class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
                           {"data": {"title": "Hallo"}},
                           headers=self.headers)
         self.app.put_json(self.source_collection + "/records/r2",
-                          {"data": {"title": "Hallo"}},
+                          {"data": {"title": "Bon dia"}},
                           headers=self.headers)
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "work-in-progress"
@@ -480,17 +480,17 @@ class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
                             headers=self.other_headers)
 
         resp = self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-rollback"}},
-                            headers=self.headers,
-                            status=400)
+                                   {"data": {"status": "to-rollback"}},
+                                   headers=self.headers,
+                                   status=400)
 
         assert resp.json["message"] == "Collection has no work-in-progress"
 
     def test_rollbacks_if_no_pending_changes(self):
         self.app.delete(self.source_collection + "/records/r1",
-                           headers=self.headers)
+                        headers=self.headers)
         self.app.delete(self.source_collection + "/records/r2",
-                           headers=self.headers)
+                        headers=self.headers)
 
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-rollback"}},
@@ -511,14 +511,59 @@ class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
+    def test_tracking_fields_are_updated(self):
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        before_date = resp.json["data"]["last_edit_date"]
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-rollback"}},
+                            headers=self.headers)
+
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        after_date = resp.json["data"]["last_edit_date"]
+        assert before_date != after_date
+
     def test_recreates_deleted_record(self):
-        pass
+        resp = self.app.delete(self.source_collection + "/records?_limit=1&_sort=last_modified",
+                               headers=self.headers)
+        deleted_id = resp.json["data"][0]["id"]
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-rollback"}},
+                            headers=self.headers)
+
+        self.app.get(self.source_collection + f"/records/{deleted_id}",
+                     headers=self.headers,
+                     status=200)
 
     def test_reverts_updated_records(self):
-        pass
+        resp = self.app.get(self.source_collection + "/records?_limit=1&_sort=last_modified",
+                            headers=self.headers)
+        update_id = resp.json["data"][0]["id"]
+        self.app.put_json(self.source_collection + f"/records/{update_id}",
+                          {"data": {"title": "Ave"}},
+                          headers=self.headers)
+
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-rollback"}},
+                            headers=self.headers)
+
+        resp = self.app.get(self.source_collection + f"/records/{update_id}",
+                            headers=self.headers,
+                            status=200)
+        assert resp.json["data"]["title"] == "hello"
 
     def test_removes_created_records(self):
-        pass
+        self.app.patch_json(self.source_collection,
+                            {"data": {"status": "to-rollback"}},
+                            headers=self.headers)
+
+        self.app.get(self.source_collection + f"/records/r1",
+                     headers=self.headers,
+                     status=404)
+        self.app.get(self.source_collection + f"/records/r2",
+                     headers=self.headers,
+                     status=404)
 
     def test_also_resets_changes_on_preview(self):
         pass

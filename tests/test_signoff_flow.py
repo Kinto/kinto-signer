@@ -210,7 +210,7 @@ class CollectionStatusTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCas
         call_args = mocked.call_args_list[0][0]
 
         # One creation (see SignoffWebTest setup) and one deletion.
-        assert call_args == ('plugins.signer.approved_changes.alice.dcid', 2)
+        assert call_args == ('plugins.signer.approved_changes', 2)
 
 
 class ForceReviewTest(SignoffWebTest, unittest.TestCase):

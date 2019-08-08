@@ -131,7 +131,7 @@ class LocalUpdater(object):
 
         self.invalidate_cloudfront_cache(request, timestamp)
 
-    def refresh_signature(self, request, next_source_status):
+    def refresh_signature(self, request, next_source_status=None):
         """Refresh the signature without moving records.
         """
         records, timestamp = self.get_destination_records(empty_none=False)
@@ -140,23 +140,25 @@ class LocalUpdater(object):
         signature = self.signer.sign(serialized_records)
         self.set_destination_signature(signature, request=request, source_attributes={})
 
-        current_userid = request.prefixed_userid
-        current_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        attrs = {'status': next_source_status}
-        attrs[TRACKING_FIELDS.LAST_SIGNATURE_BY.value] = current_userid
-        attrs[TRACKING_FIELDS.LAST_SIGNATURE_DATE.value] = current_date
-        self._update_source_attributes(request, **attrs)
+        if next_source_status is not None:
+            current_userid = request.prefixed_userid
+            current_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            attrs = {'status': next_source_status}
+            attrs[TRACKING_FIELDS.LAST_SIGNATURE_BY.value] = current_userid
+            attrs[TRACKING_FIELDS.LAST_SIGNATURE_DATE.value] = current_date
+            self._update_source_attributes(request, **attrs)
 
-    def rollback_changes(self, request):
+    def rollback_changes(self, request, refresh_last_edit=True, refresh_signature=False):
         dest_records, dest_timestamp = self.get_destination_records(empty_none=False)
         dest_by_id = {r["id"]: r for r in dest_records}
-        changes_since_approval, _ = self.get_source_records(last_modified=1)
+        changes_since_approval, _ = self.get_source_records(last_modified=dest_timestamp)
 
         storage_kwargs = {
             "parent_id": self.source_collection_uri,
             "resource_name": 'record',
         }
 
+        changed_count = 0
         for record in changes_since_approval:
             dest_record = dest_by_id.get(record[FIELD_ID])
             if dest_record is None:
@@ -164,19 +166,26 @@ class LocalUpdater(object):
                     self.storage.delete(object_id=record[FIELD_ID],
                                         last_modified=record[FIELD_LAST_MODIFIED],
                                         **storage_kwargs)
+                    changed_count += 1
+
             elif record.get("deleted"):
                 self.storage.create(obj=dest_record, **storage_kwargs)
+                changed_count += 1
 
             else:
                 self.storage.update(object_id=record[FIELD_ID], obj=dest_record,
                                     **storage_kwargs)
+                changed_count += 1
 
-        current_userid = request.prefixed_userid
-        current_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
-        attrs = {'status': STATUS.SIGNED.value}
-        attrs[TRACKING_FIELDS.LAST_EDIT_BY.value] = current_userid
-        attrs[TRACKING_FIELDS.LAST_EDIT_DATE.value] = current_date
-        self._update_source_attributes(request, **attrs)
+        if refresh_last_edit:
+            current_userid = request.prefixed_userid
+            current_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
+            attrs = {'status': STATUS.SIGNED.value}
+            attrs[TRACKING_FIELDS.LAST_EDIT_BY.value] = current_userid
+            attrs[TRACKING_FIELDS.LAST_EDIT_DATE.value] = current_date
+            self._update_source_attributes(request, **attrs)
+
+        return changed_count
 
     def create_destination(self, request):
         """Create the destination bucket/collection if they don't already exist.

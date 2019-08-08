@@ -171,15 +171,20 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
                 updater.refresh_signature(event.request, next_source_status=old_status)
 
         elif new_status == STATUS.TO_ROLLBACK:
-            # review_event_cls = signer_events.RollbackChanges
-            updater.rollback_changes(event.request)
+            # Reset source with destination content, and set status to SIGNED.
+            changes_count = updater.rollback_changes(event.request)
             if has_review_enabled:
-                # Reset preview based on destination.
+                # Reset preview with destination content.
                 updater.source = resource['preview']
-                updater.rollback_changes(event.request)
-                # Refresh signature of preview collection.
+                changes_count += updater.rollback_changes(event.request,
+                                                          refresh_last_edit=False)
+                # Refresh signature for this new preview collection content.
                 updater.destination = resource['preview']
-                updater.refresh_signature(event.request, next_source_status=STATUS.SIGNED)
+                # Without refreshing the source attributes.
+                updater.refresh_signature(event.request, next_source_status=None)
+            # If some changes were effectively rolledback, send an event.
+            if changes_count > 0:
+                review_event_cls = signer_events.ReviewCanceled
 
         # Notify request of review.
         if review_event_cls:

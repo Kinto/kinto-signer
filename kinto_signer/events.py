@@ -21,3 +21,7 @@ class ReviewRejected(BaseEvent):
 
 class ReviewApproved(BaseEvent):
     pass
+
+
+class ReviewCanceled(BaseEvent):
+    pass

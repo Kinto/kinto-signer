@@ -29,10 +29,9 @@ class PostgresWebTest(BaseWebTest):
         def fake_sign():
             fake_signature = "".join(random.sample(string.ascii_lowercase, 10))
             return [{
-                "signature": "",
+                "signature": fake_signature,
                 "hash_algorithm": "",
                 "signature_encoding": "",
-                "content-signature": fake_signature,
                 "x5u": ""
             }]
 
@@ -339,7 +338,7 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
                            headers=self.headers)
 
         resp = self.app.get(self.destination_collection, headers=self.headers)
-        before_signature = resp.json["data"]["signature"]["content-signature"]
+        before_signature = resp.json["data"]["signature"]["signature"]
 
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-resign"}},
@@ -348,7 +347,7 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
         assert resp.json["data"]["status"] == "work-in-progress"
 
         resp = self.app.get(self.destination_collection, headers=self.headers)
-        assert resp.json["data"]["signature"]["content-signature"] != before_signature
+        assert resp.json["data"]["signature"]["signature"] != before_signature
 
 
 class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
@@ -592,14 +591,14 @@ class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
 
     def test_preview_signature_is_refreshed(self):
         resp = self.app.get(self.preview_collection, headers=self.headers)
-        sign_before = resp.json["data"]["signature"]["content-signature"]
+        sign_before = resp.json["data"]["signature"]["signature"]
 
         self.app.patch_json(self.source_collection,
                             {"data": {"status": "to-rollback"}},
                             headers=self.headers)
 
         resp = self.app.get(self.preview_collection, headers=self.headers)
-        sign_after = resp.json["data"]["signature"]["content-signature"]
+        sign_after = resp.json["data"]["signature"]["signature"]
         assert sign_before != sign_after
 
 

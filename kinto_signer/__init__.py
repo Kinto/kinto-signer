@@ -34,6 +34,10 @@ def on_review_approved(event):
         count = event.changes_count
         bid = event.resource["destination"]["bucket"]
         cid = event.resource["destination"]["collection"]
+        # Report into a global counter.
+        statsd_client.count("plugins.signer.approved_changes")
+        # Report for this collection.
+        # TODO: when using Datadog, we could annotate the above with tags instead.
         statsd_client.count(f"plugins.signer.approved_changes.{bid}.{cid}", count)
 
 

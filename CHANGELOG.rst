@@ -13,6 +13,7 @@ This document describes changes between each past release.
 **Internal changes**
 
 - Use black to autoformat the code base. (#617)
+- Use f-string to format strings. (#619)
 
 
 5.0.1 (2019-07-26)

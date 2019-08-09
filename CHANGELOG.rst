@@ -10,6 +10,10 @@ This document describes changes between each past release.
 
 - Add StatsD counter for number of changes approved (fixes #606)
 
+**Internal changes**
+
+- Use black to autoformat the code base. (#617)
+
 
 5.0.1 (2019-07-26)
 ------------------

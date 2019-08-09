@@ -7,7 +7,6 @@ from kinto_signer import utils
 
 
 class ParseResourcesTest(unittest.TestCase):
-
     def test_missing_arrow_raises_an_exception(self):
         raw_resources = """
         foo bar
@@ -35,7 +34,8 @@ class ParseResourcesTest(unittest.TestCase):
             "/buckets/sbid/scid -> "
             "/buckets/dbid/collections/dcid -> "
             "/buckets/dbid/collections/dcid -> "
-            "/buckets/sbid/scid")
+            "/buckets/sbid/scid"
+        )
         with pytest.raises(ConfigurationError):
             utils.parse_resources(raw_resources)
 
@@ -45,15 +45,9 @@ class ParseResourcesTest(unittest.TestCase):
         """
         resources = utils.parse_resources(raw_resources)
         assert resources == {
-            '/buckets/sbid/collections/scid': {
-                'source': {
-                    'bucket': 'sbid',
-                    'collection': 'scid'
-                },
-                'destination': {
-                    'bucket': 'dbid',
-                    'collection': 'dcid'
-                }
+            "/buckets/sbid/collections/scid": {
+                "source": {"bucket": "sbid", "collection": "scid"},
+                "destination": {"bucket": "dbid", "collection": "dcid"},
             }
         }
 
@@ -63,15 +57,9 @@ class ParseResourcesTest(unittest.TestCase):
         """
         resources = utils.parse_resources(raw_resources)
         assert resources == {
-            '/buckets/sbid/collections/scid': {
-                'source': {
-                    'bucket': 'sbid',
-                    'collection': 'scid'
-                },
-                'destination': {
-                    'bucket': 'dbid',
-                    'collection': 'dcid'
-                }
+            "/buckets/sbid/collections/scid": {
+                "source": {"bucket": "sbid", "collection": "scid"},
+                "destination": {"bucket": "dbid", "collection": "dcid"},
             }
         }
 
@@ -80,15 +68,9 @@ class ParseResourcesTest(unittest.TestCase):
         """
         resources = utils.parse_resources(raw_resources)
         assert resources == {
-            '/buckets/sbid/collections/scid': {
-                'source': {
-                    'bucket': 'sbid',
-                    'collection': 'scid'
-                },
-                'destination': {
-                    'bucket': 'dbid',
-                    'collection': 'dcid'
-                }
+            "/buckets/sbid/collections/scid": {
+                "source": {"bucket": "sbid", "collection": "scid"},
+                "destination": {"bucket": "dbid", "collection": "dcid"},
             }
         }
 
@@ -99,8 +81,8 @@ class ParseResourcesTest(unittest.TestCase):
         """
         resources = utils.parse_resources(raw_resources)
         assert len(resources) == 2
-        assert resources['/buckets/bid1/collections/scid1']['source']['bucket'] == 'bid1'
-        assert resources['/buckets/bid2/collections/scid2']['source']['bucket'] == 'bid2'
+        assert resources["/buckets/bid1/collections/scid1"]["source"]["bucket"] == "bid1"
+        assert resources["/buckets/bid2/collections/scid2"]["source"]["bucket"] == "bid2"
 
     def test_multiple_resources_are_supported(self):
         raw_resources = """
@@ -118,19 +100,10 @@ class ParseResourcesTest(unittest.TestCase):
         )
         resources = utils.parse_resources(raw_resources)
         assert resources == {
-            '/buckets/stage/collections/cid': {
-                'source': {
-                    'bucket': 'stage',
-                    'collection': 'cid'
-                },
-                'preview': {
-                    'bucket': 'preview',
-                    'collection': 'cid'
-                },
-                'destination': {
-                    'bucket': 'prod',
-                    'collection': 'cid'
-                }
+            "/buckets/stage/collections/cid": {
+                "source": {"bucket": "stage", "collection": "cid"},
+                "preview": {"bucket": "preview", "collection": "cid"},
+                "destination": {"bucket": "prod", "collection": "cid"},
             }
         }
 
@@ -142,38 +115,26 @@ class ParseResourcesTest(unittest.TestCase):
         with self.assertRaises(ConfigurationError):
             utils.parse_resources(raw_resources)
 
-        raw_resources = (
-            "sbid1/scid -> dbid1/dcid,sbid2/scid -> dbid2/dcid"
-        )
+        raw_resources = "sbid1/scid -> dbid1/dcid,sbid2/scid -> dbid2/dcid"
         with self.assertRaises(ConfigurationError):
             utils.parse_resources(raw_resources)
 
     def test_resources_must_be_valid_names(self):
-        raw_resources = (
-            "/buckets/sbi+d1/collections/scid -> /buckets/dbid1/collections/dci,d"
-        )
+        raw_resources = "/buckets/sbi+d1/collections/scid -> /buckets/dbid1/collections/dci,d"
         with self.assertRaises(ConfigurationError) as e:
             utils.parse_resources(raw_resources)
-        assert repr(e.exception).startswith('ConfigurationError("Malformed resource: '
-                                            'bucket or collection id is invalid')
+        assert repr(e.exception).startswith(
+            'ConfigurationError("Malformed resource: ' "bucket or collection id is invalid"
+        )
 
     def test_resources_can_be_defined_per_bucket(self):
         raw_resources = "/buckets/stage -> /buckets/preview -> /buckets/prod"
         resources = utils.parse_resources(raw_resources)
         assert resources == {
-            '/buckets/stage': {
-                'source': {
-                    'bucket': 'stage',
-                    'collection': None
-                },
-                'preview': {
-                    'bucket': 'preview',
-                    'collection': None
-                },
-                'destination': {
-                    'bucket': 'prod',
-                    'collection': None
-                }
+            "/buckets/stage": {
+                "source": {"bucket": "stage", "collection": None},
+                "preview": {"bucket": "preview", "collection": None},
+                "destination": {"bucket": "prod", "collection": None},
             }
         }
 
@@ -182,9 +143,11 @@ class ParseResourcesTest(unittest.TestCase):
         with self.assertRaises(ConfigurationError):
             utils.parse_resources(raw_resources)
 
-        raw_resources = ("/buckets/stage/collections/boom -> "
-                         "/buckets/preview/collections/boom -> "
-                         "/buckets/prod")
+        raw_resources = (
+            "/buckets/stage/collections/boom -> "
+            "/buckets/preview/collections/boom -> "
+            "/buckets/prod"
+        )
         with self.assertRaises(ConfigurationError):
             utils.parse_resources(raw_resources)
 

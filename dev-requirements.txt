@@ -11,3 +11,4 @@ webtest
 kinto[postgresql]
 kinto-attachment
 black
+therapist

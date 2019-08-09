@@ -39,7 +39,7 @@ tests: install-dev
 	$(VENV)/bin/tox
 
 black: install-dev
-	$(VENV)/bin/black kinto_signer tests
+	$(VENV)/bin/black kinto_signer tests scripts
 
 clean:
 	find . -name '*.pyc' -delete

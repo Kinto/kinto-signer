@@ -9,7 +9,7 @@ services:
 env:
     - TOX_ENV=py36
     - TOX_ENV=kinto-master
-    - TOX_ENV=flake8
+    - TOX_ENV=lint
 sudo: false
 install:
     - pip install tox

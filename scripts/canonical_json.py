@@ -29,7 +29,7 @@ def main(argv):
     records = json.load(stdin)
     json.dump(records, stdout, indent=2, sort_keys=True)
 
-    stdout.write('\n')
+    stdout.write("\n")
     # Closing file descriptors
 
     if stdin_close:

@@ -128,7 +128,7 @@ class LocalUpdater(object):
 
         records, timestamp = self.get_destination_records(empty_none=False)
         serialized_records = canonical_json(records, timestamp)
-        logger.debug("{}:\t'{}'".format(self.source_collection_uri, serialized_records))
+        logger.debug(f"{self.source_collection_uri}:\t'{serialized_records}'")
         signature = self.signer.sign(serialized_records)
 
         self.set_destination_signature(signature, source_attributes, request)
@@ -144,7 +144,7 @@ class LocalUpdater(object):
         """
         records, timestamp = self.get_destination_records(empty_none=False)
         serialized_records = canonical_json(records, timestamp)
-        logger.debug("{}:\t'{}'".format(self.source_collection_uri, serialized_records))
+        logger.debug(f"{self.source_collection_uri}:\t'{serialized_records}'")
         signature = self.signer.sign(serialized_records)
         self.set_destination_signature(signature, request=request, source_attributes={})
 
@@ -232,7 +232,9 @@ class LocalUpdater(object):
             storage_kwargs["filters"] = [gt_last_modified]
 
         storage_kwargs["sorting"] = [Sort(FIELD_LAST_MODIFIED, 1)]
-        parent_id = "/buckets/{bucket}/collections/{collection}".format(**resource)
+        bid = resource["bucket"]
+        cid = resource["collection"]
+        parent_id = f"/buckets/{bid}/collections/{cid}"
 
         records = self.storage.list_all(
             parent_id=parent_id, resource_name="record", include_deleted=True, **storage_kwargs
@@ -286,7 +288,7 @@ class LocalUpdater(object):
                     pushed = self.storage.delete(
                         object_id=record[FIELD_ID],
                         last_modified=record[FIELD_LAST_MODIFIED],
-                        **storage_kwargs
+                        **storage_kwargs,
                     )
                     action = ACTIONS.DELETE
                 except RecordNotFoundError:
@@ -308,11 +310,11 @@ class LocalUpdater(object):
                 "collection_id": self.destination["collection"],
                 FIELD_ID: record[FIELD_ID],
             }
-            record_uri = (
-                "/buckets/{bucket_id}"
-                "/collections/{collection_id}"
-                "/records/{id}".format(**matchdict)
-            )
+            bid = matchdict["bucket_id"]
+            cid = matchdict["collection_id"]
+            rid = matchdict["id"]
+            record_uri = f"/buckets/{bid}/collections/{cid}/records/{rid}"
+
             notify_resource_event(
                 request,
                 {"method": "DELETE" if deleted else "PUT", "path": record_uri},
@@ -447,7 +449,7 @@ class LocalUpdater(object):
                 DistributionId=distribution_id,
                 InvalidationBatch={
                     "Paths": {"Quantity": len(paths), "Items": paths},
-                    "CallerReference": "{}-{}".format(timestamp, uuid.uuid4()),
+                    "CallerReference": f"{timestamp}-{uuid.uuid4()}",
                 },
             )
             logger.info("Invalidated CloudFront cache at %s" % ", ".join(paths))

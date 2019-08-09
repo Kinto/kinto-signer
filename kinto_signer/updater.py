@@ -115,10 +115,12 @@ class LocalUpdater(object):
         4. Ask the signer for a signature
         5. Send the signature to the destination.
         """
+        changes_count = 0
+
         self.create_destination(request)
 
         if push_records:
-            self.push_records_to_destination(request)
+            changes_count = self.push_records_to_destination(request)
 
         records, timestamp = self.get_destination_records(empty_none=False)
         serialized_records = canonical_json(records, timestamp)
@@ -130,6 +132,8 @@ class LocalUpdater(object):
             self.update_source_status(next_source_status, request, previous_source_status)
 
         self.invalidate_cloudfront_cache(request, timestamp)
+
+        return changes_count
 
     def refresh_signature(self, request, next_source_status):
         """Refresh the signature without moving records.
@@ -211,6 +215,7 @@ class LocalUpdater(object):
     def push_records_to_destination(self, request):
         __, dest_timestamp = self.get_destination_records()
         new_records, source_timestamp = self.get_source_records(last_modified=dest_timestamp)
+        changes_count = len(new_records)
 
         if source_timestamp and dest_timestamp and dest_timestamp > source_timestamp:
             raise ValueError("Destination collection timestamp cannot be higher "
@@ -273,6 +278,8 @@ class LocalUpdater(object):
                 obj=pushed,
                 action=action,
                 old=before)
+
+        return changes_count
 
     def set_destination_signature(self, signature, source_attributes, request):
         # Push the new signature to the destination collection.

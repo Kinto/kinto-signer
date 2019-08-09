@@ -78,14 +78,13 @@ def includeme(config):
         bid = resource["source"]["bucket"]
         # Match setting names like signer.stage.specific.autograph.hawk_id
         matches = [
-            (v, re.search(r"signer\.{0}\.([^\.]+)\.(.+)".format(bid), k))
-            for k, v in settings.items()
+            (v, re.search(rf"signer\.{bid}\.([^\.]+)\.(.+)", k)) for k, v in settings.items()
         ]
         found = [(v, m.group(1), m.group(2)) for (v, m) in matches if m]
         # Expand the list of resources with the ones that contain collection
         # specific settings.
         for setting_value, cid, setting_name in found:
-            signer_key = "/buckets/{0}/collections/{1}".format(bid, cid)
+            signer_key = f"/buckets/{bid}/collections/{cid}"
             if signer_key not in output_resources:
                 specific = copy.deepcopy(resource)
                 specific["source"]["collection"] = cid
@@ -115,16 +114,17 @@ def includeme(config):
     # Note: the `resource` values are mutated in place.
     config.registry.signers = {}
     for signer_key, resource in resources.items():
-
+        bid = resource["source"]["bucket"]
         server_wide = "signer."
-        bucket_wide = "signer.{bucket}.".format(**resource["source"])
+        bucket_wide = f"signer.{bid}."
         prefixes = [bucket_wide, server_wide]
 
         per_bucket_config = resource["source"]["collection"] is None
 
         if not per_bucket_config:
-            collection_wide = "signer.{bucket}.{collection}.".format(**resource["source"])
-            deprecated = "signer.{bucket}_{collection}.".format(**resource["source"])
+            cid = resource["source"]["collection"]
+            collection_wide = f"signer.{bid}.{cid}."
+            deprecated = f"signer.{bid}_{cid}."
             prefixes = [collection_wide, deprecated] + prefixes
 
         # Instantiates the signers associated to this resource.

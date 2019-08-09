@@ -45,9 +45,7 @@ class LocalUpdaterTest(unittest.TestCase):
                 storage=self.storage,
                 permission=self.permission,
             )
-        assert str(excinfo.value) == (
-            "Resources should contain both " "bucket and collection"
-        )
+        assert str(excinfo.value) == ("Resources should contain both " "bucket and collection")
 
     def test_get_source_records_asks_storage_for_records(self):
         self.storage.list_all.return_value = []
@@ -78,8 +76,7 @@ class LocalUpdaterTest(unittest.TestCase):
         self.storage.list_all.return_value = records
         self.updater.get_destination_records()
         self.storage.resource_timestamp.assert_called_with(
-            resource_name="record",
-            parent_id="/buckets/destbucket/collections/destcollection",
+            resource_name="record", parent_id="/buckets/destbucket/collections/destcollection"
         )
         self.storage.list_all.assert_called_with(
             resource_name="record",
@@ -110,9 +107,7 @@ class LocalUpdaterTest(unittest.TestCase):
     def test_push_records_removes_deleted_records(self):
         self.patch(self.updater, "get_destination_records", return_value=([], 1324))
         records = [{"id": idx, "foo": "bar %s" % idx} for idx in range(0, 2)]
-        records.extend(
-            [{"id": idx, "deleted": True, "last_modified": 42} for idx in range(3, 5)]
-        )
+        records.extend([{"id": idx, "deleted": True, "last_modified": 42} for idx in range(3, 5)])
         self.patch(self.updater, "get_source_records", return_value=(records, 1325))
         self.updater.push_records_to_destination(DummyRequest())
         self.updater.get_source_records.assert_called_with(last_modified=1324)
@@ -125,9 +120,7 @@ class LocalUpdaterTest(unittest.TestCase):
         self.storage.delete.side_effect = RecordNotFoundError()
         self.patch(self.updater, "get_destination_records", return_value=([], 1324))
         records = [{"id": idx, "foo": "bar %s" % idx} for idx in range(0, 2)]
-        records.extend(
-            [{"id": idx, "deleted": True, "last_modified": 42} for idx in range(3, 5)]
-        )
+        records.extend([{"id": idx, "deleted": True, "last_modified": 42} for idx in range(3, 5)])
         self.patch(self.updater, "get_source_records", return_value=(records, 1325))
         # Calling the updater should not raise the RecordNotFoundError.
         self.updater.push_records_to_destination(DummyRequest())
@@ -142,9 +135,7 @@ class LocalUpdaterTest(unittest.TestCase):
 
     def test_set_destination_signature_modifies_the_destination_collection(self):
         self.storage.get.return_value = {"id": 1234, "last_modified": 1234}
-        self.updater.set_destination_signature(
-            mock.sentinel.signature, {}, DummyRequest()
-        )
+        self.updater.set_destination_signature(mock.sentinel.signature, {}, DummyRequest())
 
         self.storage.update.assert_called_with(
             resource_name="collection",
@@ -154,15 +145,9 @@ class LocalUpdaterTest(unittest.TestCase):
         )
 
     def test_set_destination_signature_copies_kinto_admin_ui_fields(self):
-        self.storage.get.return_value = {
-            "id": 1234,
-            "sort": "-age",
-            "last_modified": 1234,
-        }
+        self.storage.get.return_value = {"id": 1234, "sort": "-age", "last_modified": 1234}
         self.updater.set_destination_signature(
-            mock.sentinel.signature,
-            {"displayFields": ["name"], "sort": "size"},
-            DummyRequest(),
+            mock.sentinel.signature, {"displayFields": ["name"], "sort": "size"}, DummyRequest()
         )
 
         self.storage.update.assert_called_with(
@@ -178,11 +163,7 @@ class LocalUpdaterTest(unittest.TestCase):
         )
 
     def test_update_source_status_modifies_the_source_collection(self):
-        self.storage.get.return_value = {
-            "id": 1234,
-            "last_modified": 1234,
-            "status": "to-sign",
-        }
+        self.storage.get.return_value = {"id": 1234, "last_modified": 1234, "status": "to-sign"}
 
         with mock.patch("kinto_signer.updater.datetime") as mocked:
             mocked.datetime.now().isoformat.return_value = "2018-04-09"
@@ -223,16 +204,11 @@ class LocalUpdaterTest(unittest.TestCase):
         request = DummyRequest()
         self.updater.create_destination(request)
         request.registry.storage.create.assert_any_call(
-            resource_name="collection",
-            parent_id=bucket_id,
-            obj={"id": "destcollection"},
+            resource_name="collection", parent_id=bucket_id, obj={"id": "destcollection"}
         )
 
     def test_sign_and_update_destination(self):
-        records = [
-            {"id": idx, "foo": "bar %s" % idx, "last_modified": idx}
-            for idx in range(1, 3)
-        ]
+        records = [{"id": idx, "foo": "bar %s" % idx, "last_modified": idx} for idx in range(1, 3)]
         self.storage.list_all.return_value = records
 
         self.patch(self.storage, "update_records")
@@ -289,10 +265,7 @@ class LocalUpdaterTest(unittest.TestCase):
             params = call_args[1]
             assert params["DistributionId"] == "DWIGHTENIS"
             assert params["InvalidationBatch"]["CallerReference"].startswith("tz_1234-")
-            assert params["InvalidationBatch"]["Paths"] == {
-                "Quantity": 1,
-                "Items": ["/v1/*"],
-            }
+            assert params["InvalidationBatch"]["Paths"] == {"Quantity": 1, "Items": ["/v1/*"]}
 
     def test_does_not_fail_when_cache_invalidation_does(self):
         request = mock.MagicMock()

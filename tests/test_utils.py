@@ -81,12 +81,8 @@ class ParseResourcesTest(unittest.TestCase):
         """
         resources = utils.parse_resources(raw_resources)
         assert len(resources) == 2
-        assert (
-            resources["/buckets/bid1/collections/scid1"]["source"]["bucket"] == "bid1"
-        )
-        assert (
-            resources["/buckets/bid2/collections/scid2"]["source"]["bucket"] == "bid2"
-        )
+        assert resources["/buckets/bid1/collections/scid1"]["source"]["bucket"] == "bid1"
+        assert resources["/buckets/bid2/collections/scid2"]["source"]["bucket"] == "bid2"
 
     def test_multiple_resources_are_supported(self):
         raw_resources = """
@@ -124,14 +120,11 @@ class ParseResourcesTest(unittest.TestCase):
             utils.parse_resources(raw_resources)
 
     def test_resources_must_be_valid_names(self):
-        raw_resources = (
-            "/buckets/sbi+d1/collections/scid -> /buckets/dbid1/collections/dci,d"
-        )
+        raw_resources = "/buckets/sbi+d1/collections/scid -> /buckets/dbid1/collections/dci,d"
         with self.assertRaises(ConfigurationError) as e:
             utils.parse_resources(raw_resources)
         assert repr(e.exception).startswith(
-            'ConfigurationError("Malformed resource: '
-            "bucket or collection id is invalid"
+            'ConfigurationError("Malformed resource: ' "bucket or collection id is invalid"
         )
 
     def test_resources_can_be_defined_per_bucket(self):
@@ -158,9 +151,7 @@ class ParseResourcesTest(unittest.TestCase):
         with self.assertRaises(ConfigurationError):
             utils.parse_resources(raw_resources)
 
-        raw_resources = (
-            "/buckets/stage -> /buckets/preview/collections/boom -> /buckets/prod"
-        )
+        raw_resources = "/buckets/stage -> /buckets/preview/collections/boom -> /buckets/prod"
         with self.assertRaises(ConfigurationError):
             utils.parse_resources(raw_resources)
 

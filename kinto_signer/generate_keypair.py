@@ -14,9 +14,6 @@ def generate_keypair(private_key_location, public_key_location):
 
 if __name__ == "__main__":  # pragma: no cover
     if len(sys.argv) != 3:
-        print(
-            "Usage: python -m kinto_signer.generate_keypair "
-            "{public_key} {private_key}"
-        )
+        print("Usage: python -m kinto_signer.generate_keypair " "{public_key} {private_key}")
         sys.exit(0)
     generate_keypair(sys.argv[1], sys.argv[2])

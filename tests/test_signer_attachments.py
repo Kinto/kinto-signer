@@ -74,27 +74,19 @@ class SignerAttachmentsTest(BaseWebTest, unittest.TestCase):
 
     def initialize(self):
         r = self.app.post_json(
-            self.source_collection + "/records",
-            {"data": {"title": "hello"}},
-            headers=self.headers,
+            self.source_collection + "/records", {"data": {"title": "hello"}}, headers=self.headers
         )
         r = r.json["data"]
         uri = self.source_collection + "/records/" + r["id"] + "/attachment"
         self.upload_file(
-            uri=uri,
-            files=[("attachment", "image.jpg", b"--fake--")],
-            headers=self.headers,
+            uri=uri, files=[("attachment", "image.jpg", b"--fake--")], headers=self.headers
         )
 
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.other_headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
         )
 
     def upload_file(self, uri, files, params=[], headers={}):
@@ -126,20 +118,14 @@ class SignerAttachmentsTest(BaseWebTest, unittest.TestCase):
 
         uri = self.source_collection + "/records/" + record["id"] + "/attachment"
         self.upload_file(
-            uri=uri,
-            files=[("attachment", "image.jpg", b"--other-fake--")],
-            headers=self.headers,
+            uri=uri, files=[("attachment", "image.jpg", b"--other-fake--")], headers=self.headers
         )
 
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.other_headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
         )
 
         r = self.app.get(self.destination_collection + "/records", headers=self.headers)

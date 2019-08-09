@@ -30,24 +30,17 @@ def upload_records(client, num):
 def _get_args():
     parser = argparse.ArgumentParser(description="End-to-end signing test")
 
-    parser.add_argument(
-        "--auth", help="Basic Authentication", type=str, default=DEFAULT_AUTH
-    )
+    parser.add_argument("--auth", help="Basic Authentication", type=str, default=DEFAULT_AUTH)
 
     parser.add_argument(
         "--editor-auth", help="Basic Authentication for editor", type=str, default=None
     )
 
     parser.add_argument(
-        "--reviewer-auth",
-        help="Basic Authentication for reviewer",
-        type=str,
-        default=None,
+        "--reviewer-auth", help="Basic Authentication for reviewer", type=str, default=None
     )
 
-    parser.add_argument(
-        "--server", help="Kinto Server", type=str, default=DEFAULT_SERVER
-    )
+    parser.add_argument("--server", help="Kinto Server", type=str, default=DEFAULT_SERVER)
 
     parser.add_argument(
         "--source-bucket", help="Source bucket", type=str, default=DEFAULT_SOURCE_BUCKET
@@ -57,9 +50,7 @@ def _get_args():
         "--source-col", help="Source collection", type=str, default=DEFAULT_SOURCE_COL
     )
 
-    parser.add_argument(
-        "--reset", help="Reset collection data", type=bool, default=False
-    )
+    parser.add_argument("--reset", help="Reset collection data", type=bool, default=False)
 
     return parser.parse_args()
 
@@ -110,43 +101,35 @@ def main():
         for r in signer_capabilities["resources"]
         if (args.source_bucket, args.source_col)
         == (r["source"]["bucket"], r["source"]["collection"])
-        or (args.source_bucket, None)
-        == (r["source"]["bucket"], r["source"]["collection"])
+        or (args.source_bucket, None) == (r["source"]["bucket"], r["source"]["collection"])
     ]
     assert len(resources) > 0, "Specified source not configured to be signed"
     resource = resources[0]
     if "preview" in resource:
         print(
-            "Signoff: {source[bucket]}/{source[collection]} => {preview[bucket]}/{preview[collection]} => {destination[bucket]}/{destination[collection]}".format(
-                **resource
-            )
+            f"Signoff: {resource['source']['bucket']}/{resource['source']['collection']}"
+            f" => {resource['preview']['bucket']}/{resource['preview']['collection']}"
+            f" => {resource['destination']['bucket']}/{resource['destination']['collection']}"
         )
     else:
         print(
-            "Signoff: {source[bucket]}/{source[collection]} => {destination[bucket]}/{destination[collection]}".format(
-                **resource
-            )
+            f"Signoff: {resource['source']['bucket']}/{resource['source']['collection']} "
+            f" => {resource['destination']['bucket']}/{resource['destination']['collection']}"
         )
 
     print("_" * 80)
 
     bucket = client.create_bucket(if_not_exists=True)
     client.create_collection(
-        permissions={
-            "write": [editor_id, reviewer_id] + bucket["permissions"]["write"]
-        },
+        permissions={"write": [editor_id, reviewer_id] + bucket["permissions"]["write"]},
         if_not_exists=True,
     )
 
-    editors_group = (
-        resource.get("editors_group") or signer_capabilities["editors_group"]
-    )
+    editors_group = resource.get("editors_group") or signer_capabilities["editors_group"]
     editors_group = editors_group.format(collection_id=args.source_col)
     client.patch_group(id=editors_group, data={"members": [editor_id]})
 
-    reviewers_group = (
-        resource.get("reviewers_group") or signer_capabilities["reviewers_group"]
-    )
+    reviewers_group = resource.get("reviewers_group") or signer_capabilities["reviewers_group"]
     reviewers_group = reviewers_group.format(collection_id=args.source_col)
     client.patch_group(id=reviewers_group, data={"members": [reviewer_id]})
 
@@ -159,9 +142,7 @@ def main():
 
     dest_col = resource["destination"].get("collection") or args.source_col
     dest_client = Client(
-        server_url=args.server,
-        bucket=resource["destination"]["bucket"],
-        collection=dest_col,
+        server_url=args.server, bucket=resource["destination"]["bucket"], collection=dest_col
     )
 
     preview_client = None
@@ -229,14 +210,10 @@ def main():
         # Diff size is 20 + 5 if updated records are also all deleted,
         # or 30 if deletions and updates apply to different records.
         diff_since_last = preview_client.get_records(_since=preview_timestamp)
-        assert (
-            25 <= len(diff_since_last) <= 30
-        ), "Changes since last signature are not consistent"
+        assert 25 <= len(diff_since_last) <= 30, "Changes since last signature are not consistent"
 
         metadata = preview_client.get_collection()["data"]
-        assert (
-            preview_signature != metadata["signature"]
-        ), "Preview collection not updated"
+        assert preview_signature != metadata["signature"], "Preview collection not updated"
 
     # 2.3 approve the review
     print("Reviewer approves and triggers signature")

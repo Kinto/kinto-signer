@@ -119,9 +119,7 @@ class IncludeMeTest(unittest.TestCase):
 
     def test_defines_a_signer_per_bucket(self):
         settings = {
-            "signer.resources": (
-                "/buckets/sb1/collections/sc1 -> /buckets/db1/collections/dc1\n"
-            ),
+            "signer.resources": ("/buckets/sb1/collections/sc1 -> /buckets/db1/collections/dc1\n"),
             "signer.sb1.signer_backend": "kinto_signer.signer.local_ecdsa",
             "signer.sb1.ecdsa.public_key": "/path/to/key",
             "signer.sb1.ecdsa.private_key": "/path/to/private",
@@ -215,18 +213,14 @@ class IncludeMeTest(unittest.TestCase):
     def test_a_statsd_timer_is_used_for_signature_if_configured(self):
         settings = {
             "statsd_url": "udp://127.0.0.1:8125",
-            "signer.resources": (
-                "/buckets/sb1/collections/sc1 -> /buckets/db1/collections/dc1"
-            ),
+            "signer.resources": ("/buckets/sb1/collections/sc1 -> /buckets/db1/collections/dc1"),
             "signer.ecdsa.public_key": "/path/to/key",
             "signer.ecdsa.private_key": "/path/to/private",
         }
         config = self.includeme(settings)
 
         payload = dict(resource_name="collection", action="update", bucket_id="foo")
-        event = ResourceChanged(
-            payload=payload, impacted_objects=[], request=mock.MagicMock()
-        )
+        event = ResourceChanged(payload=payload, impacted_objects=[], request=mock.MagicMock())
         statsd_client = config.registry.statsd._client
         with mock.patch.object(statsd_client, "timing") as mocked:
             config.registry.notify(event)
@@ -252,9 +246,7 @@ class OnCollectionChangedTest(unittest.TestCase):
         self.addCleanup(patch.stop)
 
     def test_nothing_happens_when_resource_is_not_configured(self):
-        evt = mock.MagicMock(
-            payload={"action": "update", "bucket_id": "a", "collection_id": "b"}
-        )
+        evt = mock.MagicMock(payload={"action": "update", "bucket_id": "a", "collection_id": "b"})
         sign_collection_data(
             evt, resources=utils.parse_resources("c/d -> e/f"), to_review_enabled=True
         )
@@ -277,9 +269,7 @@ class OnCollectionChangedTest(unittest.TestCase):
         )
         evt.request.registry.storage = mock.sentinel.storage
         evt.request.registry.permission = mock.sentinel.permission
-        evt.request.registry.signers = {
-            "/buckets/a/collections/b": mock.sentinel.signer
-        }
+        evt.request.registry.signers = {"/buckets/a/collections/b": mock.sentinel.signer}
         evt.request.route_path.return_value = "/v1/buckets/a/collections/b"
         sign_collection_data(
             evt, resources=utils.parse_resources("a/b -> c/d"), to_review_enabled=True
@@ -302,9 +292,7 @@ class OnCollectionChangedTest(unittest.TestCase):
         )
         evt.request.registry.storage = mock.sentinel.storage
         evt.request.registry.permission = mock.sentinel.permission
-        evt.request.registry.signers = {
-            "/buckets/a/collections/b": mock.sentinel.signer
-        }
+        evt.request.registry.signers = {"/buckets/a/collections/b": mock.sentinel.signer}
         evt.request.route_path.return_value = "/v1/buckets/a/collections/b"
         sign_collection_data(
             evt, resources=utils.parse_resources("a/b -> c/d"), to_review_enabled=True
@@ -313,9 +301,7 @@ class OnCollectionChangedTest(unittest.TestCase):
 
     def test_updater_does_not_fail_when_payload_is_inconsistent(self):
         # This happens with events on default bucket for kinto < 3.3
-        evt = mock.MagicMock(
-            payload={"action": "update", "subpath": "collections/boom"}
-        )
+        evt = mock.MagicMock(payload={"action": "update", "subpath": "collections/boom"})
         sign_collection_data(
             evt, resources=utils.parse_resources("a/b -> c/d"), to_review_enabled=True
         )
@@ -349,10 +335,7 @@ class BatchTest(BaseWebTest, unittest.TestCase):
         self.app.post_json(
             "/batch",
             {
-                "defaults": {
-                    "method": "PATCH",
-                    "body": {"data": {"status": "to-sign"}},
-                },
+                "defaults": {"method": "PATCH", "body": {"data": {"status": "to-sign"}}},
                 "requests": [
                     {"path": "/buckets/alice/collections/source"},
                     {"path": "/buckets/bob/collections/source"},
@@ -393,10 +376,7 @@ class SigningErrorTest(BaseWebTest, unittest.TestCase):
 
         self.app.put_json("/buckets/alice", headers=self.headers)
         self.app.put_json(
-            collection_uri,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
-            status=500,
+            collection_uri, {"data": {"status": "to-sign"}}, headers=self.headers, status=500
         )
 
 
@@ -446,27 +426,21 @@ class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):
         body = {"permissions": {"write": [self.other_userid]}}
         self.app.put_json("/buckets/stage/collections/a", body, headers=self.headers)
         for i in range(5):
-            self.app.post_json(
-                f"/buckets/stage/collections/a/records", headers=self.headers
-            )
+            self.app.post_json(f"/buckets/stage/collections/a/records", headers=self.headers)
         self.app.patch_json(
             "/buckets/stage/collections/a",
             {"data": {"status": "to-review"}},
             headers=self.other_headers,
         )
         self.app.patch_json(
-            "/buckets/stage/collections/a",
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            "/buckets/stage/collections/a", {"data": {"status": "to-sign"}}, headers=self.headers
         )
 
     def test_unsigned_collection_are_not_affected(self):
         self.app.put_json("/buckets/bid", headers=self.headers)
         self.app.put_json("/buckets/bid/collections/a", headers=self.headers)
 
-        patch = mock.patch(
-            "kinto_signer.updater.LocalUpdater.sign_and_update_destination"
-        )
+        patch = mock.patch("kinto_signer.updater.LocalUpdater.sign_and_update_destination")
         mocked = patch.start()
         self.addCleanup(patch.stop)
 
@@ -479,9 +453,7 @@ class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):
         resp = self.app.get("/buckets/prod/collections/a/records", headers=self.headers)
         assert len(resp.json["data"]) == 0
         # Tombstones were created.
-        resp = self.app.get(
-            "/buckets/prod/collections/a/records?_since=0", headers=self.headers
-        )
+        resp = self.app.get("/buckets/prod/collections/a/records?_since=0", headers=self.headers)
         assert len(resp.json["data"]) == 5
         # Recreate source collection.
         self.create_records_and_sign()
@@ -491,9 +463,7 @@ class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):
 
     def test_preview_content_is_deleted_when_source_is_deleted(self):
         # Preview is empty.
-        resp = self.app.get(
-            "/buckets/preview/collections/a/records", headers=self.headers
-        )
+        resp = self.app.get("/buckets/preview/collections/a/records", headers=self.headers)
         assert len(resp.json["data"]) == 0
         # Tombstones were created.
         resp = self.app.get(
@@ -503,7 +473,5 @@ class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):
         # Recreate source collection.
         self.create_records_and_sign()
         # Preview has 5 records.
-        resp = self.app.get(
-            "/buckets/preview/collections/a/records", headers=self.headers
-        )
+        resp = self.app.get("/buckets/preview/collections/a/records", headers=self.headers)
         assert len(resp.json["data"]) == 5

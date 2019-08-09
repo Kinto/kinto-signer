@@ -20,9 +20,7 @@ class AutographSigner(SignerBase):
 
         b64_payload = base64.b64encode(payload)
         url = urljoin(self.server_url, "/sign/data")
-        resp = requests.post(
-            url, auth=self.auth, json=[{"input": b64_payload.decode("utf-8")}]
-        )
+        resp = requests.post(url, auth=self.auth, json=[{"input": b64_payload.decode("utf-8")}])
         resp.raise_for_status()
         signature_bundle = resp.json()[0]
         return signature_bundle
@@ -40,11 +38,7 @@ def load_from_settings(settings, prefix="", *, prefixes=None):
         warnings.warn(message, DeprecationWarning)
 
     return AutographSigner(
-        server_url=get_first_matching_setting(
-            "autograph.server_url", settings, prefixes
-        ),
+        server_url=get_first_matching_setting("autograph.server_url", settings, prefixes),
         hawk_id=get_first_matching_setting("autograph.hawk_id", settings, prefixes),
-        hawk_secret=get_first_matching_setting(
-            "autograph.hawk_secret", settings, prefixes
-        ),
+        hawk_secret=get_first_matching_setting("autograph.hawk_secret", settings, prefixes),
     )

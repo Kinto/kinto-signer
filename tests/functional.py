@@ -238,9 +238,7 @@ class BaseTestFunctional(object):
 
         self.source.create_record(data={"pim": "pam"})
         # Trigger a signature as someone else.
-        trigger_signature(
-            editor_client=self.editor_client, reviewer_client=self.someone_client
-        )
+        trigger_signature(editor_client=self.editor_client, reviewer_client=self.someone_client)
 
         collection = self.destination.get_collection()
         after = collection["data"]["signature"]
@@ -339,10 +337,7 @@ class HistoryTest(unittest.TestCase):
 
         # update of last_editor (by plugin)
         assert collection_entries[3]["target"]["data"]["status"] == "to-review"
-        assert (
-            "basicauth:"
-            in collection_entries[3]["target"]["data"]["last_review_request_by"]
-        )
+        assert "basicauth:" in collection_entries[3]["target"]["data"]["last_review_request_by"]
         assert "kinto-signer" in collection_entries[3]["user_id"]
 
         # status: to-sign
@@ -376,13 +371,9 @@ class WorkflowTest(unittest.TestCase):
     def setUp(self):
         perms = {"write": ["system.Authenticated"]}
         self.client.create_bucket()
+        create_group(self.client, "editors", members=[self.anna_principal, self.client_principal])
         create_group(
-            self.client, "editors", members=[self.anna_principal, self.client_principal]
-        )
-        create_group(
-            self.client,
-            "reviewers",
-            members=[self.elsa_principal, self.client_principal],
+            self.client, "reviewers", members=[self.elsa_principal, self.client_principal]
         )
         self.client.create_collection(permissions=perms)
 
@@ -554,9 +545,7 @@ class PerBucketTest(unittest.TestCase):
     def test_preview_and_destination_collections_are_signed(self):
         self.julia_client.create_collection(id="poum")
 
-        preview_collection = self.anon_client.get_collection(
-            bucket="preview", id="poum"
-        )
+        preview_collection = self.anon_client.get_collection(bucket="preview", id="poum")
         assert "signature" in preview_collection["data"]
 
         prod_collection = self.anon_client.get_collection(bucket="prod", id="poum")
@@ -578,9 +567,7 @@ class PerBucketTest(unittest.TestCase):
         self.julia_client.create_collection(id="pim")
 
         # Add Joan to reviewers.
-        data = JSONPatch(
-            [{"op": "add", "path": "/data/members/0", "value": self.joan_principal}]
-        )
+        data = JSONPatch([{"op": "add", "path": "/data/members/0", "value": self.joan_principal}])
         self.julia_client.patch_group(id="reviewers", changes=data)
 
         # Create some records.

@@ -42,9 +42,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         )
 
         settings["kinto.signer.signer_backend"] = "kinto_signer.signer." "local_ecdsa"
-        settings["signer.ecdsa.private_key"] = os.path.join(
-            here, "config", "ecdsa.private.pem"
-        )
+        settings["signer.ecdsa.private_key"] = os.path.join(here, "config", "ecdsa.private.pem")
 
         settings["event_listeners"] = "ks"
         settings["event_listeners.ks.use"] = "tests.test_events"
@@ -55,9 +53,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         self.app.put_json("/buckets/alice", headers=self.headers)
         self.app.put_json(self.source_collection, headers=self.headers)
         self.app.post_json(
-            self.source_collection + "/records",
-            {"data": {"title": "hello"}},
-            headers=self.headers,
+            self.source_collection + "/records", {"data": {"title": "hello"}}, headers=self.headers
         )
         self.app.post_json(
             self.source_collection + "/records",
@@ -67,9 +63,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
 
     def _sign(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
 
         resp = self.app.get(self.source_collection, headers=self.headers)
@@ -85,16 +79,14 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         event = [
             e
             for e in listener.received
-            if e.payload["uri"] == "/buckets/destination"
-            and e.payload["action"] == "create"
+            if e.payload["uri"] == "/buckets/destination" and e.payload["action"] == "create"
         ][0]
         self.assertEqual(len(event.impacted_objects), 1)
 
         event = [
             e
             for e in listener.received
-            if e.payload["uri"] == self.destination_collection
-            and e.payload["action"] == "create"
+            if e.payload["uri"] == self.destination_collection and e.payload["action"] == "create"
         ][0]
         self.assertEqual(len(event.impacted_objects), 1)
         self.assertEqual(event.payload["user_id"], "plugin:kinto-signer")
@@ -113,12 +105,8 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         self.assertIsNone(events[0].impacted_objects[0]["old"].get("status"))
         self.assertIsNone(events[0].impacted_objects[0]["old"].get("last_edit_date"))
         self.assertEqual(events[0].payload["user_id"], "plugin:kinto-signer")
-        self.assertEqual(
-            events[0].impacted_objects[0]["new"]["status"], "work-in-progress"
-        )
-        self.assertIn(
-            "basicauth:", events[0].impacted_objects[0]["new"]["last_edit_by"]
-        )
+        self.assertEqual(events[0].impacted_objects[0]["new"]["status"], "work-in-progress")
+        self.assertIn("basicauth:", events[0].impacted_objects[0]["new"]["last_edit_by"])
         self.assertNotEqual(
             events[0].impacted_objects[0]["new"]["last_edit_date"],
             events[-1].impacted_objects[0]["new"]["last_edit_date"],
@@ -128,9 +116,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         before = len(listener.received)
 
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
 
         events = [
@@ -147,9 +133,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         self.assertNotIn("last_editor", events[0].impacted_objects[0]["new"])
 
         self.assertEqual(events[1].payload["user_id"], "plugin:kinto-signer")
-        self.assertIn(
-            "basicauth:", events[1].impacted_objects[0]["new"]["last_review_request_by"]
-        )
+        self.assertIn("basicauth:", events[1].impacted_objects[0]["new"]["last_review_request_by"])
         self.assertEqual(events[1].impacted_objects[0]["old"]["status"], "to-review")
 
     def test_resource_changed_is_triggered_for_source_collection(self):
@@ -171,9 +155,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         self.assertEqual(len(event_signed.impacted_objects), 1)
         self.assertEqual(event_signed.impacted_objects[0]["old"]["status"], "to-sign")
         self.assertEqual(event_signed.impacted_objects[0]["new"]["status"], "signed")
-        self.assertGreater(
-            event_signed.payload["timestamp"], event_tosign.payload["timestamp"]
-        )
+        self.assertGreater(event_signed.payload["timestamp"], event_tosign.payload["timestamp"])
 
     def test_resource_changed_is_triggered_for_destination_collection(self):
         before = len(listener.received)
@@ -200,8 +182,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         events = [
             e
             for e in listener.received[before:]
-            if e.payload["resource_name"] == "record"
-            and e.payload["collection_id"] == "dcid"
+            if e.payload["resource_name"] == "record" and e.payload["collection_id"] == "dcid"
         ]
 
         self.assertEqual(len(events), 1)
@@ -213,13 +194,9 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
 
     def test_resource_changed_is_triggered_for_destination_update(self):
         record_uri = self.source_collection + "/records/xyz"
-        self.app.put_json(
-            record_uri, {"data": {"title": "salam"}}, headers=self.headers
-        )
+        self.app.put_json(record_uri, {"data": {"title": "salam"}}, headers=self.headers)
         self._sign()
-        self.app.patch_json(
-            record_uri, {"data": {"title": "servus"}}, headers=self.headers
-        )
+        self.app.patch_json(record_uri, {"data": {"title": "servus"}}, headers=self.headers)
 
         before = len(listener.received)
 
@@ -227,8 +204,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         events = [
             e
             for e in listener.received[before:]
-            if e.payload["resource_name"] == "record"
-            and e.payload["collection_id"] == "dcid"
+            if e.payload["resource_name"] == "record" and e.payload["collection_id"] == "dcid"
         ]
 
         self.assertEqual(len(events), 1)
@@ -240,26 +216,18 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
 
     def test_resource_changed_is_triggered_for_destination_removal(self):
         record_uri = self.source_collection + "/records/xyz"
-        self.app.put_json(
-            record_uri, {"data": {"title": "servus"}}, headers=self.headers
-        )
+        self.app.put_json(record_uri, {"data": {"title": "servus"}}, headers=self.headers)
         self._sign()
         self.app.delete(record_uri, headers=self.headers)
 
         before = len(listener.received)
         self._sign()
 
-        events = [
-            e
-            for e in listener.received[before:]
-            if e.payload["resource_name"] == "record"
-        ]
+        events = [e for e in listener.received[before:] if e.payload["resource_name"] == "record"]
 
         self.assertEqual(len(events), 1)
         self.assertEqual(events[0].payload["action"], "delete")
-        self.assertEqual(
-            events[0].payload["uri"], self.destination_collection + "/records/xyz"
-        )
+        self.assertEqual(events[0].payload["uri"], self.destination_collection + "/records/xyz")
 
 
 class SignoffEventsTest(BaseWebTest, unittest.TestCase):
@@ -278,9 +246,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         )
 
         settings["kinto.signer.signer_backend"] = "kinto_signer.signer." "local_ecdsa"
-        settings["signer.ecdsa.private_key"] = os.path.join(
-            here, "config", "ecdsa.private.pem"
-        )
+        settings["signer.ecdsa.private_key"] = os.path.join(here, "config", "ecdsa.private.pem")
         return settings
 
     @classmethod
@@ -308,9 +274,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         self.app.put_json("/buckets/alice", headers=self.headers)
         self.app.put_json(self.source_collection, headers=self.headers)
         self.app.post_json(
-            self.source_collection + "/records",
-            {"data": {"title": "hello"}},
-            headers=self.headers,
+            self.source_collection + "/records", {"data": {"title": "hello"}}, headers=self.headers
         )
         self.app.post_json(
             self.source_collection + "/records",
@@ -319,9 +283,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         )
 
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
 
     def test_review_requested_is_triggered(self):
@@ -342,9 +304,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
 
     def test_review_rejected_is_triggered(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "work-in-progress"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "work-in-progress"}}, headers=self.headers
         )
         assert isinstance(self.events[-1], signer_events.ReviewRejected)
 
@@ -353,60 +313,45 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         assert r.json["data"]["status"] == "to-review"
 
         del self.events[:]
-        self.app.patch_json(
-            self.source_collection, {"data": {"foo": "baz"}}, headers=self.headers
-        )
+        self.app.patch_json(self.source_collection, {"data": {"foo": "baz"}}, headers=self.headers)
         assert len(self.events) == 0
 
     def test_review_rejected_is_not_triggered_if_not_waiting_review(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
         del self.events[:]
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "work-in-progress"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "work-in-progress"}}, headers=self.headers
         )
         assert len(self.events) == 0
 
     def test_review_rejected_is_not_triggered_when_modified_indirectly(self):
         del self.events[:]
         self.app.post_json(
-            self.source_collection + "/records",
-            {"data": {"title": "hello"}},
-            headers=self.headers,
+            self.source_collection + "/records", {"data": {"title": "hello"}}, headers=self.headers
         )
         assert len(self.events) == 0
 
     def test_review_approved_is_triggered(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
         assert isinstance(self.events[-1], signer_events.ReviewApproved)
 
     def test_review_approved_is_not_triggered_on_resign(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
         del self.events[:]
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
         assert len(self.events) == 0
 
     def test_event_is_not_sent_if_rolledback(self):
         patch = mock.patch(
-            "kinto_signer.signer.local_ecdsa.ECDSASigner.sign",
-            side_effect=ValueError("boom"),
+            "kinto_signer.signer.local_ecdsa.ECDSASigner.sign", side_effect=ValueError("boom")
         )
         self.addCleanup(patch.stop)
         patch.start()

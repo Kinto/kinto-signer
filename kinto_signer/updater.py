@@ -133,9 +133,7 @@ class LocalUpdater(object):
 
         self.set_destination_signature(signature, source_attributes, request)
         if next_source_status is not None:
-            self.update_source_status(
-                next_source_status, request, previous_source_status
-            )
+            self.update_source_status(next_source_status, request, previous_source_status)
 
         self.invalidate_cloudfront_cache(request, timestamp)
 
@@ -199,10 +197,7 @@ class LocalUpdater(object):
         parent_id = "/buckets/{bucket}/collections/{collection}".format(**resource)
 
         records = self.storage.list_all(
-            parent_id=parent_id,
-            resource_name="record",
-            include_deleted=True,
-            **storage_kwargs
+            parent_id=parent_id, resource_name="record", include_deleted=True, **storage_kwargs
         )
 
         if len(records) == 0 and empty_none:
@@ -223,9 +218,7 @@ class LocalUpdater(object):
 
     def push_records_to_destination(self, request):
         __, dest_timestamp = self.get_destination_records()
-        new_records, source_timestamp = self.get_source_records(
-            last_modified=dest_timestamp
-        )
+        new_records, source_timestamp = self.get_source_records(last_modified=dest_timestamp)
         changes_count = len(new_records)
 
         if source_timestamp and dest_timestamp and dest_timestamp > source_timestamp:
@@ -319,9 +312,7 @@ class LocalUpdater(object):
             obj=new_collection,
         )
 
-        matchdict = dict(
-            bucket_id=self.destination["bucket"], id=self.destination["collection"]
-        )
+        matchdict = dict(bucket_id=self.destination["bucket"], id=self.destination["collection"])
         notify_resource_event(
             request,
             {"method": "PUT", "path": self.destination_collection_uri},
@@ -365,9 +356,7 @@ class LocalUpdater(object):
         resource_name = "collection"
 
         collection_record = self.storage.get(
-            parent_id=parent_id,
-            resource_name=resource_name,
-            object_id=self.source["collection"],
+            parent_id=parent_id, resource_name=resource_name, object_id=self.source["collection"]
         )
 
         # Update the collection_record

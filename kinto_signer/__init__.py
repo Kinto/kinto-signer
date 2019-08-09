@@ -123,9 +123,7 @@ def includeme(config):
         per_bucket_config = resource["source"]["collection"] is None
 
         if not per_bucket_config:
-            collection_wide = "signer.{bucket}.{collection}.".format(
-                **resource["source"]
-            )
+            collection_wide = "signer.{bucket}.{collection}.".format(**resource["source"])
             deprecated = "signer.{bucket}_{collection}.".format(**resource["source"])
             prefixes = [collection_wide, deprecated] + prefixes
 
@@ -155,8 +153,7 @@ def includeme(config):
                 collection_id = resource["source"]["collection"] or "{collection_id}"
                 try:
                     value = value.format(
-                        bucket_id=resource["source"]["bucket"],
-                        collection_id=collection_id,
+                        bucket_id=resource["source"]["bucket"], collection_id=collection_id
                     )
                 except KeyError as e:
                     raise ConfigurationError("Unknown group placeholder %s" % e)

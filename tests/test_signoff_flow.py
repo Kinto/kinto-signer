@@ -93,9 +93,7 @@ class SignoffWebTest(PostgresWebTest):
         # Source collection with 2 records
         self.app.put_json(self.source_collection, headers=self.headers)
         self.app.post_json(
-            self.source_collection + "/records",
-            {"data": {"title": "hello"}},
-            headers=self.headers,
+            self.source_collection + "/records", {"data": {"title": "hello"}}, headers=self.headers
         )
         self.app.post_json(
             self.source_collection + "/records",
@@ -110,9 +108,7 @@ class CollectionStatusTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCas
         assert "last_signature_date" not in resp.json["data"]
 
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-resign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-resign"}}, headers=self.headers
         )
 
         resp = self.app.get(self.source_collection, headers=self.headers)
@@ -152,21 +148,15 @@ class CollectionStatusTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCas
 
     def test_status_can_be_set_to_work_in_progress_manually(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "work-in-progress"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "work-in-progress"}}, headers=self.headers
         )
 
     def test_status_can_be_maintained_as_signed_manually(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
         # Signature occured, the source collection will be signed.
         self.app.patch_json(
@@ -178,40 +168,27 @@ class CollectionStatusTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCas
 
     def test_status_cannot_be_removed_once_it_was_set(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
-        self.app.put_json(
-            self.source_collection, {"data": {}}, headers=self.headers, status=400
-        )
+        self.app.put_json(self.source_collection, {"data": {}}, headers=self.headers, status=400)
 
     def test_status_cannot_be_emptied_once_it_was_set(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
         self.app.put_json(
-            self.source_collection,
-            {"data": {"status": ""}},
-            headers=self.headers,
-            status=400,
+            self.source_collection, {"data": {"status": ""}}, headers=self.headers, status=400
         )
 
     def test_status_can_be_reset(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "to-review"
@@ -221,32 +198,24 @@ class CollectionStatusTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCas
         assert resp.json["data"]["status"] == "work-in-progress"
 
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
         self.app.post_json(
-            self.source_collection + "/records",
-            {"data": {"title": "Hallo"}},
-            headers=self.headers,
+            self.source_collection + "/records", {"data": {"title": "Hallo"}}, headers=self.headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "work-in-progress"
 
     def test_statsd_reports_number_of_records_approved(self):
-        self.app.delete(
-            self.source_collection + "/records/in-french", headers=self.headers
-        )
+        self.app.delete(self.source_collection + "/records/in-french", headers=self.headers)
 
         statsd_client = self.app.app.registry.statsd
         with mock.patch.object(statsd_client, "count") as mocked:
             self.app.patch_json(
-                self.source_collection,
-                {"data": {"status": "to-sign"}},
-                headers=self.headers,
+                self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
             )
         call_args = mocked.call_args_list[0][0]
 
@@ -275,31 +244,23 @@ class ForceReviewTest(SignoffWebTest, unittest.TestCase):
         """This is useful when the x5u certificate changed and you want
            to retrigger a new signature."""
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.other_headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
         )
         resp = self.app.get(self.source_collection, headers=self.other_headers)
         assert resp.json["data"]["status"] == "signed"
 
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.other_headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
     def test_editor_cannot_be_reviewer(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
 
         self.app.patch_json(
@@ -313,9 +274,7 @@ class ForceReviewTest(SignoffWebTest, unittest.TestCase):
 
         # Try again as someone else
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.other_headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
@@ -332,14 +291,10 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
     def setUp(self):
         super().setUp()
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.other_headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
@@ -347,9 +302,7 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
     def test_editor_can_retrigger_a_signature(self):
         # Editor retriggers a signature, without going through review.
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-resign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-resign"}}, headers=self.headers
         )
 
         resp = self.app.get(self.source_collection, headers=self.headers)
@@ -357,27 +310,21 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
 
         # Old way (status: to-sign)
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
     def test_reviewer_can_retrigger_a_signature(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-resign"}},
-            headers=self.other_headers,
+            self.source_collection, {"data": {"status": "to-resign"}}, headers=self.other_headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
         # Old way (status: to-sign)
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.other_headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
@@ -400,24 +347,18 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
         resp = self.app.get("/", headers=writer_headers)
         writer_userid = resp.json["user"]["id"]
         self.app.patch_json(
-            self.source_bucket,
-            {"permissions": {"write": [writer_userid]}},
-            headers=self.headers,
+            self.source_bucket, {"permissions": {"write": [writer_userid]}}, headers=self.headers
         )
 
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-resign"}},
-            headers=writer_headers,
+            self.source_collection, {"data": {"status": "to-resign"}}, headers=writer_headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
         # Old way (status: to-sign)
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=writer_headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=writer_headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
@@ -433,9 +374,7 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
         before_signature = resp.json["data"]["signature"]["content-signature"]
 
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-resign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-resign"}}, headers=self.headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "work-in-progress"
@@ -447,9 +386,7 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
 class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
     def last_edit_by_and_date_are_tracked(self):
         self.app.post_json(
-            self.source_collection + "/records",
-            {"data": {"title": "Hallo"}},
-            headers=self.headers,
+            self.source_collection + "/records", {"data": {"title": "Hallo"}}, headers=self.headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["last_edit_by"] == self.userid
@@ -457,9 +394,7 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
 
     def test_last_review_request_by_and_date_are_tracked(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["last_review_request_by"] == self.userid
@@ -467,9 +402,7 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
 
     def test_last_review_by_and_date_are_tracked(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
@@ -480,22 +413,16 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
 
     def test_last_review_differs_from_last_signature_on_refresh_signature(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
         last_reviewer = resp.json["data"]["last_review_by"]
 
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-resign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-resign"}}, headers=self.headers
         )
-        metadata = self.app.get(self.source_collection, headers=self.headers).json[
-            "data"
-        ]
+        metadata = self.app.get(self.source_collection, headers=self.headers).json["data"]
         assert metadata["status"] == "signed"
 
         assert metadata["last_signature_date"] != metadata["last_review_date"]
@@ -503,34 +430,24 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
 
     def test_editor_can_be_reviewer(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
 
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
     def test_editor_reviewer_editor_cannot_be_changed_nor_removed(self):
         self.app.post_json(
-            self.source_collection + "/records",
-            {"data": {"title": "Hallo"}},
-            headers=self.headers,
+            self.source_collection + "/records", {"data": {"title": "Hallo"}}, headers=self.headers
         )
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.other_headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
         )
 
         resp = self.app.get(self.source_collection, headers=self.headers)
@@ -553,18 +470,12 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
         # They cannot be changed nor removed.
         for f in expected:
             self.app.patch_json(
-                self.source_collection,
-                {"data": {f: "changed"}},
-                headers=self.headers,
-                status=400,
+                self.source_collection, {"data": {f: "changed"}}, headers=self.headers, status=400
             )
             changed = source_collection.copy()
             changed.pop(f)
             self.app.put_json(
-                self.source_collection,
-                {"data": changed},
-                headers=self.headers,
-                status=400,
+                self.source_collection, {"data": changed}, headers=self.headers, status=400
             )
 
 
@@ -617,16 +528,12 @@ class UserGroupsTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCase):
         )
 
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.editor_headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.editor_headers
         )
 
     def test_only_reviewers_can_ask_to_sign(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.editor_headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.editor_headers
         )
 
         resp = self.app.patch_json(
@@ -644,9 +551,7 @@ class UserGroupsTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCase):
         )
 
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.reviewer_headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.reviewer_headers
         )
 
 
@@ -714,9 +619,7 @@ class SpecificUserGroupsTest(SignoffWebTest, FormattedErrorMixin, unittest.TestC
 
     def test_only_reviewers_can_ask_to_sign(self):
         self.app.patch_json(
-            self.source_collection1,
-            {"data": {"status": "to-review"}},
-            headers=self.editor_headers,
+            self.source_collection1, {"data": {"status": "to-review"}}, headers=self.editor_headers
         )
         resp = self.app.patch_json(
             self.source_collection1,
@@ -751,9 +654,7 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
 
     def test_the_preview_collection_is_updated_and_signed(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
 
         self.app.get(self.preview_bucket, headers=self.headers)
@@ -776,16 +677,12 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
 
     def test_the_preview_collection_is_also_resigned(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
         resp = self.app.get(self.preview_collection, headers=self.headers)
         signature_preview_before = resp.json["data"]["signature"]
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.other_headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
         )
         resp = self.app.get(self.destination_collection, headers=self.headers)
         signature_destination_before = resp.json["data"]["signature"]
@@ -795,9 +692,7 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
 
         # Resign.
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-resign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-resign"}}, headers=self.headers
         )
 
         resp = self.app.get(self.destination_collection, headers=self.headers)
@@ -809,9 +704,7 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
 
         # Resign the old way.
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
         resp = self.app.get(self.preview_collection, headers=self.headers)
         signature_preview_before = signature_preview_after
@@ -820,26 +713,18 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
 
     def test_the_preview_collection_is_emptied_when_source_records_are_deleted(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.other_headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
         )
 
         resp = self.app.get(self.source_collection + "/records", headers=self.headers)
         records = resp.json["data"]
         for r in records:
-            self.app.delete(
-                self.source_collection + "/records/" + r["id"], headers=self.headers
-            )
+            self.app.delete(self.source_collection + "/records/" + r["id"], headers=self.headers)
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
 
         resp = self.app.get(self.preview_collection + "/records", headers=self.headers)
@@ -848,23 +733,15 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
 
     def test_the_preview_collection_is_emptied_when_source_is_deleted(self):
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.other_headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
         )
 
-        self.app.delete(self.source_collection + "/records", headers=self.headers).json[
-            "data"
-        ]
+        self.app.delete(self.source_collection + "/records", headers=self.headers).json["data"]
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-review"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
 
         resp = self.app.get(self.preview_collection + "/records", headers=self.headers)
@@ -917,26 +794,18 @@ class NoReviewNoPreviewTest(SignoffWebTest, unittest.TestCase):
         )
         self.app.put_json(self.source_collection, headers=self.headers)
 
-        self.app.get(
-            self.preview_bucket + "/collections/onecrl",
-            status=200,
-            headers=self.headers,
-        )
+        self.app.get(self.preview_bucket + "/collections/onecrl", status=200, headers=self.headers)
         self.app.get(self.preview_collection, status=404, headers=self.headers)
 
     def test_the_preview_collection_is_not_updated(self):
         r = self.app.get(self.destination_collection + "/records", headers=self.headers)
         before = len(r.json["data"])
         self.app.post_json(
-            self.source_collection + "/records",
-            {"data": {"title": "Hallo"}},
-            headers=self.headers,
+            self.source_collection + "/records", {"data": {"title": "Hallo"}}, headers=self.headers
         )
 
         self.app.patch_json(
-            self.source_collection,
-            {"data": {"status": "to-sign"}},
-            headers=self.headers,
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
 
         # The preview still does not exist :)
@@ -972,20 +841,14 @@ class PerBucketTest(SignoffWebTest, unittest.TestCase):
         col_uri = "/collections/pim"
         self.app.put(self.source_bucket + col_uri, headers=self.headers)
 
-        data = self.app.get(self.preview_bucket + col_uri, headers=self.headers).json[
-            "data"
-        ]
+        data = self.app.get(self.preview_bucket + col_uri, headers=self.headers).json["data"]
         assert "signature" in data
 
-        data = self.app.get(
-            self.destination_bucket + col_uri, headers=self.headers
-        ).json["data"]
+        data = self.app.get(self.destination_bucket + col_uri, headers=self.headers).json["data"]
         assert "signature" in data
 
         # Source status was left untouched (ie. missing here)
-        data = self.app.get(self.source_bucket + col_uri, headers=self.headers).json[
-            "data"
-        ]
+        data = self.app.get(self.source_bucket + col_uri, headers=self.headers).json["data"]
         assert "status" not in data
 
     def test_review_settings_can_be_overriden_for_a_specific_collection(self):
@@ -1007,9 +870,7 @@ class PerBucketTest(SignoffWebTest, unittest.TestCase):
         args, kwargs = self.mocked_autograph.post.call_args_list[0]
         assert args[0].startswith("http://localhost:8000")  # global.
         assert kwargs["auth"].credentials["id"] == "for-specific"
-        assert (
-            kwargs["auth"].credentials["key"].startswith("fs5w")
-        )  # global in signer.ini
+        assert kwargs["auth"].credentials["key"].startswith("fs5w")  # global in signer.ini
 
 
 class GroupCreationTest(PostgresWebTest, unittest.TestCase):

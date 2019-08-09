@@ -66,9 +66,7 @@ def parse_resources(raw_resources):
             raise ConfigurationError(error_msg % "not separated with '->'")
 
         try:
-            triplet = [
-                r.strip() for r in res.replace(";", " ").replace("->", " ").split()
-            ]
+            triplet = [r.strip() for r in res.replace(";", " ").replace("->", " ").split()]
             if len(triplet) == 2:
                 source_uri, destination_uri = triplet
                 preview_uri = None
@@ -89,18 +87,12 @@ def parse_resources(raw_resources):
         all_per_bucket = all([x["collection"] is None for x in sections])
         all_explicit = all([x["collection"] is not None for x in sections])
         if not all_per_bucket and not all_explicit:
-            raise ConfigurationError(
-                error_msg % "cannot mix bucket and collection URIs"
-            )
+            raise ConfigurationError(error_msg % "cannot mix bucket and collection URIs")
 
         # Repeated source/preview/destination.
-        if (
-            len(set([tuple(s.items()) for s in (source, preview or {}, destination)]))
-            != 3
-        ):
+        if len(set([tuple(s.items()) for s in (source, preview or {}, destination)])) != 3:
             raise ConfigurationError(
-                error_msg % "cannot have same value for source, "
-                " preview or destination"
+                error_msg % "cannot have same value for source, " " preview or destination"
             )
 
         # Resources info is returned as a mapping by bucket/collection URI.
@@ -124,9 +116,7 @@ def parse_resources(raw_resources):
     # and have no test at all for that, prefer safety.
     sources = [tuple(r["source"].items()) for r in resources.values()]
     destinations = [tuple(r["destination"].items()) for r in resources.values()]
-    previews = [
-        tuple(r["preview"].items()) for r in resources.values() if "preview" in r
-    ]
+    previews = [tuple(r["preview"].items()) for r in resources.values() if "preview" in r]
 
     if len(set(destinations)) != len(destinations):
         raise ConfigurationError("Resources setting has repeated destination URI")
@@ -152,15 +142,11 @@ def get_first_matching_setting(setting_name, settings, prefixes, default=None):
     return default
 
 
-def ensure_resource_exists(
-    request, resource_name, parent_id, obj, permissions, matchdict
-):
+def ensure_resource_exists(request, resource_name, parent_id, obj, permissions, matchdict):
     storage = request.registry.storage
     permission = request.registry.permission
     try:
-        created = storage.create(
-            resource_name=resource_name, parent_id=parent_id, obj=obj
-        )
+        created = storage.create(resource_name=resource_name, parent_id=parent_id, obj=obj)
         object_uri = instance_uri(request, resource_name, **matchdict)
         permission.replace_object_permissions(object_uri, permissions)
         notify_resource_event(
@@ -203,9 +189,5 @@ def notify_resource_event(
         fakerequest._attachment_auto_save = True
 
     fakerequest.notify_resource_event(
-        parent_id=parent_id,
-        timestamp=obj[FIELD_LAST_MODIFIED],
-        data=obj,
-        action=action,
-        old=old,
+        parent_id=parent_id, timestamp=obj[FIELD_LAST_MODIFIED], data=obj, action=action, old=old
     )

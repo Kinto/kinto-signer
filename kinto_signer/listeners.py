@@ -12,12 +12,7 @@ from kinto_signer import events as signer_events
 from kinto_signer.utils import STATUS, PLUGIN_USERID, ensure_resource_exists
 
 
-REVIEW_SETTINGS = (
-    "reviewers_group",
-    "editors_group",
-    "to_review_enabled",
-    "group_check_enabled",
-)
+REVIEW_SETTINGS = ("reviewers_group", "editors_group", "to_review_enabled", "group_check_enabled")
 
 
 def raise_invalid(**kwargs):
@@ -32,9 +27,7 @@ def raise_forbidden(**kwargs):
 
 def pick_resource_and_signer(request, resources, bucket_id, collection_id):
     bucket_key = instance_uri(request, "bucket", id=bucket_id)
-    collection_key = instance_uri(
-        request, "collection", bucket_id=bucket_id, id=collection_id
-    )
+    collection_key = instance_uri(request, "collection", bucket_id=bucket_id, id=collection_id)
 
     resource = signer = None
 
@@ -111,10 +104,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
         )
 
         uri = instance_uri(
-            event.request,
-            "collection",
-            bucket_id=payload["bucket_id"],
-            id=new_collection["id"],
+            event.request, "collection", bucket_id=payload["bucket_id"], id=new_collection["id"]
         )
 
         has_review_enabled = "preview" in resource and resource.get(
@@ -144,9 +134,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
             if has_review_enabled:
                 updater.destination = resource["preview"]
                 updater.sign_and_update_destination(
-                    event.request,
-                    source_attributes=new_collection,
-                    next_source_status=None,
+                    event.request, source_attributes=new_collection, next_source_status=None
                 )
             updater.destination = resource["destination"]
             updater.sign_and_update_destination(
@@ -160,9 +148,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
             # Run signature process (will set `last_reviewer` field).
             updater.destination = resource["destination"]
             changes_count = updater.sign_and_update_destination(
-                event.request,
-                source_attributes=new_collection,
-                previous_source_status=old_status,
+                event.request, source_attributes=new_collection, previous_source_status=old_status
             )
 
             if old_status == STATUS.SIGNED:
@@ -206,9 +192,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
         # Notify request of review.
         if review_event_cls:
             review_event = review_event_cls(**review_event_kw)
-            event.request.bound_data.setdefault("kinto_signer.events", []).append(
-                review_event
-            )
+            event.request.bound_data.setdefault("kinto_signer.events", []).append(review_event)
 
 
 def send_signer_events(event):
@@ -222,12 +206,7 @@ def send_signer_events(event):
 
 
 def check_collection_status(
-    event,
-    resources,
-    group_check_enabled,
-    to_review_enabled,
-    editors_group,
-    reviewers_group,
+    event, resources, group_check_enabled, to_review_enabled, editors_group, reviewers_group
 ):
     """Make sure status changes are allowed.
     """
@@ -259,12 +238,8 @@ def check_collection_status(
         # to-review and group checking.
         _to_review_enabled = resource.get("to_review_enabled", to_review_enabled)
         _group_check_enabled = resource.get("group_check_enabled", group_check_enabled)
-        _editors_group = resource_group(
-            resource, "editors_group", default=editors_group
-        )
-        _reviewers_group = resource_group(
-            resource, "reviewers_group", default=reviewers_group
-        )
+        _editors_group = resource_group(resource, "editors_group", default=editors_group)
+        _reviewers_group = resource_group(resource, "reviewers_group", default=reviewers_group)
         # Member of groups have their URIs in their principals.
         editors_group_uri = instance_uri(
             event.request, "group", bucket_id=payload["bucket_id"], id=_editors_group
@@ -398,12 +373,8 @@ def create_editors_reviewers_groups(event, resources, editors_group, reviewers_g
         if resource is None:
             continue
 
-        _editors_group = resource_group(
-            resource, "editors_group", default=editors_group
-        )
-        _reviewers_group = resource_group(
-            resource, "reviewers_group", default=reviewers_group
-        )
+        _editors_group = resource_group(resource, "editors_group", default=editors_group)
+        _reviewers_group = resource_group(resource, "reviewers_group", default=reviewers_group)
 
         required_perms = authz.get_bound_permissions(bucket_uri, "group:create")
         permission = event.request.registry.permission
@@ -411,10 +382,7 @@ def create_editors_reviewers_groups(event, resources, editors_group, reviewers_g
             return
 
         group_perms = {"write": [current_user_id]}
-        for group, members in (
-            (_editors_group, [current_user_id]),
-            (_reviewers_group, []),
-        ):
+        for group, members in ((_editors_group, [current_user_id]), (_reviewers_group, [])):
             ensure_resource_exists(
                 request=event.request,
                 resource_name="group",
@@ -427,15 +395,10 @@ def create_editors_reviewers_groups(event, resources, editors_group, reviewers_g
         # Allow those groups to write to the source collection.
         permission = event.request.registry.permission
         collection_uri = instance_uri(
-            event.request,
-            "collection",
-            bucket_id=bid,
-            id=resource["source"]["collection"],
+            event.request, "collection", bucket_id=bid, id=resource["source"]["collection"]
         )
         for group in (_editors_group, _reviewers_group):
-            group_principal = instance_uri(
-                event.request, "group", bucket_id=bid, id=group
-            )
+            group_principal = instance_uri(event.request, "group", bucket_id=bid, id=group)
             permission.add_principal_to_ace(collection_uri, "write", group_principal)
 
 
@@ -459,12 +422,8 @@ def cleanup_preview_destination(event, resources):
                 continue
             bid = resource[k]["bucket"]
             cid = resource[k]["collection"]
-            collection_uri = instance_uri(
-                event.request, "collection", bucket_id=bid, id=cid
-            )
-            storage.delete_all(
-                resource_name="record", parent_id=collection_uri, with_deleted=True
-            )
+            collection_uri = instance_uri(event.request, "collection", bucket_id=bid, id=cid)
+            storage.delete_all(resource_name="record", parent_id=collection_uri, with_deleted=True)
 
             updater = LocalUpdater(
                 signer=signer,

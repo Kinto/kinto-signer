@@ -6,11 +6,7 @@ except ImportError:
     import configparser
 
 from kinto import main as kinto_main
-from kinto.core.testing import (
-    BaseWebTest as CoreWebTest,
-    get_user_headers,
-    DummyRequest,
-)
+from kinto.core.testing import BaseWebTest as CoreWebTest, get_user_headers, DummyRequest
 
 __all__ = ["BaseWebTest", "DummyRequest", "get_user_headers"]
 

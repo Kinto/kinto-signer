@@ -108,7 +108,16 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
         has_review_enabled = ('preview' in resource and
                               resource.get('to_review_enabled', to_review_enabled))
 
+        payload = payload.copy()
+        payload["uri"] = uri
+        payload["collection_id"] = new_collection['id']
+
         review_event_cls = None
+        review_event_kw = dict(request=event.request,
+                               payload=payload,
+                               impacted_objects=[impacted],
+                               resource=resource,
+                               original_event=event)
 
         new_status = new_collection.get("status")
         old_status = old_collection.get("status")
@@ -133,9 +142,10 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
         if new_status == STATUS.TO_SIGN:
             # Run signature process (will set `last_reviewer` field).
             updater.destination = resource['destination']
-            updater.sign_and_update_destination(event.request,
-                                                source_attributes=new_collection,
-                                                previous_source_status=old_status)
+            changes_count = updater.sign_and_update_destination(
+                event.request,
+                source_attributes=new_collection,
+                previous_source_status=old_status)
 
             if old_status == STATUS.SIGNED:
                 # When we refresh the signature, it is mainly in order to make sure that
@@ -148,6 +158,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
                                                         previous_source_status=old_status)
             else:
                 review_event_cls = signer_events.ReviewApproved
+                review_event_kw["changes_count"] = changes_count
 
         elif new_status == STATUS.TO_REVIEW:
             if has_review_enabled:
@@ -188,14 +199,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
 
         # Notify request of review.
         if review_event_cls:
-            payload = payload.copy()
-            payload["uri"] = uri
-            payload["collection_id"] = new_collection['id']
-            review_event = review_event_cls(request=event.request,
-                                            payload=payload,
-                                            impacted_objects=[impacted],
-                                            resource=resource,
-                                            original_event=event)
+            review_event = review_event_cls(**review_event_kw)
             event.request.bound_data.setdefault('kinto_signer.events', []).append(review_event)
 
 

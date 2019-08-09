@@ -10,3 +10,4 @@ tox
 webtest
 kinto[postgresql]
 kinto-attachment
+black

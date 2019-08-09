@@ -14,24 +14,20 @@ from .support import DummyRequest
 
 
 class LocalUpdaterTest(unittest.TestCase):
-
     def setUp(self):
         self.storage = mock.MagicMock()
         self.permission = mock.MagicMock()
         self.signer_instance = mock.MagicMock()
         self.updater = LocalUpdater(
-            source={
-                'bucket': 'sourcebucket',
-                'collection': 'sourcecollection'},
-            destination={
-                'bucket': 'destbucket',
-                'collection': 'destcollection'},
+            source={"bucket": "sourcebucket", "collection": "sourcecollection"},
+            destination={"bucket": "destbucket", "collection": "destcollection"},
             signer=self.signer_instance,
             storage=self.storage,
-            permission=self.permission)
+            permission=self.permission,
+        )
 
         # Resource events are bypassed completely in this test suite.
-        patcher = mock.patch('kinto_signer.utils.build_request')
+        patcher = mock.patch("kinto_signer.utils.build_request")
         self.addCleanup(patcher.stop)
         patcher.start()
 
@@ -43,82 +39,81 @@ class LocalUpdaterTest(unittest.TestCase):
     def test_updater_raises_if_resources_are_not_set_properly(self):
         with pytest.raises(ValueError) as excinfo:
             LocalUpdater(
-                source={'bucket': 'source'},
+                source={"bucket": "source"},
                 destination={},
                 signer=self.signer_instance,
                 storage=self.storage,
-                permission=self.permission)
-        assert str(excinfo.value) == ("Resources should contain both "
-                                      "bucket and collection")
+                permission=self.permission,
+            )
+        assert str(excinfo.value) == (
+            "Resources should contain both " "bucket and collection"
+        )
 
     def test_get_source_records_asks_storage_for_records(self):
         self.storage.list_all.return_value = []
 
         self.updater.get_source_records(None)
         self.storage.list_all.assert_called_with(
-            resource_name='record',
-            parent_id='/buckets/sourcebucket/collections/sourcecollection',
+            resource_name="record",
+            parent_id="/buckets/sourcebucket/collections/sourcecollection",
             include_deleted=True,
-            sorting=[Sort('last_modified', 1)])
+            sorting=[Sort("last_modified", 1)],
+        )
 
     def test_get_source_records_asks_storage_for_last_modified_records(self):
         self.storage.list_all.return_value = []
 
         self.updater.get_source_records(1234)
         self.storage.list_all.assert_called_with(
-            resource_name='record',
-            parent_id='/buckets/sourcebucket/collections/sourcecollection',
+            resource_name="record",
+            parent_id="/buckets/sourcebucket/collections/sourcecollection",
             include_deleted=True,
-            filters=[Filter('last_modified', 1234, COMPARISON.GT)],
-            sorting=[Sort('last_modified', 1)])
+            filters=[Filter("last_modified", 1234, COMPARISON.GT)],
+            sorting=[Sort("last_modified", 1)],
+        )
 
     def test_get_destination_records(self):
         # We want to test get_destination_records with some records.
-        records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
+        records = [{"id": idx, "foo": "bar %s" % idx} for idx in range(1, 4)]
         self.storage.list_all.return_value = records
         self.updater.get_destination_records()
         self.storage.resource_timestamp.assert_called_with(
-            resource_name='record',
-            parent_id='/buckets/destbucket/collections/destcollection')
+            resource_name="record",
+            parent_id="/buckets/destbucket/collections/destcollection",
+        )
         self.storage.list_all.assert_called_with(
-            resource_name='record',
-            parent_id='/buckets/destbucket/collections/destcollection',
+            resource_name="record",
+            parent_id="/buckets/destbucket/collections/destcollection",
             include_deleted=True,
-            sorting=[Sort('last_modified', 1)])
+            sorting=[Sort("last_modified", 1)],
+        )
 
     def test_push_records_to_destination(self):
-        self.patch(self.updater, 'get_destination_records',
-                   return_value=([], 1324))
-        records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
-        self.patch(self.updater, 'get_source_records',
-                   return_value=(records, 1325))
+        self.patch(self.updater, "get_destination_records", return_value=([], 1324))
+        records = [{"id": idx, "foo": "bar %s" % idx} for idx in range(1, 4)]
+        self.patch(self.updater, "get_source_records", return_value=(records, 1325))
         self.updater.push_records_to_destination(DummyRequest())
         assert self.storage.update.call_count == 3
 
     def test_push_records_to_destination_raises_if_storage_is_misconfigured(self):
-        self.patch(self.updater, 'get_destination_records',
-                   return_value=([{}], 1324))
-        self.patch(self.updater, 'get_source_records',
-                   return_value=([{}], 1234))
+        self.patch(self.updater, "get_destination_records", return_value=([{}], 1324))
+        self.patch(self.updater, "get_source_records", return_value=([{}], 1234))
         with pytest.raises(ValueError):
             self.updater.push_records_to_destination(DummyRequest())
 
     def test_push_records_to_destination_does_not_raises_if_collection_is_empty(self):
-        self.patch(self.updater, 'get_destination_records',
-                   return_value=([], 1324))
-        self.patch(self.updater, 'get_source_records',
-                   return_value=([], 1234))
+        self.patch(self.updater, "get_destination_records", return_value=([], 1324))
+        self.patch(self.updater, "get_source_records", return_value=([], 1234))
         with pytest.raises(ValueError):
             self.updater.push_records_to_destination(DummyRequest())
 
     def test_push_records_removes_deleted_records(self):
-        self.patch(self.updater, 'get_destination_records',
-                   return_value=([], 1324))
-        records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(0, 2)]
-        records.extend([{'id': idx, 'deleted': True, 'last_modified': 42}
-                        for idx in range(3, 5)])
-        self.patch(self.updater, 'get_source_records',
-                   return_value=(records, 1325))
+        self.patch(self.updater, "get_destination_records", return_value=([], 1324))
+        records = [{"id": idx, "foo": "bar %s" % idx} for idx in range(0, 2)]
+        records.extend(
+            [{"id": idx, "deleted": True, "last_modified": 42} for idx in range(3, 5)]
+        )
+        self.patch(self.updater, "get_source_records", return_value=(records, 1325))
         self.updater.push_records_to_destination(DummyRequest())
         self.updater.get_source_records.assert_called_with(last_modified=1324)
         assert self.storage.update.call_count == 2
@@ -128,118 +123,125 @@ class LocalUpdaterTest(unittest.TestCase):
         # In case the record doesn't exists in the destination
         # a RecordNotFoundError is raised.
         self.storage.delete.side_effect = RecordNotFoundError()
-        self.patch(self.updater, 'get_destination_records',
-                   return_value=([], 1324))
-        records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(0, 2)]
-        records.extend([{'id': idx, 'deleted': True, 'last_modified': 42}
-                       for idx in range(3, 5)])
-        self.patch(self.updater, 'get_source_records',
-                   return_value=(records, 1325))
+        self.patch(self.updater, "get_destination_records", return_value=([], 1324))
+        records = [{"id": idx, "foo": "bar %s" % idx} for idx in range(0, 2)]
+        records.extend(
+            [{"id": idx, "deleted": True, "last_modified": 42} for idx in range(3, 5)]
+        )
+        self.patch(self.updater, "get_source_records", return_value=(records, 1325))
         # Calling the updater should not raise the RecordNotFoundError.
         self.updater.push_records_to_destination(DummyRequest())
 
     def test_push_records_to_destination_with_no_destination_changes(self):
-        self.patch(self.updater, 'get_destination_records',
-                   return_value=([], None))
-        records = [{'id': idx, 'foo': 'bar %s' % idx} for idx in range(1, 4)]
-        self.patch(self.updater, 'get_source_records',
-                   return_value=(records, 1325))
+        self.patch(self.updater, "get_destination_records", return_value=([], None))
+        records = [{"id": idx, "foo": "bar %s" % idx} for idx in range(1, 4)]
+        self.patch(self.updater, "get_source_records", return_value=(records, 1325))
         self.updater.push_records_to_destination(DummyRequest())
         self.updater.get_source_records.assert_called_with(last_modified=None)
         assert self.storage.update.call_count == 3
 
     def test_set_destination_signature_modifies_the_destination_collection(self):
-        self.storage.get.return_value = {'id': 1234, 'last_modified': 1234}
-        self.updater.set_destination_signature(mock.sentinel.signature,
-                                               {},
-                                               DummyRequest())
+        self.storage.get.return_value = {"id": 1234, "last_modified": 1234}
+        self.updater.set_destination_signature(
+            mock.sentinel.signature, {}, DummyRequest()
+        )
 
         self.storage.update.assert_called_with(
-            resource_name='collection',
-            object_id='destcollection',
-            parent_id='/buckets/destbucket',
-            obj={
-                'id': 1234,
-                'signature': mock.sentinel.signature
-            })
+            resource_name="collection",
+            object_id="destcollection",
+            parent_id="/buckets/destbucket",
+            obj={"id": 1234, "signature": mock.sentinel.signature},
+        )
 
     def test_set_destination_signature_copies_kinto_admin_ui_fields(self):
-        self.storage.get.return_value = {'id': 1234, 'sort': '-age', 'last_modified': 1234}
-        self.updater.set_destination_signature(mock.sentinel.signature,
-                                               {'displayFields': ['name'], 'sort': 'size'},
-                                               DummyRequest())
+        self.storage.get.return_value = {
+            "id": 1234,
+            "sort": "-age",
+            "last_modified": 1234,
+        }
+        self.updater.set_destination_signature(
+            mock.sentinel.signature,
+            {"displayFields": ["name"], "sort": "size"},
+            DummyRequest(),
+        )
 
         self.storage.update.assert_called_with(
-            resource_name='collection',
-            object_id='destcollection',
-            parent_id='/buckets/destbucket',
+            resource_name="collection",
+            object_id="destcollection",
+            parent_id="/buckets/destbucket",
             obj={
-                'id': 1234,
-                'signature': mock.sentinel.signature,
-                'sort': '-age',
-                'displayFields': ['name']
-            })
+                "id": 1234,
+                "signature": mock.sentinel.signature,
+                "sort": "-age",
+                "displayFields": ["name"],
+            },
+        )
 
     def test_update_source_status_modifies_the_source_collection(self):
-        self.storage.get.return_value = {'id': 1234, 'last_modified': 1234,
-                                         'status': 'to-sign'}
+        self.storage.get.return_value = {
+            "id": 1234,
+            "last_modified": 1234,
+            "status": "to-sign",
+        }
 
         with mock.patch("kinto_signer.updater.datetime") as mocked:
             mocked.datetime.now().isoformat.return_value = "2018-04-09"
             self.updater.update_source_status(STATUS.SIGNED, DummyRequest())
 
         self.storage.update.assert_called_with(
-            resource_name='collection',
-            object_id='sourcecollection',
-            parent_id='/buckets/sourcebucket',
+            resource_name="collection",
+            object_id="sourcecollection",
+            parent_id="/buckets/sourcebucket",
             obj={
-                'id': 1234,
-                'last_review_by': 'basicauth:bob',
-                'last_review_date': '2018-04-09',
-                'last_signature_by': 'basicauth:bob',
-                'last_signature_date': '2018-04-09',
-                'status': "signed"
-            })
+                "id": 1234,
+                "last_review_by": "basicauth:bob",
+                "last_review_date": "2018-04-09",
+                "last_signature_by": "basicauth:bob",
+                "last_signature_date": "2018-04-09",
+                "status": "signed",
+            },
+        )
 
     def test_create_destination_updates_collection_permissions(self):
-        collection_uri = '/buckets/destbucket/collections/destcollection'
+        collection_uri = "/buckets/destbucket/collections/destcollection"
         request = DummyRequest()
         request.route_path.return_value = collection_uri
         self.updater.create_destination(request)
         request.registry.permission.replace_object_permissions.assert_called_with(
-            collection_uri,
-            {"read": ("system.Everyone",)})
+            collection_uri, {"read": ("system.Everyone",)}
+        )
 
     def test_create_destination_creates_bucket(self):
         request = DummyRequest()
         self.updater.create_destination(request)
         request.registry.storage.create.assert_any_call(
-            resource_name='bucket',
-            parent_id='',
-            obj={"id": 'destbucket'})
+            resource_name="bucket", parent_id="", obj={"id": "destbucket"}
+        )
 
     def test_create_destination_creates_collection(self):
-        bucket_id = '/buckets/destbucket'
+        bucket_id = "/buckets/destbucket"
         request = DummyRequest()
         self.updater.create_destination(request)
         request.registry.storage.create.assert_any_call(
-            resource_name='collection',
+            resource_name="collection",
             parent_id=bucket_id,
-            obj={"id": 'destcollection'})
+            obj={"id": "destcollection"},
+        )
 
     def test_sign_and_update_destination(self):
-        records = [{'id': idx, 'foo': 'bar %s' % idx, 'last_modified': idx}
-                   for idx in range(1, 3)]
+        records = [
+            {"id": idx, "foo": "bar %s" % idx, "last_modified": idx}
+            for idx in range(1, 3)
+        ]
         self.storage.list_all.return_value = records
 
-        self.patch(self.storage, 'update_records')
-        self.patch(self.updater, 'get_destination_records',
-                   return_value=([], '0'))
-        self.patch(self.updater, 'push_records_to_destination')
-        self.patch(self.updater, 'set_destination_signature')
-        self.patch(self.updater, 'invalidate_cloudfront_cache')
+        self.patch(self.storage, "update_records")
+        self.patch(self.updater, "get_destination_records", return_value=([], "0"))
+        self.patch(self.updater, "push_records_to_destination")
+        self.patch(self.updater, "set_destination_signature")
+        self.patch(self.updater, "invalidate_cloudfront_cache")
 
-        self.updater.sign_and_update_destination(DummyRequest(), {'id': 'source'})
+        self.updater.sign_and_update_destination(DummyRequest(), {"id": "source"})
 
         assert self.updater.get_destination_records.call_count == 1
         assert self.updater.push_records_to_destination.call_count == 1
@@ -248,11 +250,11 @@ class LocalUpdaterTest(unittest.TestCase):
 
     def test_refresh_signature_does_not_push_records(self):
         self.storage.list_all.return_value = []
-        self.patch(self.updater, 'set_destination_signature')
-        self.patch(self.updater, 'push_records_to_destination')
-        self.patch(self.updater, 'invalidate_cloudfront_cache')
+        self.patch(self.updater, "set_destination_signature")
+        self.patch(self.updater, "push_records_to_destination")
+        self.patch(self.updater, "invalidate_cloudfront_cache")
 
-        self.updater.refresh_signature(DummyRequest(), 'signed')
+        self.updater.refresh_signature(DummyRequest(), "signed")
 
         assert self.updater.set_destination_signature.call_count == 1
         assert self.updater.push_records_to_destination.call_count == 0
@@ -261,55 +263,57 @@ class LocalUpdaterTest(unittest.TestCase):
 
     def test_refresh_signature_restores_status_on_source(self):
         self.storage.list_all.return_value = []
-        with mock.patch('kinto_signer.updater.datetime') as mocked:
+        with mock.patch("kinto_signer.updater.datetime") as mocked:
             mocked.datetime.now.return_value = datetime.datetime(2010, 10, 31)
 
-            self.updater.refresh_signature(DummyRequest(), 'work-in-progress')
+            self.updater.refresh_signature(DummyRequest(), "work-in-progress")
 
         new_attrs = {
-            'status': 'work-in-progress',
-            'last_signature_by': 'basicauth:bob',
-            'last_signature_date': '2010-10-31T00:00:00'
+            "status": "work-in-progress",
+            "last_signature_by": "basicauth:bob",
+            "last_signature_date": "2010-10-31T00:00:00",
         }
-        self.storage.update.assert_any_call(resource_name='collection',
-                                            parent_id='/buckets/sourcebucket',
-                                            object_id='sourcecollection',
-                                            obj=new_attrs)
+        self.storage.update.assert_any_call(
+            resource_name="collection",
+            parent_id="/buckets/sourcebucket",
+            object_id="sourcecollection",
+            obj=new_attrs,
+        )
 
     def test_if_distribution_id_a_cloudfront_invalidation_request_is_triggered(self):
         request = mock.MagicMock()
-        request.registry.settings = {'signer.distribution_id': 'DWIGHTENIS'}
-        with mock.patch('boto3.client') as boto3_client:
-            self.updater.invalidate_cloudfront_cache(request, 'tz_1234')
+        request.registry.settings = {"signer.distribution_id": "DWIGHTENIS"}
+        with mock.patch("boto3.client") as boto3_client:
+            self.updater.invalidate_cloudfront_cache(request, "tz_1234")
             call_args = boto3_client.return_value.create_invalidation.call_args
             params = call_args[1]
-            assert params['DistributionId'] == "DWIGHTENIS"
-            assert params['InvalidationBatch']['CallerReference'].startswith('tz_1234-')
-            assert params['InvalidationBatch']['Paths'] == {
-                'Quantity': 1,
-                'Items': ['/v1/*']
+            assert params["DistributionId"] == "DWIGHTENIS"
+            assert params["InvalidationBatch"]["CallerReference"].startswith("tz_1234-")
+            assert params["InvalidationBatch"]["Paths"] == {
+                "Quantity": 1,
+                "Items": ["/v1/*"],
             }
 
     def test_does_not_fail_when_cache_invalidation_does(self):
         request = mock.MagicMock()
-        request.registry.settings = {'signer.distribution_id': 'DWIGHTENIS'}
-        with mock.patch('boto3.client') as boto3_client:
+        request.registry.settings = {"signer.distribution_id": "DWIGHTENIS"}
+        with mock.patch("boto3.client") as boto3_client:
             boto3_client.return_value.create_invalidation.side_effect = ValueError
-            self.updater.invalidate_cloudfront_cache(request, 'tz_1234')
+            self.updater.invalidate_cloudfront_cache(request, "tz_1234")
 
     def test_invalidation_paths_can_be_configured(self):
         request = mock.MagicMock()
         request.registry.settings = {
-            'signer.distribution_id': 'DWIGHTENIS',
-            'signer.invalidation_paths': '/v1/blocklists* '
-                                         '/v1/buckets/{bucket_id}/collections/{collection_id}*'
+            "signer.distribution_id": "DWIGHTENIS",
+            "signer.invalidation_paths": "/v1/blocklists* "
+            "/v1/buckets/{bucket_id}/collections/{collection_id}*",
         }
-        with mock.patch('boto3.client') as boto3_client:
-            self.updater.invalidate_cloudfront_cache(request, 'tz_1234')
+        with mock.patch("boto3.client") as boto3_client:
+            self.updater.invalidate_cloudfront_cache(request, "tz_1234")
             call_args = boto3_client.return_value.create_invalidation.call_args
             params = call_args[1]
-            assert params['InvalidationBatch']['Paths']['Quantity'] == 2
-            assert params['InvalidationBatch']['Paths']['Items'] == [
-                '/v1/blocklists*',
-                '/v1/buckets/destbucket/collections/destcollection*'
+            assert params["InvalidationBatch"]["Paths"]["Quantity"] == 2
+            assert params["InvalidationBatch"]["Paths"]["Items"] == [
+                "/v1/blocklists*",
+                "/v1/buckets/destbucket/collections/destcollection*",
             ]

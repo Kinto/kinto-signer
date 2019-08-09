@@ -1,0 +1,4 @@
+therapist
+black
+flake8
+setuptools

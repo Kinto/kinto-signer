@@ -9,12 +9,15 @@ from pyramid.interfaces import IAuthorizationPolicy
 
 from kinto_signer.updater import LocalUpdater, TRACKING_FIELDS
 from kinto_signer import events as signer_events
-from kinto_signer.utils import (STATUS, PLUGIN_USERID,
-                                ensure_resource_exists)
+from kinto_signer.utils import STATUS, PLUGIN_USERID, ensure_resource_exists
 
 
-REVIEW_SETTINGS = ("reviewers_group", "editors_group",
-                   "to_review_enabled", "group_check_enabled")
+REVIEW_SETTINGS = (
+    "reviewers_group",
+    "editors_group",
+    "to_review_enabled",
+    "group_check_enabled",
+)
 
 
 def raise_invalid(**kwargs):
@@ -29,9 +32,9 @@ def raise_forbidden(**kwargs):
 
 def pick_resource_and_signer(request, resources, bucket_id, collection_id):
     bucket_key = instance_uri(request, "bucket", id=bucket_id)
-    collection_key = instance_uri(request, "collection",
-                                  bucket_id=bucket_id,
-                                  id=collection_id)
+    collection_key = instance_uri(
+        request, "collection", bucket_id=bucket_id, id=collection_id
+    )
 
     resource = signer = None
 
@@ -75,7 +78,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
     """
     payload = event.payload
 
-    is_new_collection = payload['action'] == ACTIONS.CREATE.value
+    is_new_collection = payload["action"] == ACTIONS.CREATE.value
 
     current_user_id = event.request.prefixed_userid
     if current_user_id == PLUGIN_USERID:
@@ -86,38 +89,50 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
     impacted_objects = list(event.impacted_objects)
 
     for impacted in impacted_objects:
-        new_collection = impacted['new']
-        old_collection = impacted.get('old', {})
+        new_collection = impacted["new"]
+        old_collection = impacted.get("old", {})
 
         # Only sign the configured resources.
-        resource, signer = pick_resource_and_signer(event.request, resources,
-                                                    bucket_id=payload['bucket_id'],
-                                                    collection_id=new_collection['id'])
+        resource, signer = pick_resource_and_signer(
+            event.request,
+            resources,
+            bucket_id=payload["bucket_id"],
+            collection_id=new_collection["id"],
+        )
         if resource is None:
             continue
 
-        updater = LocalUpdater(signer=signer,
-                               storage=event.request.registry.storage,
-                               permission=event.request.registry.permission,
-                               source=resource['source'],
-                               destination=resource['destination'])
+        updater = LocalUpdater(
+            signer=signer,
+            storage=event.request.registry.storage,
+            permission=event.request.registry.permission,
+            source=resource["source"],
+            destination=resource["destination"],
+        )
 
-        uri = instance_uri(event.request, "collection", bucket_id=payload['bucket_id'],
-                           id=new_collection['id'])
+        uri = instance_uri(
+            event.request,
+            "collection",
+            bucket_id=payload["bucket_id"],
+            id=new_collection["id"],
+        )
 
-        has_review_enabled = ('preview' in resource and
-                              resource.get('to_review_enabled', to_review_enabled))
+        has_review_enabled = "preview" in resource and resource.get(
+            "to_review_enabled", to_review_enabled
+        )
 
         payload = payload.copy()
         payload["uri"] = uri
-        payload["collection_id"] = new_collection['id']
+        payload["collection_id"] = new_collection["id"]
 
         review_event_cls = None
-        review_event_kw = dict(request=event.request,
-                               payload=payload,
-                               impacted_objects=[impacted],
-                               resource=resource,
-                               original_event=event)
+        review_event_kw = dict(
+            request=event.request,
+            payload=payload,
+            impacted_objects=[impacted],
+            resource=resource,
+            original_event=event,
+        )
 
         new_status = new_collection.get("status")
         old_status = old_collection.get("status")
@@ -127,35 +142,40 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
 
         if is_new_collection:
             if has_review_enabled:
-                updater.destination = resource['preview']
-                updater.sign_and_update_destination(event.request,
-                                                    source_attributes=new_collection,
-                                                    next_source_status=None)
-            updater.destination = resource['destination']
-            updater.sign_and_update_destination(event.request,
-                                                source_attributes=new_collection,
-                                                next_source_status=None)
+                updater.destination = resource["preview"]
+                updater.sign_and_update_destination(
+                    event.request,
+                    source_attributes=new_collection,
+                    next_source_status=None,
+                )
+            updater.destination = resource["destination"]
+            updater.sign_and_update_destination(
+                event.request, source_attributes=new_collection, next_source_status=None
+            )
 
         if old_status == new_status:
             continue
 
         if new_status == STATUS.TO_SIGN:
             # Run signature process (will set `last_reviewer` field).
-            updater.destination = resource['destination']
+            updater.destination = resource["destination"]
             changes_count = updater.sign_and_update_destination(
                 event.request,
                 source_attributes=new_collection,
-                previous_source_status=old_status)
+                previous_source_status=old_status,
+            )
 
             if old_status == STATUS.SIGNED:
                 # When we refresh the signature, it is mainly in order to make sure that
                 # the latest signer certificate was used. When a preview collection
                 # is configured, we also want to refresh its signature.
                 if has_review_enabled:
-                    updater.destination = resource['preview']
-                    updater.sign_and_update_destination(event.request,
-                                                        source_attributes=new_collection,
-                                                        previous_source_status=old_status)
+                    updater.destination = resource["preview"]
+                    updater.sign_and_update_destination(
+                        event.request,
+                        source_attributes=new_collection,
+                        previous_source_status=old_status,
+                    )
             else:
                 review_event_cls = signer_events.ReviewApproved
                 review_event_kw["changes_count"] = changes_count
@@ -163,10 +183,12 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
         elif new_status == STATUS.TO_REVIEW:
             if has_review_enabled:
                 # If preview collection: update and sign preview collection
-                updater.destination = resource['preview']
-                updater.sign_and_update_destination(event.request,
-                                                    source_attributes=new_collection,
-                                                    next_source_status=STATUS.TO_REVIEW)
+                updater.destination = resource["preview"]
+                updater.sign_and_update_destination(
+                    event.request,
+                    source_attributes=new_collection,
+                    next_source_status=STATUS.TO_REVIEW,
+                )
             else:
                 # If no preview collection: just track `last_editor`
                 updater.update_source_review_request_by(event.request)
@@ -178,13 +200,15 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
         elif new_status == STATUS.TO_REFRESH:
             updater.refresh_signature(event.request, next_source_status=old_status)
             if has_review_enabled:
-                updater.destination = resource['preview']
+                updater.destination = resource["preview"]
                 updater.refresh_signature(event.request, next_source_status=old_status)
 
         # Notify request of review.
         if review_event_cls:
             review_event = review_event_cls(**review_event_kw)
-            event.request.bound_data.setdefault('kinto_signer.events', []).append(review_event)
+            event.request.bound_data.setdefault("kinto_signer.events", []).append(
+                review_event
+            )
 
 
 def send_signer_events(event):
@@ -192,13 +216,19 @@ def send_signer_events(event):
     ``AfterResourceChanged`` event so that review events are sent only if the transaction
     was committed.
     """
-    review_events = event.request.bound_data.pop('kinto_signer.events', [])
+    review_events = event.request.bound_data.pop("kinto_signer.events", [])
     for review_event in review_events:
         event.request.registry.notify(review_event)
 
 
-def check_collection_status(event, resources, group_check_enabled,
-                            to_review_enabled, editors_group, reviewers_group):
+def check_collection_status(
+    event,
+    resources,
+    group_check_enabled,
+    to_review_enabled,
+    editors_group,
+    reviewers_group,
+):
     """Make sure status changes are allowed.
     """
     payload = event.payload
@@ -217,24 +247,31 @@ def check_collection_status(event, resources, group_check_enabled,
         new_status = new_collection.get("status")
 
         # Skip if collection is not configured for review.
-        resource, _ = pick_resource_and_signer(event.request, resources,
-                                               bucket_id=payload["bucket_id"],
-                                               collection_id=new_collection["id"])
+        resource, _ = pick_resource_and_signer(
+            event.request,
+            resources,
+            bucket_id=payload["bucket_id"],
+            collection_id=new_collection["id"],
+        )
         if resource is None:
             continue
 
         # to-review and group checking.
         _to_review_enabled = resource.get("to_review_enabled", to_review_enabled)
         _group_check_enabled = resource.get("group_check_enabled", group_check_enabled)
-        _editors_group = resource_group(resource, "editors_group", default=editors_group)
-        _reviewers_group = resource_group(resource, "reviewers_group", default=reviewers_group)
+        _editors_group = resource_group(
+            resource, "editors_group", default=editors_group
+        )
+        _reviewers_group = resource_group(
+            resource, "reviewers_group", default=reviewers_group
+        )
         # Member of groups have their URIs in their principals.
-        editors_group_uri = instance_uri(event.request, "group",
-                                         bucket_id=payload["bucket_id"],
-                                         id=_editors_group)
-        reviewers_group_uri = instance_uri(event.request, "group",
-                                           bucket_id=payload["bucket_id"],
-                                           id=_reviewers_group)
+        editors_group_uri = instance_uri(
+            event.request, "group", bucket_id=payload["bucket_id"], id=_editors_group
+        )
+        reviewers_group_uri = instance_uri(
+            event.request, "group", bucket_id=payload["bucket_id"], id=_reviewers_group
+        )
 
         if old_status == new_status:
             continue
@@ -296,9 +333,12 @@ def check_collection_tracking(event, resources):
         old_collection = impacted.get("old", {})
         new_collection = impacted["new"]
 
-        resource, _ = pick_resource_and_signer(event.request, resources,
-                                               bucket_id=event.payload["bucket_id"],
-                                               collection_id=new_collection["id"])
+        resource, _ = pick_resource_and_signer(
+            event.request,
+            resources,
+            bucket_id=event.payload["bucket_id"],
+            collection_id=new_collection["id"],
+        )
         # Skip if resource is not configured.
         if resource is None:
             continue
@@ -313,18 +353,23 @@ def check_collection_tracking(event, resources):
 def set_work_in_progress_status(event, resources):
     """Put the status in work-in-progress if was signed.
     """
-    resource, signer = pick_resource_and_signer(event.request, resources,
-                                                bucket_id=event.payload["bucket_id"],
-                                                collection_id=event.payload["collection_id"])
+    resource, signer = pick_resource_and_signer(
+        event.request,
+        resources,
+        bucket_id=event.payload["bucket_id"],
+        collection_id=event.payload["collection_id"],
+    )
     # Skip if resource is not configured.
     if resource is None:
         return
 
-    updater = LocalUpdater(signer=signer,
-                           storage=event.request.registry.storage,
-                           permission=event.request.registry.permission,
-                           source=resource['source'],
-                           destination=resource['destination'])
+    updater = LocalUpdater(
+        signer=signer,
+        storage=event.request.registry.storage,
+        permission=event.request.registry.permission,
+        source=resource["source"],
+        destination=resource["destination"],
+    )
     updater.update_source_status(STATUS.WORK_IN_PROGRESS, event.request)
 
 
@@ -344,39 +389,54 @@ def create_editors_reviewers_groups(event, resources, editors_group, reviewers_g
         new_collection = impacted["new"]
 
         # Skip if collection is not configured for review.
-        resource, _ = pick_resource_and_signer(event.request, resources,
-                                               bucket_id=event.payload["bucket_id"],
-                                               collection_id=new_collection["id"])
+        resource, _ = pick_resource_and_signer(
+            event.request,
+            resources,
+            bucket_id=event.payload["bucket_id"],
+            collection_id=new_collection["id"],
+        )
         if resource is None:
             continue
 
-        _editors_group = resource_group(resource, "editors_group", default=editors_group)
-        _reviewers_group = resource_group(resource, "reviewers_group", default=reviewers_group)
+        _editors_group = resource_group(
+            resource, "editors_group", default=editors_group
+        )
+        _reviewers_group = resource_group(
+            resource, "reviewers_group", default=reviewers_group
+        )
 
-        required_perms = authz.get_bound_permissions(bucket_uri, 'group:create')
+        required_perms = authz.get_bound_permissions(bucket_uri, "group:create")
         permission = event.request.registry.permission
         if not permission.check_permission(principals, required_perms):
             return
 
-        group_perms = {'write': [current_user_id]}
-        for group, members in ((_editors_group, [current_user_id]), (_reviewers_group, [])):
-            ensure_resource_exists(request=event.request,
-                                   resource_name='group',
-                                   parent_id=bucket_uri,
-                                   obj={'id': group, 'members': members},
-                                   permissions=group_perms,
-                                   matchdict={'bucket_id': bid, 'id': group})
+        group_perms = {"write": [current_user_id]}
+        for group, members in (
+            (_editors_group, [current_user_id]),
+            (_reviewers_group, []),
+        ):
+            ensure_resource_exists(
+                request=event.request,
+                resource_name="group",
+                parent_id=bucket_uri,
+                obj={"id": group, "members": members},
+                permissions=group_perms,
+                matchdict={"bucket_id": bid, "id": group},
+            )
 
         # Allow those groups to write to the source collection.
         permission = event.request.registry.permission
-        collection_uri = instance_uri(event.request, "collection",
-                                      bucket_id=bid,
-                                      id=resource["source"]["collection"])
+        collection_uri = instance_uri(
+            event.request,
+            "collection",
+            bucket_id=bid,
+            id=resource["source"]["collection"],
+        )
         for group in (_editors_group, _reviewers_group):
-            group_principal = instance_uri(event.request, "group",
-                                           bucket_id=bid,
-                                           id=group)
-            permission.add_principal_to_ace(collection_uri, 'write', group_principal)
+            group_principal = instance_uri(
+                event.request, "group", bucket_id=bid, id=group
+            )
+            permission.add_principal_to_ace(collection_uri, "write", group_principal)
 
 
 def cleanup_preview_destination(event, resources):
@@ -385,9 +445,12 @@ def cleanup_preview_destination(event, resources):
     for impacted in event.impacted_objects:
         old_collection = impacted["old"]
 
-        resource, signer = pick_resource_and_signer(event.request, resources,
-                                                    bucket_id=event.payload["bucket_id"],
-                                                    collection_id=old_collection["id"])
+        resource, signer = pick_resource_and_signer(
+            event.request,
+            resources,
+            bucket_id=event.payload["bucket_id"],
+            collection_id=old_collection["id"],
+        )
         if resource is None:
             continue
 
@@ -396,20 +459,28 @@ def cleanup_preview_destination(event, resources):
                 continue
             bid = resource[k]["bucket"]
             cid = resource[k]["collection"]
-            collection_uri = instance_uri(event.request, "collection", bucket_id=bid, id=cid)
-            storage.delete_all(resource_name="record", parent_id=collection_uri, with_deleted=True)
+            collection_uri = instance_uri(
+                event.request, "collection", bucket_id=bid, id=cid
+            )
+            storage.delete_all(
+                resource_name="record", parent_id=collection_uri, with_deleted=True
+            )
 
-            updater = LocalUpdater(signer=signer,
-                                   storage=storage,
-                                   permission=event.request.registry.permission,
-                                   source=resource['source'],
-                                   destination=resource[k])
+            updater = LocalUpdater(
+                signer=signer,
+                storage=storage,
+                permission=event.request.registry.permission,
+                source=resource["source"],
+                destination=resource[k],
+            )
 
             # At this point, the DELETE event was sent for the source collection,
             # but the source records may not have been deleted yet (it happens in an event
             # listener too). That's why we don't copy the records otherwise it will
             # recreate the records that were just deleted.
-            updater.sign_and_update_destination(event.request,
-                                                source_attributes=old_collection,
-                                                next_source_status=None,
-                                                push_records=False)
+            updater.sign_and_update_destination(
+                event.request,
+                source_attributes=old_collection,
+                next_source_status=None,
+                push_records=False,
+            )

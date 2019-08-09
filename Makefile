@@ -38,6 +38,9 @@ tests-once: install-dev
 tests: install-dev
 	$(VENV)/bin/tox
 
+black: install-dev
+	$(VENV)/bin/black kinto_signer tests
+
 clean:
 	find . -name '*.pyc' -delete
 	find . -name '__pycache__' -type d | xargs rm -fr

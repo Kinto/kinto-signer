@@ -196,6 +196,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
             # If some changes were effectively rolledback, send an event.
             if changes_count > 0:
                 review_event_cls = signer_events.ReviewCanceled
+                review_event_kw["changes_count"] = changes_count
 
         # Notify request of review.
         if review_event_cls:

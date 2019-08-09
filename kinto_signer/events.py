@@ -26,4 +26,6 @@ class ReviewApproved(BaseEvent):
 
 
 class ReviewCanceled(BaseEvent):
-    pass
+    def __init__(self, changes_count, **kwargs):
+        super().__init__(**kwargs)
+        self.changes_count = changes_count

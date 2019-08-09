@@ -393,6 +393,16 @@ During the review process, the *source* collection metadata will receive the fol
   (ie. status changed directly from ``signed`` to ``to-sign``).
 
 
+Rollback changes
+----------------
+
+In order to reset the source (and preview) collection with the content of the destination collection (ie. last approved content), set the source to ``to-rollback``.
+
+.. code-block:: bash
+
+    echo '{"data": {"status": "to-rollback"}}' | http PATCH http://0.0.0.0:8888/v1/buckets/source/collections/collection1 --auth user:pass
+
+
 Refresh signature
 -----------------
 
@@ -427,6 +437,7 @@ The following events are thrown:
 * ``kinto_signer.events.ReviewRequested``
 * ``kinto_signer.events.ReviewRejected``
 * ``kinto_signer.events.ReviewApproved``
+* ``kinto_signer.events.ReviewCanceled`` (when source is rolledback)
 
 .. important::
 

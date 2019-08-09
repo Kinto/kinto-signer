@@ -171,7 +171,7 @@ class LocalUpdater(object):
                     self.storage.delete(
                         object_id=record[FIELD_ID],
                         last_modified=record[FIELD_LAST_MODIFIED],
-                        **storage_kwargs
+                        **storage_kwargs,
                     )
                     changed_count += 1
 

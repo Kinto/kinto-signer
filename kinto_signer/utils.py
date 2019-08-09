@@ -96,12 +96,14 @@ def parse_resources(raw_resources):
             )
 
         # Resources info is returned as a mapping by bucket/collection URI.
+        bid = source["bucket"]
         if source["collection"] is None:
             # Per bucket.
-            key = f"/buckets/{source['bucket']}"
+            key = f"/buckets/{bid}"
         else:
+            cid = source["collection"]
             # For a specific collection.
-            key = f"/buckets/{source['bucket']}/collections/{source['collection']}"
+            key = f"/buckets/{bid}/collections/{cid}"
 
         # We can't have the same source twice.
         if key in resources:

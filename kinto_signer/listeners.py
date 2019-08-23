@@ -4,6 +4,7 @@ from kinto.core import errors
 from kinto.core.events import ACTIONS
 from kinto.core.utils import instance_uri
 from kinto.core.errors import ERRORS
+from kinto.core.storage.exceptions import ObjectNotFoundError
 from pyramid import httpexceptions
 from pyramid.interfaces import IAuthorizationPolicy
 
@@ -299,21 +300,37 @@ def check_collection_status(
 
 
 def prevent_collection_delete(event, resources):
-    error_msg = "Collection is in use."
+    request = event.request
     bucket_id = event.payload["bucket_id"]
     for impacted in event.impacted_objects:
         collection_id = impacted["old"]["id"]
 
+        in_used = None
         for resource in resources.values():
             destination = resource["destination"]
             if destination["bucket"] == bucket_id:
                 if destination["collection"] is None or destination["collection"] == collection_id:
-                    raise_forbidden(message=error_msg)
+                    in_used = resource
             if "preview" in resource:
                 preview = resource["preview"]
                 if preview["bucket"] == bucket_id:
                     if preview["collection"] is None or preview["collection"] == collection_id:
-                        raise_forbidden(message=error_msg)
+                        in_used = resource
+        if in_used:
+            source_bucket_uri = instance_uri(
+                event.request, "bucket", id=in_used["source"]["bucket"]
+            )
+            source_collection_id = in_used["source"]["collection"] or collection_id
+            try:
+                request.registry.storage.get(
+                    resource_name="collection",
+                    parent_id=source_bucket_uri,
+                    object_id=source_collection_id,
+                )
+                raise_forbidden(message="Collection is in use.")
+            except ObjectNotFoundError:
+                # Do not prevent delete of preview/destination if source does not exist.
+                pass
 
 
 def check_collection_tracking(event, resources):

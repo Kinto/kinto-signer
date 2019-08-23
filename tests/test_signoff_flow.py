@@ -782,6 +782,10 @@ class CollectionDelete(SignoffWebTest, unittest.TestCase):
     def test_cannot_delete_destination_collection_if_used(self):
         self.app.delete(self.destination_collection, headers=self.headers, status=403)
 
+    def test_can_delete_destination_if_source_is_deleted(self):
+        self.app.delete(self.source_collection, headers=self.headers)
+        self.app.delete(self.preview_collection, headers=self.headers)
+
     def test_can_delete_source_collection(self):
         self.app.delete(self.source_collection, headers=self.headers)
 

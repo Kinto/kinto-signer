@@ -220,6 +220,13 @@ def includeme(config):
         for_resources=("collection",),
     )
 
+    config.add_subscriber(
+        functools.partial(listeners.prevent_collection_delete, resources=resources),
+        ResourceChanged,
+        for_actions=(ACTIONS.DELETE,),
+        for_resources=("collection",),
+    )
+
     sign_data_listener = functools.partial(
         listeners.sign_collection_data, resources=resources, **global_settings
     )

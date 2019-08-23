@@ -298,6 +298,24 @@ def check_collection_status(
             raise_invalid(message="Invalid status '%s'" % new_status)
 
 
+def prevent_collection_delete(event, resources):
+    error_msg = "Collection is in use."
+    bucket_id = event.payload["bucket_id"]
+    for impacted in event.impacted_objects:
+        collection_id = impacted["old"]["id"]
+
+        for resource in resources.values():
+            destination = resource["destination"]
+            if destination["bucket"] == bucket_id:
+                if destination["collection"] is None or destination["collection"] == collection_id:
+                    raise_forbidden(message=error_msg)
+            if "preview" in resource:
+                preview = resource["preview"]
+                if preview["bucket"] == bucket_id:
+                    if preview["collection"] is None or preview["collection"] == collection_id:
+                        raise_forbidden(message=error_msg)
+
+
 def check_collection_tracking(event, resources):
     """Make sure tracking fields are not changed manually/removed.
     """

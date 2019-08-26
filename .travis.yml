@@ -23,8 +23,8 @@ matrix:
     - env:
         - TOX_ENV=functional
       before_install:
-        - docker pull mozilla/autograph
-        - docker run -v `pwd`/tests/config/autograph.yaml:/app/autograph.yaml -d -p 8000:8000 mozilla/autograph
+        - docker pull mozilla/autograph:3.4.1
+        - docker run -v `pwd`/tests/config/autograph.yaml:/app/autograph.yaml -d -p 8000:8000 mozilla/autograph:3.4.1
       install:
         - pip install tox
         - make install
@@ -34,8 +34,8 @@ matrix:
         - TOX_ENV=functional
           WITH=kinto-master
       before_install:
-        - docker pull mozilla/autograph
-        - docker run -v `pwd`/tests/config/autograph.yaml:/app/autograph.yaml -d -p 8000:8000 mozilla/autograph
+        - docker pull mozilla/autograph:3.4.1
+        - docker run -v `pwd`/tests/config/autograph.yaml:/app/autograph.yaml -d -p 8000:8000 mozilla/autograph:3.4.1
       install:
         - pip install tox
         - make install

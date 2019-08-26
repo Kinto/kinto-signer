@@ -911,6 +911,60 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
         assert len(records) == 0
 
 
+class CollectionDelete(SignoffWebTest, unittest.TestCase):
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
+
+        cls.preview_bucket = "/buckets/preview"
+        cls.preview_collection = cls.preview_bucket + "/collections/pcid"
+
+        settings["signer.to_review_enabled"] = "true"
+        settings["kinto.signer.resources"] = (
+            "%s -> %s -> %s"
+            % (cls.source_collection, cls.preview_collection, cls.destination_collection)
+            + "\n %s -> %s"
+            % (
+                cls.source_bucket + "/collections/s-no-preview",
+                cls.destination_bucket + "/collections/d-no-preview",
+            )
+            + "\n %s -> %s -> %s" % ("/buckets/a", "/buckets/b", "/buckets/c")
+        )
+        return settings
+
+    def setUp(self):
+        super(CollectionDelete, self).setUp()
+
+        self.app.put(self.destination_bucket + "/collections/exta", headers=self.headers)
+        self.app.put(self.preview_bucket + "/collections/p-no-preview", headers=self.headers)
+
+    def test_cannot_delete_preview_collection_if_used(self):
+        self.app.delete(self.preview_collection, headers=self.headers, status=403)
+
+    def test_cannot_delete_destination_collection_if_used(self):
+        self.app.delete(self.destination_collection, headers=self.headers, status=403)
+
+    def test_can_delete_destination_if_source_is_deleted(self):
+        self.app.delete(self.source_collection, headers=self.headers)
+        self.app.delete(self.preview_collection, headers=self.headers)
+
+    def test_can_delete_source_collection(self):
+        self.app.delete(self.source_collection, headers=self.headers)
+
+    def test_can_delete_preview_if_unused(self):
+        self.app.delete("/buckets/preview/collections/p-no-preview", headers=self.headers)
+
+    def test_can_delete_destination_if_unused(self):
+        self.app.delete(self.destination_bucket + "/collections/exta", headers=self.headers)
+
+    def test_per_bucket(self):
+        self.app.put("/buckets/a", headers=self.headers)
+        self.app.put("/buckets/a/collections/a", headers=self.headers)
+
+        self.app.delete("/buckets/b/collections/a", headers=self.headers, status=403)
+        self.app.delete("/buckets/c/collections/a", headers=self.headers, status=403)
+
+
 class NoReviewNoPreviewTest(SignoffWebTest, unittest.TestCase):
     """
     If review is disabled for a collection, we don't create the preview collection

@@ -1,6 +1,6 @@
 bcrypt==3.1.7
-boto3==1.9.203
-botocore==1.12.203
+boto3==1.9.215
+botocore==1.12.215
 certifi==2019.6.16
 cffi==1.12.3
 chardet==3.0.4
@@ -18,7 +18,7 @@ jmespath==0.9.4
 jsonpatch==1.24
 jsonpointer==2.0
 jsonschema==3.0.2
-kinto==13.2.2
+kinto==13.3.0
 logging-color-formatter==1.0.2
 mohawk==1.0.0
 PasteDeploy==2.0.1

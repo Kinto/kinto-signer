@@ -9,6 +9,7 @@ This document describes changes between each past release.
 **New Features**
 
 - Add StatsD counter for number of changes approved (fixes #606)
+- Prevent deletion of preview or destination if in use (fixes #641)
 
 **Internal changes**
 

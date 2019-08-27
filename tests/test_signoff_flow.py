@@ -627,6 +627,7 @@ class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
         resp = self.app.get(self.preview_collection + "/records", headers=self.headers)
         size_after = len(resp.json["data"])
         assert size_before != size_after
+        assert size_setup == size_after
 
     def test_preview_signature_is_refreshed(self):
         resp = self.app.get(self.preview_collection, headers=self.headers)

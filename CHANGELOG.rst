@@ -10,6 +10,7 @@ This document describes changes between each past release.
 
 - Add StatsD counter for number of changes approved (fixes #606)
 - Prevent deletion of preview or destination if in use (fixes #641)
+- Add ability to rollback changes (fixes #260)
 
 **Internal changes**
 

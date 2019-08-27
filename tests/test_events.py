@@ -265,6 +265,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         config.add_subscriber(on_signer_event, signer_events.ReviewRequested)
         config.add_subscriber(on_signer_event, signer_events.ReviewRejected)
         config.add_subscriber(on_signer_event, signer_events.ReviewApproved)
+        config.add_subscriber(on_signer_event, signer_events.ReviewCanceled)
 
         return super().make_app(config=config)
 
@@ -307,6 +308,25 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
             self.source_collection, {"data": {"status": "work-in-progress"}}, headers=self.headers
         )
         assert isinstance(self.events[-1], signer_events.ReviewRejected)
+
+    def test_review_cancelled_is_triggered(self):
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
+        )
+        assert isinstance(self.events[-1], signer_events.ReviewCanceled)
+
+    def test_review_cancelled_is_not_triggered_if_no_change(self):
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
+        )
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "work-in-progress"}}, headers=self.headers
+        )
+        del self.events[:]
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
+        )
+        assert len(self.events) == 0
 
     def test_review_requested_is_not_triggered_if_already_set(self):
         r = self.app.get(self.source_collection, headers=self.headers)

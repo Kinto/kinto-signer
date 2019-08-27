@@ -18,6 +18,7 @@ class STATUS(Enum):
     TO_SIGN = "to-sign"
     TO_REFRESH = "to-resign"
     TO_REVIEW = "to-review"
+    TO_ROLLBACK = "to-rollback"
     SIGNED = "signed"
 
     def __eq__(self, other):

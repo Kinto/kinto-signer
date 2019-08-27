@@ -30,10 +30,9 @@ class PostgresWebTest(BaseWebTest):
             fake_signature = "".join(random.sample(string.ascii_lowercase, 10))
             return [
                 {
-                    "signature": "",
+                    "signature": fake_signature,
                     "hash_algorithm": "",
                     "signature_encoding": "",
-                    "content-signature": fake_signature,
                     "x5u": "",
                 }
             ]
@@ -371,7 +370,7 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
         )
 
         resp = self.app.get(self.destination_collection, headers=self.headers)
-        before_signature = resp.json["data"]["signature"]["content-signature"]
+        before_signature = resp.json["data"]["signature"]["signature"]
 
         self.app.patch_json(
             self.source_collection, {"data": {"status": "to-resign"}}, headers=self.headers
@@ -380,7 +379,7 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
         assert resp.json["data"]["status"] == "work-in-progress"
 
         resp = self.app.get(self.destination_collection, headers=self.headers)
-        assert resp.json["data"]["signature"]["content-signature"] != before_signature
+        assert resp.json["data"]["signature"]["signature"] != before_signature
 
 
 class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
@@ -477,6 +476,170 @@ class TrackingFieldsTest(SignoffWebTest, unittest.TestCase):
             self.app.put_json(
                 self.source_collection, {"data": changed}, headers=self.headers, status=400
             )
+
+
+class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
+    @classmethod
+    def get_app_settings(cls, extras=None):
+        settings = super().get_app_settings(extras)
+
+        cls.preview_bucket = "/buckets/preview"
+        cls.preview_collection = cls.preview_bucket + "/collections/pcid"
+
+        settings["signer.to_review_enabled"] = "true"
+        settings["kinto.signer.resources"] = " -> ".join(
+            [cls.source_collection, cls.preview_collection, cls.destination_collection]
+        )
+        return settings
+
+    def setUp(self):
+        super().setUp()
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
+        )
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
+        )
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+
+        self.app.put_json(
+            self.source_collection + "/records/r1",
+            {"data": {"title": "Hallo"}},
+            headers=self.headers,
+        )
+        self.app.put_json(
+            self.source_collection + "/records/r2",
+            {"data": {"title": "Bon dia"}},
+            headers=self.headers,
+        )
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "work-in-progress"
+
+    def test_return_400_if_status_is_signed(self):
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
+        )
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
+        )
+
+        resp = self.app.patch_json(
+            self.source_collection,
+            {"data": {"status": "to-rollback"}},
+            headers=self.headers,
+            status=400,
+        )
+
+        assert resp.json["message"] == "Collection has no work-in-progress"
+
+    def test_rollbacks_if_no_pending_changes(self):
+        self.app.delete(self.source_collection + "/records/r1", headers=self.headers)
+        self.app.delete(self.source_collection + "/records/r2", headers=self.headers)
+
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
+        )
+
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+
+    def test_rollbacks_if_review_already_requested(self):
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
+        )
+
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
+        )
+
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["status"] == "signed"
+
+    def test_tracking_fields_are_updated(self):
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        before_date = resp.json["data"]["last_edit_date"]
+
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
+        )
+
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        after_date = resp.json["data"]["last_edit_date"]
+        assert before_date != after_date
+
+    def test_recreates_deleted_record(self):
+        resp = self.app.delete(
+            self.source_collection + "/records?_limit=1&_sort=last_modified", headers=self.headers
+        )
+        deleted_id = resp.json["data"][0]["id"]
+
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
+        )
+
+        self.app.get(
+            self.source_collection + f"/records/{deleted_id}", headers=self.headers, status=200
+        )
+
+    def test_reverts_updated_records(self):
+        resp = self.app.get(
+            self.source_collection + "/records?_limit=1&_sort=last_modified", headers=self.headers
+        )
+        update_id = resp.json["data"][0]["id"]
+        self.app.put_json(
+            self.source_collection + f"/records/{update_id}",
+            {"data": {"title": "Ave"}},
+            headers=self.headers,
+        )
+
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
+        )
+
+        resp = self.app.get(
+            self.source_collection + f"/records/{update_id}", headers=self.headers, status=200
+        )
+        assert resp.json["data"]["title"] == "hello"
+
+    def test_removes_created_records(self):
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
+        )
+
+        self.app.get(self.source_collection + f"/records/r1", headers=self.headers, status=404)
+        self.app.get(self.source_collection + f"/records/r2", headers=self.headers, status=404)
+
+    def test_also_resets_changes_on_preview(self):
+        resp = self.app.get(self.preview_collection + "/records", headers=self.headers)
+        size_setup = len(resp.json["data"])
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
+        )
+        resp = self.app.get(self.preview_collection + "/records", headers=self.headers)
+        size_before = len(resp.json["data"])
+        assert size_setup != size_before
+
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
+        )
+
+        resp = self.app.get(self.preview_collection + "/records", headers=self.headers)
+        size_after = len(resp.json["data"])
+        assert size_before != size_after
+        assert size_setup == size_after
+
+    def test_preview_signature_is_refreshed(self):
+        resp = self.app.get(self.preview_collection, headers=self.headers)
+        sign_before = resp.json["data"]["signature"]["signature"]
+
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
+        )
+
+        resp = self.app.get(self.preview_collection, headers=self.headers)
+        sign_after = resp.json["data"]["signature"]["signature"]
+        assert sign_before != sign_after
 
 
 class UserGroupsTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCase):

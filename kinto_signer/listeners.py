@@ -190,6 +190,22 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
                 updater.destination = resource["preview"]
                 updater.refresh_signature(event.request, next_source_status=old_status)
 
+        elif new_status == STATUS.TO_ROLLBACK:
+            # Reset source with destination content, and set status to SIGNED.
+            changes_count = updater.rollback_changes(event.request)
+            if has_review_enabled:
+                # Reset preview with destination content.
+                updater.source = resource["preview"]
+                changes_count += updater.rollback_changes(event.request, refresh_last_edit=False)
+                # Refresh signature for this new preview collection content.
+                updater.destination = resource["preview"]
+                # Without refreshing the source attributes.
+                updater.refresh_signature(event.request, next_source_status=None)
+            # If some changes were effectively rolledback, send an event.
+            if changes_count > 0:
+                review_event_cls = signer_events.ReviewCanceled
+                review_event_kw["changes_count"] = changes_count
+
         # Notify request of review.
         if review_event_cls:
             review_event = review_event_cls(**review_event_kw)
@@ -290,6 +306,11 @@ def check_collection_status(
             # Before here we would raise a 400 if the collection had never been
             # signed, but after some thought it does not really make sense.
             pass
+
+        # Rollback changes
+        elif new_status == STATUS.TO_ROLLBACK:
+            if old_status == STATUS.SIGNED:
+                raise_invalid(message="Collection has no work-in-progress")
 
         # Nobody can remove the status
         elif new_status is None:

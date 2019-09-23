@@ -326,32 +326,48 @@ def prevent_collection_delete(event, resources):
     for impacted in event.impacted_objects:
         collection_id = impacted["old"]["id"]
 
-        in_used = None
-        for resource in resources.values():
-            destination = resource["destination"]
-            if destination["bucket"] == bucket_id:
-                if destination["collection"] is None or destination["collection"] == collection_id:
-                    in_used = resource
-            if "preview" in resource:
-                preview = resource["preview"]
-                if preview["bucket"] == bucket_id:
-                    if preview["collection"] is None or preview["collection"] == collection_id:
-                        in_used = resource
-        if in_used:
-            source_bucket_uri = instance_uri(
-                event.request, "bucket", id=in_used["source"]["bucket"]
+        resources = copy.deepcopy(resources)
+        by_bucket = {
+            v["source"]["bucket"]: k
+            for k, v in resources.items()
+            if v["source"]["collection"] is None
+        }
+        for k, r in resources.items():
+            r_by_bucket = by_bucket.get(r["source"]["bucket"])
+            if r["source"]["collection"] == collection_id and r_by_bucket is not None:
+                resources[r_by_bucket] = r
+
+        in_use = None
+        for r in resources.values():
+            if r["destination"]["bucket"] == bucket_id:
+                if (
+                    r["destination"]["collection"] is None
+                    or r["destination"]["collection"] == collection_id
+                ):
+                    in_use = r
+            if "preview" in r and r["preview"]["bucket"] == bucket_id:
+                if (
+                    r["preview"]["collection"] is None
+                    or r["preview"]["collection"] == collection_id
+                ):
+                    in_use = r
+
+        if in_use is None:
+            # Can delete!
+            continue
+
+        source_bucket_uri = instance_uri(event.request, "bucket", id=in_use["source"]["bucket"])
+        source_collection_id = in_use["source"]["collection"] or collection_id
+        try:
+            request.registry.storage.get(
+                resource_name="collection",
+                parent_id=source_bucket_uri,
+                object_id=source_collection_id,
             )
-            source_collection_id = in_used["source"]["collection"] or collection_id
-            try:
-                request.registry.storage.get(
-                    resource_name="collection",
-                    parent_id=source_bucket_uri,
-                    object_id=source_collection_id,
-                )
-                raise_forbidden(message="Collection is in use.")
-            except ObjectNotFoundError:
-                # Do not prevent delete of preview/destination if source does not exist.
-                pass
+            raise_forbidden(message="Collection is in use.")
+        except ObjectNotFoundError:
+            # Do not prevent delete of preview/destination if source does not exist.
+            pass
 
 
 def check_collection_tracking(event, resources):

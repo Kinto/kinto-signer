@@ -34,6 +34,7 @@ class PostgresWebTest(BaseWebTest):
                     "hash_algorithm": "",
                     "signature_encoding": "",
                     "x5u": "",
+                    "ref": "",
                 }
             ]
 

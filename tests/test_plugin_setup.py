@@ -84,7 +84,7 @@ class HeartbeatTest(BaseWebTest, unittest.TestCase):
         patch = mock.patch("kinto_signer.signer.autograph.requests")
         self.mock = patch.start()
         self.addCleanup(patch.stop)
-        self.signature = {"signature": "", "x5u": "", "mode": ""}
+        self.signature = {"signature": "", "x5u": "", "mode": "", "ref": "abc"}
         self.mock.post.return_value.json.return_value = [self.signature]
 
     def test_heartbeat_is_exposed(self):
@@ -325,6 +325,7 @@ class BatchTest(BaseWebTest, unittest.TestCase):
                 "signature_encoding": "",
                 "content-signature": "",
                 "x5u": "",
+                "ref": "",
             }
         ]
 
@@ -402,6 +403,7 @@ class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):
                 "signature_encoding": "",
                 "content-signature": "",
                 "x5u": "",
+                "ref": "",
             }
         ]
 

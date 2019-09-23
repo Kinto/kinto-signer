@@ -4,6 +4,7 @@ import warnings
 
 import requests
 from requests_hawk import HawkAuth
+from kinto import logger
 
 from .base import SignerBase
 from ..utils import get_first_matching_setting
@@ -23,6 +24,9 @@ class AutographSigner(SignerBase):
         resp = requests.post(url, auth=self.auth, json=[{"input": b64_payload.decode("utf-8")}])
         resp.raise_for_status()
         signature_bundle = resp.json()[0]
+        logger.info(
+            "Obtained %s response from Autograph %s" % (resp.status, signature_bundle["ref"])
+        )
         return signature_bundle
 
 

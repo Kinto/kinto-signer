@@ -6,7 +6,9 @@ This document describes changes between each past release.
 5.2.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**New features**
+
+- Log Autograph requests references (#687)
 
 
 5.1.0 (2019-08-27)

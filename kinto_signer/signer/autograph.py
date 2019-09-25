@@ -25,7 +25,7 @@ class AutographSigner(SignerBase):
         resp.raise_for_status()
         signature_bundle = resp.json()[0]
         logger.info(
-            "Obtained %s response from Autograph %s" % (resp.status, signature_bundle["ref"])
+            "Obtained %s response from Autograph %s" % (resp.status_code, signature_bundle["ref"])
         )
         return signature_bundle
 

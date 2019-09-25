@@ -326,19 +326,19 @@ def prevent_collection_delete(event, resources):
     for impacted in event.impacted_objects:
         collection_id = impacted["old"]["id"]
 
-        resources = copy.deepcopy(resources)
+        _resources = copy.deepcopy(resources)
         by_bucket = {
             v["source"]["bucket"]: k
-            for k, v in resources.items()
+            for k, v in _resources.items()
             if v["source"]["collection"] is None
         }
-        for k, r in resources.items():
+        for k, r in _resources.items():
             r_by_bucket = by_bucket.get(r["source"]["bucket"])
             if r["source"]["collection"] == collection_id and r_by_bucket is not None:
-                resources[r_by_bucket] = r
+                _resources[r_by_bucket] = r
 
         in_use = None
-        for r in resources.values():
+        for r in _resources.values():
             if r["destination"]["bucket"] == bucket_id:
                 if (
                     r["destination"]["collection"] is None

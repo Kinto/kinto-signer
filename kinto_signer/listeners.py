@@ -320,42 +320,100 @@ def check_collection_status(
             raise_invalid(message="Invalid status '%s'" % new_status)
 
 
+def signer_resource_match(resource, bid, cid):
+    return resource["bucket"] == bid and (
+        resource["collection"] is None or resource["collection"] == cid
+    )
+
+
+def signer_impacts_resource(signer, bid, cid):
+    matches_destination = signer_resource_match(signer["destination"], bid, cid)
+    if matches_destination:
+        return True
+
+    if "preview" in signer:
+        matches_preview = signer_resource_match(signer["preview"], bid, cid)
+        if matches_preview:
+            return True
+
+    return False
+
+
 def prevent_collection_delete(event, resources):
     request = event.request
     bid = event.payload["bucket_id"]
     for impacted in event.impacted_objects:
         cid = impacted["old"]["id"]
 
-        _resources = copy.deepcopy(resources)
-
-        # Here we rewrite the resources list to handle situations like this:
-        # resources = {
-        #   workspace/None: workspace/None -> preview/None -> main/None
-        #   workspace/normandy: workspace/normandy -> main/normandy
-        # }
-        # We want explicitly defined collections to have predecence over
-        # per-bucket ones.
-        resource_keys_by_bucket = {
-            v["source"]["bucket"]: key
-            for key, v in _resources.items()
-            if v["source"]["collection"] is None
-        }
-        # If the targeted collection was explicitly defined, then we
-        # can ignore the per-bucket equivalent.
-        for k, r in _resources.items():
-            key = resource_keys_by_bucket.get(r["source"]["bucket"])
-            if key and r["source"]["collection"] == cid:
-                del _resources[key]
-
+        # Locate any collections that imply usage of this collection.
+        # If there's some path s -> p -> d for which this collection
+        # corresponds to p or d, we forbid deletion of this collection
+        # (it's "in use").
         in_use = None
-        for r in _resources.values():
-            d = r["destination"]
-            if d["bucket"] == bid and (d["collection"] is None or d["collection"] == cid):
-                in_use = r
-            if "preview" in r:
-                p = r["preview"]
-                if p["bucket"] == bid and (p["collection"] is None or p["collection"] == cid):
-                    in_use = r
+
+        # The most obvious path is if there is a signer that mentions
+        # this collection explicitly in p or d.
+        specific_signers = [
+            v
+            for v in resources.values()
+            if v["source"]["collection"] is not None and signer_impacts_resource(v, bid, cid)
+        ]
+
+        if specific_signers:
+            assert (
+                len(specific_signers) == 1
+            ), f"Inconsistent signers: multiple signers touch {bid} and {cid}"
+            in_use = specific_signers[0]
+
+        if not in_use:
+            # We identify bucket-wide signers for which p or d matches
+            # this collection -- in this case, editing the collection of
+            # the same name in s could trigger writes to p or d.
+            bucket_signers = [
+                v
+                for v in resources.values()
+                if v["source"]["collection"] is None and signer_impacts_resource(v, bid, cid)
+            ]
+            if bucket_signers:
+                assert (
+                    len(bucket_signers) == 1
+                ), f"Inconsistent signers: multiple signers touch {bid}"
+                in_use = bucket_signers[0]
+
+            if in_use:
+                # See if this bucket-wide signer is superseded by any
+                # specific-collection signers. A specific-collection
+                # signer counts as superseding a bucket-wide signer if
+                # the specific collection is in the same bucket as the
+                # bucket-wide signer, and the specific-collection
+                # signer has the same collection ID as the collection
+                # being deleted. In this case, we can ignore the
+                # bucket-wide s -> p -> d because the
+                # collection-specific signer specifies a different
+                # workflow for the collection that we thought to
+                # impact this one.
+                #
+                # Specific-collection signers that point *from* other
+                # collections to this one are handled explicitly, above.
+                #
+                # N.B. We can't use signer_impacts_resource here
+                # because we want to detect a signer for a
+                # specific source collection, regardless of whether it
+                # impacts the collection to be deleted or not. A good
+                # example where this comes up is where a
+                # specific-collection signer disables preview. We want
+                # to find this signer even though the preview
+                # collection is no longer being impacted.
+                for signer in resources.values():
+                    same_bucket = signer["source"]["bucket"] == in_use["source"]["bucket"]
+                    this_collection = signer["source"]["collection"] == cid
+                    if same_bucket and this_collection:
+                        # Clear the bucket-wide signer.
+                        # This signer either named this collection
+                        # explicitly (in which case it was handled
+                        # above), or it didn't (in which case the
+                        # collection is safe to be deleted).
+                        in_use = None
 
         if in_use is None:
             # Can delete!

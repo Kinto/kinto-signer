@@ -322,34 +322,39 @@ def check_collection_status(
 
 def prevent_collection_delete(event, resources):
     request = event.request
-    bucket_id = event.payload["bucket_id"]
+    bid = event.payload["bucket_id"]
     for impacted in event.impacted_objects:
-        collection_id = impacted["old"]["id"]
+        cid = impacted["old"]["id"]
 
         _resources = copy.deepcopy(resources)
-        by_bucket = {
-            v["source"]["bucket"]: k
-            for k, v in _resources.items()
+
+        # Here we rewrite the resources list to handle situations like this:
+        # resources = {
+        #   workspace/None: workspace/None -> preview/None -> main/None
+        #   workspace/normandy: workspace/normandy -> main/normandy
+        # }
+        # We want explicitly defined collections to have predecence over
+        # per-bucket ones.
+        resource_keys_by_bucket = {
+            v["source"]["bucket"]: key
+            for key, v in _resources.items()
             if v["source"]["collection"] is None
         }
+        # If the targeted collection was explicitly defined, then we
+        # can ignore the per-bucket equivalent.
         for k, r in _resources.items():
-            r_by_bucket = by_bucket.get(r["source"]["bucket"])
-            if r["source"]["collection"] == collection_id and r_by_bucket is not None:
-                _resources[r_by_bucket] = r
+            key = resource_keys_by_bucket.get(r["source"]["bucket"])
+            if key and r["source"]["collection"] == cid:
+                del _resources[key]
 
         in_use = None
         for r in _resources.values():
-            if r["destination"]["bucket"] == bucket_id:
-                if (
-                    r["destination"]["collection"] is None
-                    or r["destination"]["collection"] == collection_id
-                ):
-                    in_use = r
-            if "preview" in r and r["preview"]["bucket"] == bucket_id:
-                if (
-                    r["preview"]["collection"] is None
-                    or r["preview"]["collection"] == collection_id
-                ):
+            d = r["destination"]
+            if d["bucket"] == bid and (d["collection"] is None or d["collection"] == cid):
+                in_use = r
+            if "preview" in r:
+                p = r["preview"]
+                if p["bucket"] == bid and (p["collection"] is None or p["collection"] == cid):
                     in_use = r
 
         if in_use is None:
@@ -357,7 +362,7 @@ def prevent_collection_delete(event, resources):
             continue
 
         source_bucket_uri = instance_uri(event.request, "bucket", id=in_use["source"]["bucket"])
-        source_collection_id = in_use["source"]["collection"] or collection_id
+        source_collection_id = in_use["source"]["collection"] or cid
         try:
             request.registry.storage.get(
                 resource_name="collection",

@@ -362,7 +362,7 @@ def prevent_collection_delete(event, resources):
         if specific_signers:
             assert (
                 len(specific_signers) == 1
-            ), f"Inconsistent signers: two signers touch {bid} and {cid}"
+            ), f"Inconsistent signers: multiple signers touch {bid} and {cid}"
             in_use = specific_signers[0]
 
         if not in_use:
@@ -375,26 +375,35 @@ def prevent_collection_delete(event, resources):
                 if v["source"]["collection"] is None and signer_impacts_resource(v, bid, cid)
             ]
             if bucket_signers:
-                assert len(bucket_signers) == 1, f"Inconsistent signers: two touch {bid}"
+                assert (
+                    len(bucket_signers) == 1
+                ), f"Inconsistent signers: multiple signers touch {bid}"
                 in_use = bucket_signers[0]
 
             if in_use:
                 # See if this bucket-wide signer is superseded by any
-                # specific-collection signers. A specific-collection signer
-                # counts as superseding a bucket-wide signer if the specific
-                # collection is in the same bucket as the bucket-wide signer,
-                # and the specific-collection signer has the same collection
-                # ID as the collection being deleted. In this case, the
-                # bucket-wide source -> preview -> destination doesn't matter
-                # because the collection-specific signer specifies a different
-                # path for this collection.
+                # specific-collection signers. A specific-collection
+                # signer counts as superseding a bucket-wide signer if
+                # the specific collection is in the same bucket as the
+                # bucket-wide signer, and the specific-collection
+                # signer has the same collection ID as the collection
+                # being deleted. In this case, we can ignore the
+                # bucket-wide s -> p -> d because the
+                # collection-specific signer specifies a different
+                # workflow for the collection that we thought to
+                # impact this one.
                 #
                 # Specific-collection signers that point *from* other
                 # collections to this one are handled explicitly, above.
                 #
-                # N.B. We can't use signer_impacts_resource here because a
-                # specific-collection signer could be disabling preview for
-                # this collection.
+                # N.B. We can't use signer_impacts_resource here
+                # because we want to detect a signer for a
+                # specific source collection, regardless of whether it
+                # impacts the collection to be deleted or not. A good
+                # example where this comes up is where a
+                # specific-collection signer disables preview. We want
+                # to find this signer even though the preview
+                # collection is no longer being impacted.
                 for signer in resources.values():
                     same_bucket = signer["source"]["bucket"] == in_use["source"]["bucket"]
                     this_collection = signer["source"]["collection"] == cid

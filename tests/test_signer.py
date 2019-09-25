@@ -136,7 +136,7 @@ class AutographSignerTest(unittest.TestCase):
     @mock.patch("kinto_signer.signer.autograph.requests")
     def test_request_is_being_crafted_with_payload_as_input(self, requests):
         response = mock.MagicMock()
-        response.json.return_value = [{"signature": SIGNATURE, "ref": ""}]
+        response.json.return_value = [{"signature": SIGNATURE, "x5u": "", "ref": ""}]
         requests.post.return_value = response
         signature_bundle = self.signer.sign("test data")
         requests.post.assert_called_with(

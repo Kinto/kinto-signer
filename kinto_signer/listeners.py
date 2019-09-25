@@ -268,8 +268,12 @@ def check_collection_status(
         if old_status == new_status:
             continue
 
+        # 0. Nobody can remove the status
+        if new_status is None:
+            raise_invalid(message="Cannot remove status")
+
         # 1. None -> work-in-progress
-        if new_status == STATUS.WORK_IN_PROGRESS:
+        elif new_status == STATUS.WORK_IN_PROGRESS:
             pass
 
         # 2. work-in-progress -> to-review
@@ -312,9 +316,6 @@ def check_collection_status(
             if old_status == STATUS.SIGNED:
                 raise_invalid(message="Collection has no work-in-progress")
 
-        # Nobody can remove the status
-        elif new_status is None:
-            raise_invalid(message="Cannot remove status")
         # Unknown manual status
         else:
             raise_invalid(message="Invalid status '%s'" % new_status)

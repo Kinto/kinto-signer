@@ -100,15 +100,17 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
             and e.payload["action"] == "update"
         ]
 
-        # We created two records, for each of them we updated the ``last_edit_datr``
-        # field, so we received two events.
+        # The first event is when the signer updates the source to mark it as signed.
         self.assertIsNone(events[0].impacted_objects[0]["old"].get("status"))
         self.assertIsNone(events[0].impacted_objects[0]["old"].get("last_edit_date"))
         self.assertEqual(events[0].payload["user_id"], "plugin:kinto-signer")
-        self.assertEqual(events[0].impacted_objects[0]["new"]["status"], "work-in-progress")
-        self.assertIn("basicauth:", events[0].impacted_objects[0]["new"]["last_edit_by"])
+        self.assertEqual(events[0].impacted_objects[0]["new"]["status"], "signed")
+
+        # We created two records, for each of them we updated the ``last_edit_date``
+        # field, so we received two events.
+        self.assertIn("basicauth:", events[-1].impacted_objects[0]["new"]["last_edit_by"])
         self.assertNotEqual(
-            events[0].impacted_objects[0]["new"]["last_edit_date"],
+            events[-2].impacted_objects[0]["new"]["last_edit_date"],
             events[-1].impacted_objects[0]["new"]["last_edit_date"],
         )
 

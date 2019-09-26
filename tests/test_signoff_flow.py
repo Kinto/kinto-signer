@@ -104,15 +104,16 @@ class SignoffWebTest(PostgresWebTest):
 class CollectionStatusTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCase):
     def test_status_can_be_refreshed_even_if_never_signed(self):
         resp = self.app.get(self.source_collection, headers=self.headers)
-        assert "last_signature_date" not in resp.json["data"]
+        before = resp.json["data"]["last_signature_date"]
 
         self.app.patch_json(
             self.source_collection, {"data": {"status": "to-resign"}}, headers=self.headers
         )
-
         resp = self.app.get(self.source_collection, headers=self.headers)
+
         assert resp.json["data"]["status"] == "work-in-progress"
-        assert "last_signature_date" in resp.json["data"]
+        after = resp.json["data"]["last_signature_date"]
+        assert before < after
         # The review request / approval field are not set.
         assert "last_review_date" not in resp.json["data"]
         assert "last_review_request_date" not in resp.json["data"]
@@ -1060,9 +1061,9 @@ class PerBucketTest(SignoffWebTest, unittest.TestCase):
         data = self.app.get(self.destination_bucket + col_uri, headers=self.headers).json["data"]
         assert "signature" in data
 
-        # Source status was left untouched (ie. missing here)
+        # Source status was set to signed.
         data = self.app.get(self.source_bucket + col_uri, headers=self.headers).json["data"]
-        assert "status" not in data
+        assert data["status"] == "signed"
 
     def test_review_settings_can_be_overriden_for_a_specific_collection(self):
         # review is not enabled for this particular one, sign directly!

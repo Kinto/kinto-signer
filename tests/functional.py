@@ -319,36 +319,38 @@ class HistoryTest(unittest.TestCase):
             for e in entries
             if e["resource_name"] == "collection" and e["collection_id"] == "source"
         ]
-        assert len(collection_entries) == 6
+        assert len(collection_entries) == 7
 
         # create collection
         assert collection_entries[0]["action"] == "create"
         assert "basicauth:" in collection_entries[0]["user_id"]
+        assert collection_entries[1]["action"] == "update"
+        assert "kinto-signer" in collection_entries[1]["user_id"]
 
         # status: work-in-progress
-        assert collection_entries[1]["target"]["data"]["status"] == "work-in-progress"
-        assert "kinto-signer" in collection_entries[1]["user_id"]
-        assert collection_entries[3]["target"]["data"]["status"] == "to-review"
+        assert collection_entries[2]["target"]["data"]["status"] == "work-in-progress"
+        assert "kinto-signer" in collection_entries[2]["user_id"]
+        assert collection_entries[4]["target"]["data"]["status"] == "to-review"
 
         # status: to-review (by user)
-        assert collection_entries[2]["target"]["data"]["status"] == "to-review"
+        assert collection_entries[3]["target"]["data"]["status"] == "to-review"
         assert "last_review_request_by" not in collection_entries[2]["target"]["data"]
-        assert "basicauth:" in collection_entries[2]["user_id"]
+        assert "basicauth:" in collection_entries[3]["user_id"]
 
         # update of last_editor (by plugin)
-        assert collection_entries[3]["target"]["data"]["status"] == "to-review"
-        assert "basicauth:" in collection_entries[3]["target"]["data"]["last_review_request_by"]
-        assert "kinto-signer" in collection_entries[3]["user_id"]
+        assert collection_entries[4]["target"]["data"]["status"] == "to-review"
+        assert "basicauth:" in collection_entries[4]["target"]["data"]["last_review_request_by"]
+        assert "kinto-signer" in collection_entries[4]["user_id"]
 
         # status: to-sign
-        assert collection_entries[4]["target"]["data"]["status"] == "to-sign"
-        assert "last_review_by" not in collection_entries[4]["target"]["data"]
-        assert "basicauth:" in collection_entries[4]["user_id"]
+        assert collection_entries[5]["target"]["data"]["status"] == "to-sign"
+        assert "last_review_by" not in collection_entries[5]["target"]["data"]
+        assert "basicauth:" in collection_entries[5]["user_id"]
 
         # status: signed (by plugin)
-        assert collection_entries[5]["target"]["data"]["status"] == "signed"
-        assert "basicauth:" in collection_entries[5]["target"]["data"]["last_review_by"]
-        assert "kinto-signer" in collection_entries[5]["user_id"]
+        assert collection_entries[6]["target"]["data"]["status"] == "signed"
+        assert "basicauth:" in collection_entries[6]["target"]["data"]["last_review_by"]
+        assert "kinto-signer" in collection_entries[6]["user_id"]
 
 
 class WorkflowTest(unittest.TestCase):
@@ -383,7 +385,7 @@ class WorkflowTest(unittest.TestCase):
 
     def test_status_work_in_progress(self):
         collection = self.client.get_collection()
-        assert "status" not in collection["data"]
+        assert collection["data"]["status"] == "signed"
 
         create_records(self.client)
 
@@ -427,6 +429,7 @@ class WorkflowTest(unittest.TestCase):
             self.anna_client.patch_collection(data={"status": "to-sign"})
 
     def test_status_cannot_be_set_to_sign_without_review(self):
+        create_records(self.client)
         with self.assertRaises(KintoException):
             self.elsa_client.patch_collection(data={"status": "to-sign"})
 

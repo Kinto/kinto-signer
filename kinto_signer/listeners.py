@@ -135,17 +135,22 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
             if has_review_enabled:
                 updater.destination = resource["preview"]
                 updater.sign_and_update_destination(
-                    event.request, source_attributes=new_collection, next_source_status=None
+                    event.request,
+                    source_attributes=new_collection,
+                    next_source_status=None,  # Do not update source attributes (done below).
                 )
             updater.destination = resource["destination"]
             updater.sign_and_update_destination(
-                event.request, source_attributes=new_collection, next_source_status=None
+                event.request,
+                source_attributes=new_collection,
+                previous_source_status=STATUS.SIGNED,  # Prevents last_review_date to be set.
+                next_source_status=STATUS.SIGNED,  # Signed by default.
             )
 
-        if old_status == new_status:
+        elif old_status == new_status:
             continue
 
-        if new_status == STATUS.TO_SIGN:
+        elif new_status == STATUS.TO_SIGN:
             # Run signature process (will set `last_reviewer` field).
             updater.destination = resource["destination"]
             changes_count = updater.sign_and_update_destination(
@@ -266,10 +271,15 @@ def check_collection_status(
         )
 
         if old_status == new_status:
+            # When collection is created old_status == new_status == None.
             continue
 
+        # 0. Nobody can remove the status
+        if new_status is None:
+            raise_invalid(message="Cannot remove status")
+
         # 1. None -> work-in-progress
-        if new_status == STATUS.WORK_IN_PROGRESS:
+        elif new_status == STATUS.WORK_IN_PROGRESS:
             pass
 
         # 2. work-in-progress -> to-review
@@ -312,9 +322,6 @@ def check_collection_status(
             if old_status == STATUS.SIGNED:
                 raise_invalid(message="Collection has no work-in-progress")
 
-        # Nobody can remove the status
-        elif new_status is None:
-            raise_invalid(message="Cannot remove status")
         # Unknown manual status
         else:
             raise_invalid(message="Invalid status '%s'" % new_status)

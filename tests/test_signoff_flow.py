@@ -113,7 +113,7 @@ class CollectionStatusTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCas
 
         assert resp.json["data"]["status"] == "work-in-progress"
         after = resp.json["data"]["last_signature_date"]
-        assert before != after
+        assert before < after
         # The review request / approval field are not set.
         assert "last_review_date" not in resp.json["data"]
         assert "last_review_request_date" not in resp.json["data"]

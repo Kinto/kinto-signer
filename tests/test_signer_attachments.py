@@ -28,6 +28,7 @@ class SignerAttachmentsTest(BaseWebTest, unittest.TestCase):
                     "signature_encoding": "",
                     "content-signature": fake_signature,
                     "x5u": "",
+                    "ref": "",
                 }
             ]
 

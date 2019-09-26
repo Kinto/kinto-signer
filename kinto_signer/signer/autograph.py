@@ -4,9 +4,14 @@ import warnings
 
 import requests
 from requests_hawk import HawkAuth
+from kinto import logger
 
 from .base import SignerBase
 from ..utils import get_first_matching_setting
+
+
+SIGNATURE_FIELDS = ["signature", "x5u"]
+EXTRA_SIGNATURE_FIELDS = ["mode", "public_key", "type", "signer_id", "ref"]
 
 
 class AutographSigner(SignerBase):
@@ -23,7 +28,22 @@ class AutographSigner(SignerBase):
         resp = requests.post(url, auth=self.auth, json=[{"input": b64_payload.decode("utf-8")}])
         resp.raise_for_status()
         signature_bundle = resp.json()[0]
-        return signature_bundle
+
+        # Critical fields must be present, will raise if missing.
+        infos = {field: signature_bundle[field] for field in SIGNATURE_FIELDS}
+        # Other fields are returned and will be stored as part of the signature.
+        # but client won't break if they are missing, so don't raise.
+        infos.update(
+            **{
+                field: signature_bundle[field]
+                for field in EXTRA_SIGNATURE_FIELDS
+                if field in signature_bundle
+            }
+        )
+        logger.info(
+            "Obtained %s response from Autograph %s" % (resp.status_code, signature_bundle["ref"])
+        )
+        return infos
 
 
 def load_from_settings(settings, prefix="", *, prefixes=None):

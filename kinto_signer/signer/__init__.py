@@ -1,9 +1,6 @@
 from kinto import logger
 
 
-EXPECTED_FIELDS = ["signature", "x5u", "mode"]
-
-
 def heartbeat(request):
     """Test that signer is operationnal.
 
@@ -14,11 +11,7 @@ def heartbeat(request):
     """
     for signer in request.registry.signers.values():
         try:
-            result = signer.sign("This is an heartbeat tests.")
-            expected = set(EXPECTED_FIELDS)
-            obtained = result.keys()
-            if len(expected.intersection(obtained)) != len(EXPECTED_FIELDS):
-                raise ValueError("Invalid response content: %s" % result)
+            signer.sign("This is a heartbeat test.")
         except Exception as e:
             logger.exception(e)
             return False

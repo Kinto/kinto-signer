@@ -3,12 +3,14 @@ Changelog
 
 This document describes changes between each past release.
 
-5.2.0 (unreleased)
+5.2.0 (2019-09-26)
 ------------------
 
 **New features**
 
 - Log Autograph requests references (#687)
+- Set status of new collections to signed (fixes #683)
+- Fix collection deletion safety check (fixes #684)
 
 
 5.1.0 (2019-08-27)

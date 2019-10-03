@@ -6,7 +6,7 @@ This document describes changes between each past release.
 5.3.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix crash in collection deletion safety check (fixes #709)
 
 
 5.2.0 (2019-09-26)

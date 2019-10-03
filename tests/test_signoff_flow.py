@@ -927,13 +927,14 @@ class CollectionDelete(SignoffWebTest, unittest.TestCase):
         cls.destination_collection = cls.destination_bucket + "/collections/cid"
 
         settings["signer.to_review_enabled"] = "true"
-        settings["kinto.signer.resources"] = "%s -> %s -> %s" % (
-            cls.source_bucket,
-            cls.preview_bucket,
-            cls.destination_bucket,
-        ) + "\n %s -> %s" % (
-            cls.source_bucket + "/collections/no-preview",
-            cls.destination_bucket + "/collections/no-preview",
+        settings["kinto.signer.resources"] = (
+            "%s -> %s -> %s" % (cls.source_bucket, cls.preview_bucket, cls.destination_bucket)
+            + "\n %s -> %s"
+            % (
+                cls.source_bucket + "/collections/no-preview",
+                cls.destination_bucket + "/collections/no-preview",
+            )
+            + "\n /buckets/some-bucket -> /buckets/some-other"
         )
         return settings
 

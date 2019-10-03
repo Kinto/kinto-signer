@@ -421,6 +421,7 @@ def prevent_collection_delete(event, resources):
                         # above), or it didn't (in which case the
                         # collection is safe to be deleted).
                         in_use = None
+                        break
 
         if in_use is None:
             # Can delete!

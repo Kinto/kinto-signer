@@ -3,7 +3,7 @@ Changelog
 
 This document describes changes between each past release.
 
-5.3.0 (unreleased)
+5.2.1 (2019-10-03)
 ------------------
 
 - Fix crash in collection deletion safety check (fixes #709)

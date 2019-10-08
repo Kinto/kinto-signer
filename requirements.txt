@@ -10,7 +10,7 @@ cornice==3.6.0
 cornice-swagger==0.7.0
 dockerflow==2019.9.0
 docutils==0.15.2
-ecdsa==0.13.2
+ecdsa==0.13.3
 hupper==1.8.1
 idna==2.8
 iso8601==0.1.12

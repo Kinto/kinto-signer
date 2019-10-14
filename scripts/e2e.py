@@ -234,6 +234,8 @@ def main():
 
     signature = dest_client.get_collection()["data"]["signature"]
 
+    assert len(signature["public_key"]), "Signer returned empty public key"
+
     with open("pub", "w") as f:
         f.write(signature["public_key"])
 

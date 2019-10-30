@@ -125,7 +125,7 @@ class IncludeMeTest(unittest.TestCase):
             "signer.sb1.ecdsa.private_key": "/path/to/private",
         }
         config = self.includeme(settings)
-        signer, = config.registry.signers.values()
+        (signer,) = config.registry.signers.values()
         assert signer.public_key == "/path/to/key"
 
     def test_includeme_doesnt_fail_when_expanding_collection(self):
@@ -428,7 +428,7 @@ class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):
         body = {"permissions": {"write": [self.other_userid]}}
         self.app.put_json("/buckets/stage/collections/a", body, headers=self.headers)
         for i in range(5):
-            self.app.post_json(f"/buckets/stage/collections/a/records", headers=self.headers)
+            self.app.post_json("/buckets/stage/collections/a/records", headers=self.headers)
         self.app.patch_json(
             "/buckets/stage/collections/a",
             {"data": {"status": "to-review"}},

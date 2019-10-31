@@ -20,7 +20,7 @@ jsonpointer==2.0
 jsonschema==3.1.1
 kinto==13.6.0
 logging-color-formatter==1.0.2
-mohawk==1.0.0
+mohawk==1.1.0
 PasteDeploy==2.0.1
 plaster==1.0
 plaster-pastedeploy==0.7

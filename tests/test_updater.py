@@ -95,6 +95,12 @@ class LocalUpdaterTest(unittest.TestCase):
         self.patch(self.updater, "get_source_records", return_value=(records, 1325))
         self.updater.push_records_to_destination(DummyRequest())
         assert self.storage.update.call_count == 3
+        assert self.storage.update.call_args_list[0][1] == {
+            "obj": {"id": 1, "foo": "bar 1"},
+            "object_id": 1,
+            "parent_id": "/buckets/destbucket/collections/destcollection",
+            "resource_name": "record",
+        }
 
     def test_push_records_to_destination_raises_if_storage_is_misconfigured(self):
         self.patch(self.updater, "get_destination_records", return_value=([{}], 1324))

@@ -72,7 +72,9 @@ class LocalUpdaterTest(unittest.TestCase):
 
     def test_get_destination_records(self):
         # We want to test get_destination_records with some records.
-        records = [{"id": idx, "foo": "bar %s" % idx} for idx in range(1, 4)]
+        records = [
+            {"id": idx, "foo": "bar %s" % idx, "last_modified": 42 - idx} for idx in range(1, 4)
+        ]
         self.storage.list_all.return_value = records
         self.updater.get_destination_records()
         self.storage.resource_timestamp.assert_called_with(
@@ -87,10 +89,18 @@ class LocalUpdaterTest(unittest.TestCase):
 
     def test_push_records_to_destination(self):
         self.patch(self.updater, "get_destination_records", return_value=([], 1324))
-        records = [{"id": idx, "foo": "bar %s" % idx} for idx in range(1, 4)]
+        records = [
+            {"id": idx, "foo": "bar %s" % idx, "last_modified": 42 - idx} for idx in range(1, 4)
+        ]
         self.patch(self.updater, "get_source_records", return_value=(records, 1325))
         self.updater.push_records_to_destination(DummyRequest())
         assert self.storage.update.call_count == 3
+        assert self.storage.update.call_args_list[0][1] == {
+            "obj": {"id": 1, "foo": "bar 1"},
+            "object_id": 1,
+            "parent_id": "/buckets/destbucket/collections/destcollection",
+            "resource_name": "record",
+        }
 
     def test_push_records_to_destination_raises_if_storage_is_misconfigured(self):
         self.patch(self.updater, "get_destination_records", return_value=([{}], 1324))
@@ -106,7 +116,9 @@ class LocalUpdaterTest(unittest.TestCase):
 
     def test_push_records_removes_deleted_records(self):
         self.patch(self.updater, "get_destination_records", return_value=([], 1324))
-        records = [{"id": idx, "foo": "bar %s" % idx} for idx in range(0, 2)]
+        records = [
+            {"id": idx, "foo": "bar %s" % idx, "last_modified": 42 - idx} for idx in range(0, 2)
+        ]
         records.extend([{"id": idx, "deleted": True, "last_modified": 42} for idx in range(3, 5)])
         self.patch(self.updater, "get_source_records", return_value=(records, 1325))
         self.updater.push_records_to_destination(DummyRequest())
@@ -119,7 +131,9 @@ class LocalUpdaterTest(unittest.TestCase):
         # a RecordNotFoundError is raised.
         self.storage.delete.side_effect = RecordNotFoundError()
         self.patch(self.updater, "get_destination_records", return_value=([], 1324))
-        records = [{"id": idx, "foo": "bar %s" % idx} for idx in range(0, 2)]
+        records = [
+            {"id": idx, "foo": "bar %s" % idx, "last_modified": 42 - idx} for idx in range(0, 2)
+        ]
         records.extend([{"id": idx, "deleted": True, "last_modified": 42} for idx in range(3, 5)])
         self.patch(self.updater, "get_source_records", return_value=(records, 1325))
         # Calling the updater should not raise the RecordNotFoundError.
@@ -127,7 +141,9 @@ class LocalUpdaterTest(unittest.TestCase):
 
     def test_push_records_to_destination_with_no_destination_changes(self):
         self.patch(self.updater, "get_destination_records", return_value=([], None))
-        records = [{"id": idx, "foo": "bar %s" % idx} for idx in range(1, 4)]
+        records = [
+            {"id": idx, "foo": "bar %s" % idx, "last_modified": 42 - idx} for idx in range(1, 4)
+        ]
         self.patch(self.updater, "get_source_records", return_value=(records, 1325))
         self.updater.push_records_to_destination(DummyRequest())
         self.updater.get_source_records.assert_called_with(last_modified=None)

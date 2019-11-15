@@ -592,7 +592,8 @@ class PerBucketTest(unittest.TestCase):
 
         # Create some records.
         self.julia_client.create_record(id="abc", collection="pim")
-        self.julia_client.create_record(id="def", collection="pim")
+        record = self.julia_client.create_record(id="def", collection="pim")
+        timestamp_before_approval = record["data"]["last_modified"]
 
         # Preview and prod have no records yet.
         records = self.anon_client.get_records(bucket="preview", collection="pim")
@@ -613,6 +614,8 @@ class PerBucketTest(unittest.TestCase):
         # Prod now has records.
         records = self.anon_client.get_records(bucket="prod", collection="pim")
         assert len(records) == 2
+        # Publishing to destination bumped the timestamps.
+        assert records[0]["last_modified"] != timestamp_before_approval
 
         # Refresh signature
         self.joan_client.patch_collection(id="pim", data={"status": "to-resign"})

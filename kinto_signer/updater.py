@@ -282,14 +282,14 @@ class LocalUpdater(object):
             except RecordNotFoundError:
                 before = None
 
+            # Timestamp should be bumped in destination.
+            record = {**record}
+            del record[FIELD_LAST_MODIFIED]
+
             deleted = record.get("deleted", False)
             if deleted:
                 try:
-                    pushed = self.storage.delete(
-                        object_id=record[FIELD_ID],
-                        last_modified=record[FIELD_LAST_MODIFIED],
-                        **storage_kwargs,
-                    )
+                    pushed = self.storage.delete(object_id=record[FIELD_ID], **storage_kwargs,)
                     action = ACTIONS.DELETE
                 except RecordNotFoundError:
                     # If the record doesn't exists in the destination

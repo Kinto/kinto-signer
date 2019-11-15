@@ -6,7 +6,9 @@ This document describes changes between each past release.
 5.3.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Breaking changes**
+
+- Records timestamps are now bumped when copied to preview/destination collections (fixes #779)
 
 
 5.2.1 (2019-10-03)

@@ -366,6 +366,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
             self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )
         del self.events[:]
+        print("---------")
         self.app.patch_json(
             self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
         )

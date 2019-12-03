@@ -194,3 +194,27 @@ def notify_resource_event(
     fakerequest.notify_resource_event(
         parent_id=parent_id, timestamp=obj[FIELD_LAST_MODIFIED], data=obj, action=action, old=old
     )
+
+
+def records_equal(a, b):
+    ignore_fields = ("last_modified", "schema")
+    ac = {k: v for k, v in a.items() if k not in ignore_fields}
+    bc = {k: v for k, v in b.items() if k not in ignore_fields}
+    return ac == bc
+
+
+def records_diff(left, right):
+    left_by_id = {r["id"]: r for r in left}
+    results = []
+    for r in right:
+        rid = r["id"]
+        left_record = left_by_id.pop(rid, None)
+        if left_record is None:
+            # In right, but not in left (deleted!)
+            results.append({**r, "deleted": True})
+        elif not records_equal(left_record, r):
+            # Differ between left and right
+            results.append(left_record)
+    # In left, but not in right.
+    results.extend(left_by_id.values())
+    return results

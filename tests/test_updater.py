@@ -3,9 +3,8 @@ import mock
 import pytest
 import unittest
 
-from kinto.core.storage import Filter, Sort
+from kinto.core.storage import Sort
 from kinto.core.storage.exceptions import RecordNotFoundError
-from kinto.core.utils import COMPARISON
 
 from kinto_signer.updater import LocalUpdater
 from kinto_signer.utils import STATUS
@@ -50,23 +49,11 @@ class LocalUpdaterTest(unittest.TestCase):
     def test_get_source_records_asks_storage_for_records(self):
         self.storage.list_all.return_value = []
 
-        self.updater.get_source_records(None)
+        self.updater.get_source_records()
         self.storage.list_all.assert_called_with(
             resource_name="record",
             parent_id="/buckets/sourcebucket/collections/sourcecollection",
             include_deleted=True,
-            sorting=[Sort("last_modified", 1)],
-        )
-
-    def test_get_source_records_asks_storage_for_last_modified_records(self):
-        self.storage.list_all.return_value = []
-
-        self.updater.get_source_records(1234)
-        self.storage.list_all.assert_called_with(
-            resource_name="record",
-            parent_id="/buckets/sourcebucket/collections/sourcecollection",
-            include_deleted=True,
-            filters=[Filter("last_modified", 1234, COMPARISON.GT)],
             sorting=[Sort("last_modified", 1)],
         )
 
@@ -102,18 +89,6 @@ class LocalUpdaterTest(unittest.TestCase):
             "resource_name": "record",
         }
 
-    def test_push_records_to_destination_raises_if_storage_is_misconfigured(self):
-        self.patch(self.updater, "get_destination_records", return_value=([{}], 1324))
-        self.patch(self.updater, "get_source_records", return_value=([{}], 1234))
-        with pytest.raises(ValueError):
-            self.updater.push_records_to_destination(DummyRequest())
-
-    def test_push_records_to_destination_does_not_raises_if_collection_is_empty(self):
-        self.patch(self.updater, "get_destination_records", return_value=([], 1324))
-        self.patch(self.updater, "get_source_records", return_value=([], 1234))
-        with pytest.raises(ValueError):
-            self.updater.push_records_to_destination(DummyRequest())
-
     def test_push_records_removes_deleted_records(self):
         self.patch(self.updater, "get_destination_records", return_value=([], 1324))
         records = [
@@ -122,7 +97,7 @@ class LocalUpdaterTest(unittest.TestCase):
         records.extend([{"id": idx, "deleted": True, "last_modified": 42} for idx in range(3, 5)])
         self.patch(self.updater, "get_source_records", return_value=(records, 1325))
         self.updater.push_records_to_destination(DummyRequest())
-        self.updater.get_source_records.assert_called_with(last_modified=1324)
+        assert self.updater.get_source_records.call_count == 1
         assert self.storage.update.call_count == 2
         assert self.storage.delete.call_count == 2
 
@@ -146,7 +121,7 @@ class LocalUpdaterTest(unittest.TestCase):
         ]
         self.patch(self.updater, "get_source_records", return_value=(records, 1325))
         self.updater.push_records_to_destination(DummyRequest())
-        self.updater.get_source_records.assert_called_with(last_modified=None)
+        assert self.updater.get_source_records.call_count == 1
         assert self.storage.update.call_count == 3
 
     def test_set_destination_signature_modifies_the_destination_collection(self):

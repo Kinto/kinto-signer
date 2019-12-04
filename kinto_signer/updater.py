@@ -4,9 +4,8 @@ import uuid
 from enum import Enum
 
 from kinto.core.events import ACTIONS
-from kinto.core.storage import Filter, Sort
+from kinto.core.storage import Sort
 from kinto.core.storage.exceptions import RecordNotFoundError
-from kinto.core.utils import COMPARISON
 from pyramid.security import Everyone
 from pyramid.settings import aslist
 
@@ -226,14 +225,11 @@ class LocalUpdater(object):
             matchdict={"bucket_id": bucket_name, "id": collection_name},
         )
 
-    def _get_records(self, resource, last_modified=None, empty_none=True):
+    def _get_records(self, resource, empty_none=True):
         # If last_modified was specified, only retrieve items since then.
-        storage_kwargs = {}
-        if last_modified is not None:
-            gt_last_modified = Filter(FIELD_LAST_MODIFIED, last_modified, COMPARISON.GT)
-            storage_kwargs["filters"] = [gt_last_modified]
-
-        storage_kwargs["sorting"] = [Sort(FIELD_LAST_MODIFIED, 1)]
+        storage_kwargs = {
+            "sorting": [Sort(FIELD_LAST_MODIFIED, 1)],
+        }
         bid = resource["bucket"]
         cid = resource["collection"]
         parent_id = f"/buckets/{bid}/collections/{cid}"

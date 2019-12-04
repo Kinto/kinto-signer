@@ -4,14 +4,12 @@ import uuid
 from enum import Enum
 
 from kinto.core.events import ACTIONS
-from kinto.core.storage import Filter, Sort
 from kinto.core.storage.exceptions import RecordNotFoundError
-from kinto.core.utils import COMPARISON
 from pyramid.security import Everyone
 from pyramid.settings import aslist
 
 from kinto_signer.serializer import canonical_json
-from kinto_signer.utils import STATUS, ensure_resource_exists, notify_resource_event
+from kinto_signer.utils import STATUS, ensure_resource_exists, notify_resource_event, records_diff
 
 try:
     import boto3
@@ -157,9 +155,11 @@ class LocalUpdater(object):
             self._update_source_attributes(request, **attrs)
 
     def rollback_changes(self, request, refresh_last_edit=True, refresh_signature=False):
-        dest_records, dest_timestamp = self.get_destination_records(empty_none=False)
+        dest_records, _ = self.get_destination_records(empty_none=False)
         dest_by_id = {r["id"]: r for r in dest_records}
-        changes_since_approval, _ = self.get_source_records(last_modified=dest_timestamp)
+        source_records, _ = self.get_source_records()
+
+        changes_since_approval = records_diff(source_records, dest_records)
 
         storage_kwargs = {"parent_id": self.source_collection_uri, "resource_name": "record"}
 
@@ -224,20 +224,13 @@ class LocalUpdater(object):
             matchdict={"bucket_id": bucket_name, "id": collection_name},
         )
 
-    def _get_records(self, resource, last_modified=None, empty_none=True):
-        # If last_modified was specified, only retrieve items since then.
-        storage_kwargs = {}
-        if last_modified is not None:
-            gt_last_modified = Filter(FIELD_LAST_MODIFIED, last_modified, COMPARISON.GT)
-            storage_kwargs["filters"] = [gt_last_modified]
-
-        storage_kwargs["sorting"] = [Sort(FIELD_LAST_MODIFIED, 1)]
+    def _get_records(self, resource, empty_none=True):
         bid = resource["bucket"]
         cid = resource["collection"]
         parent_id = f"/buckets/{bid}/collections/{cid}"
 
         records = self.storage.list_all(
-            parent_id=parent_id, resource_name="record", include_deleted=True, **storage_kwargs
+            parent_id=parent_id, resource_name="record", include_deleted=True
         )
 
         if len(records) == 0 and empty_none:
@@ -250,23 +243,17 @@ class LocalUpdater(object):
 
         return records, collection_timestamp
 
-    def get_source_records(self, last_modified, **kwargs):
-        return self._get_records(self.source, last_modified, **kwargs)
+    def get_source_records(self, **kwargs):
+        return self._get_records(self.source, **kwargs)
 
     def get_destination_records(self, **kwargs):
         return self._get_records(self.destination, **kwargs)
 
     def push_records_to_destination(self, request):
-        __, dest_timestamp = self.get_destination_records()
-        new_records, source_timestamp = self.get_source_records(last_modified=dest_timestamp)
+        dest_records, dest_timestamp = self.get_destination_records()
+        source_records, source_timestamp = self.get_source_records()
+        new_records = records_diff(source_records, dest_records)
         changes_count = len(new_records)
-
-        if source_timestamp and dest_timestamp and dest_timestamp > source_timestamp:
-            raise ValueError(
-                "Destination collection timestamp cannot be higher "
-                "than source collection timestamp. Check that your "
-                "storage backend timezone is UTC."
-            )
 
         if len(new_records) == 0:
             return

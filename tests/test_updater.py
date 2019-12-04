@@ -3,7 +3,6 @@ import mock
 import pytest
 import unittest
 
-from kinto.core.storage import Sort
 from kinto.core.storage.exceptions import RecordNotFoundError
 
 from kinto_signer.updater import LocalUpdater
@@ -54,7 +53,6 @@ class LocalUpdaterTest(unittest.TestCase):
             resource_name="record",
             parent_id="/buckets/sourcebucket/collections/sourcecollection",
             include_deleted=True,
-            sorting=[Sort("last_modified", 1)],
         )
 
     def test_get_destination_records(self):
@@ -71,7 +69,6 @@ class LocalUpdaterTest(unittest.TestCase):
             resource_name="record",
             parent_id="/buckets/destbucket/collections/destcollection",
             include_deleted=True,
-            sorting=[Sort("last_modified", 1)],
         )
 
     def test_push_records_to_destination(self):

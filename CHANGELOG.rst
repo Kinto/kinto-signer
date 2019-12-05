@@ -3,10 +3,10 @@ Changelog
 
 This document describes changes between each past release.
 
-6.1.0 (unreleased)
+6.0.1 (2019-12-05)
 ------------------
 
-- Nothing changed yet.
+- Fix records dropped since #780 (fixes #816)
 
 
 6.0.0 (2019-11-15)

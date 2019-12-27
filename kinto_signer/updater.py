@@ -155,6 +155,9 @@ class LocalUpdater(object):
             self._update_source_attributes(request, **attrs)
 
     def rollback_changes(self, request, refresh_last_edit=True, refresh_signature=False):
+        """Restore the contents of *destination* to *source* (delete extras, recreate deleted,
+        and restore changes) (eg. destination -> preview, or preview -> source).
+        """
         dest_records, _ = self.get_destination_records(empty_none=False)
         dest_by_id = {r["id"]: r for r in dest_records}
         source_records, _ = self.get_source_records()
@@ -167,6 +170,7 @@ class LocalUpdater(object):
         for record in changes_since_approval:
             dest_record = dest_by_id.get(record[FIELD_ID])
             if dest_record is None:
+                # In source, but not in destination. Must be deleted.
                 if not record.get("deleted"):
                     self.storage.delete(
                         object_id=record[FIELD_ID],
@@ -175,10 +179,12 @@ class LocalUpdater(object):
                     )
                     changed_count += 1
 
+            # In dest_records, but not in source_records. Must be re-created.
             elif record.get("deleted"):
                 self.storage.create(obj=dest_record, **storage_kwargs)
                 changed_count += 1
 
+            # Differ, restore attributes of dest_record in source.
             else:
                 self.storage.update(object_id=record[FIELD_ID], obj=dest_record, **storage_kwargs)
                 changed_count += 1

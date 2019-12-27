@@ -580,9 +580,10 @@ class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
             self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
         )
 
-        self.app.get(
+        resp = self.app.get(
             self.source_collection + f"/records/{deleted_id}", headers=self.headers, status=200
         )
+        assert resp.json["data"]["title"] == "hello"
 
     def test_reverts_updated_records(self):
         resp = self.app.get(

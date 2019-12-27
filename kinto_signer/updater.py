@@ -235,9 +235,7 @@ class LocalUpdater(object):
         cid = resource["collection"]
         parent_id = f"/buckets/{bid}/collections/{cid}"
 
-        records = self.storage.list_all(
-            parent_id=parent_id, resource_name="record", include_deleted=True
-        )
+        records = self.storage.list_all(parent_id=parent_id, resource_name="record")
 
         if len(records) == 0 and empty_none:
             # When the collection empty (no records and no tombstones)

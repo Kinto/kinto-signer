@@ -644,6 +644,40 @@ class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
         sign_after = resp.json["data"]["signature"]["signature"]
         assert sign_before != sign_after
 
+    def test_does_not_recreate_tombstones(self):
+        # Approve creation of r1 and r2.
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
+        )
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
+        )
+        # Delete r1.
+        self.app.delete(
+            self.source_collection + "/records/r1", headers=self.headers,
+        )
+        # Approve deletion of r1.
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
+        )
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
+        )
+        # Recreate r1.
+        self.app.put_json(
+            self.source_collection + "/records/r1",
+            {"data": {"title": "Servus"}},
+            headers=self.headers,
+        )
+        # Rollback.
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
+        )
+        # r1 should be deleted again.
+        self.app.get(self.source_collection + "/records/r1", headers=self.headers, status=404)
+        self.app.get(self.preview_collection + "/records/r1", headers=self.headers, status=404)
+        self.app.get(self.destination_collection + "/records/r1", headers=self.headers, status=404)
+
 
 class UserGroupsTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCase):
     @classmethod

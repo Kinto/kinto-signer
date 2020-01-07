@@ -3,7 +3,7 @@ Changelog
 
 This document describes changes between each past release.
 
-6.1.0 (unreleased)
+6.0.2 (2020-01-07)
 ------------------
 
 - Do not recreate tombstones on rollback (fixes #832)

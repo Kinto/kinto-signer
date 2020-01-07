@@ -6,7 +6,7 @@ This document describes changes between each past release.
 6.1.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Do not recreate tombstones on rollback (fixes #832)
 
 
 6.0.1 (2019-12-05)

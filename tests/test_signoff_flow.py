@@ -211,8 +211,15 @@ class CollectionStatusTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCas
         assert resp.json["data"]["status"] == "work-in-progress"
 
     def test_statsd_reports_number_of_records_approved(self):
+        # Publish the changes to reset the setup.
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
+        )
+        # Make some changes.
+        self.app.post(self.source_collection + "/records", headers=self.headers)
         self.app.delete(self.source_collection + "/records/in-french", headers=self.headers)
 
+        # Publish the changes again.
         statsd_client = self.app.app.registry.statsd
         with mock.patch.object(statsd_client, "count") as mocked:
             self.app.patch_json(
@@ -220,7 +227,7 @@ class CollectionStatusTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCas
             )
         call_args = mocked.call_args_list[0][0]
 
-        # One creation (see SignoffWebTest setup) and one deletion.
+        # One creation and one deletion.
         assert call_args == ("plugins.signer.approved_changes", 2)
 
 

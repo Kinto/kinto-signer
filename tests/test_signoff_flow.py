@@ -211,8 +211,15 @@ class CollectionStatusTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCas
         assert resp.json["data"]["status"] == "work-in-progress"
 
     def test_statsd_reports_number_of_records_approved(self):
+        # Publish the changes to reset the setup.
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
+        )
+        # Make some changes.
+        self.app.post(self.source_collection + "/records", headers=self.headers)
         self.app.delete(self.source_collection + "/records/in-french", headers=self.headers)
 
+        # Publish the changes again.
         statsd_client = self.app.app.registry.statsd
         with mock.patch.object(statsd_client, "count") as mocked:
             self.app.patch_json(
@@ -220,7 +227,7 @@ class CollectionStatusTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCas
             )
         call_args = mocked.call_args_list[0][0]
 
-        # One creation (see SignoffWebTest setup) and one deletion.
+        # One creation and one deletion.
         assert call_args == ("plugins.signer.approved_changes", 2)
 
 
@@ -580,9 +587,10 @@ class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
             self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
         )
 
-        self.app.get(
+        resp = self.app.get(
             self.source_collection + f"/records/{deleted_id}", headers=self.headers, status=200
         )
+        assert resp.json["data"]["title"] == "hello"
 
     def test_reverts_updated_records(self):
         resp = self.app.get(
@@ -642,6 +650,40 @@ class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
         resp = self.app.get(self.preview_collection, headers=self.headers)
         sign_after = resp.json["data"]["signature"]["signature"]
         assert sign_before != sign_after
+
+    def test_does_not_recreate_tombstones(self):
+        # Approve creation of r1 and r2.
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
+        )
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
+        )
+        # Delete r1.
+        self.app.delete(
+            self.source_collection + "/records/r1", headers=self.headers,
+        )
+        # Approve deletion of r1.
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
+        )
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
+        )
+        # Recreate r1.
+        self.app.put_json(
+            self.source_collection + "/records/r1",
+            {"data": {"title": "Servus"}},
+            headers=self.headers,
+        )
+        # Rollback.
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
+        )
+        # r1 should be deleted again.
+        self.app.get(self.source_collection + "/records/r1", headers=self.headers, status=404)
+        self.app.get(self.preview_collection + "/records/r1", headers=self.headers, status=404)
+        self.app.get(self.destination_collection + "/records/r1", headers=self.headers, status=404)
 
 
 class UserGroupsTest(SignoffWebTest, FormattedErrorMixin, unittest.TestCase):

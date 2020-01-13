@@ -9,7 +9,7 @@ colorama==0.4.3
 cornice==4.0.1
 cornice-swagger==0.7.0
 dockerflow==2019.10.0
-docutils==0.15.2
+docutils==0.16
 ecdsa==0.15
 hupper==1.9.1
 idna==2.8

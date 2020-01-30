@@ -231,6 +231,51 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         self.assertEqual(events[0].payload["action"], "delete")
         self.assertEqual(events[0].payload["uri"], self.destination_collection + "/records/xyz")
 
+    def test_resource_changed_is_sent_on_rollback(self):
+        # Publish records from setup.
+        self._sign()
+
+        records = self.app.get(self.source_collection + "/records", headers=self.headers).json[
+            "data"
+        ]
+        self.app.delete(
+            self.source_collection + "/records/" + records[0]["id"], headers=self.headers
+        )
+        self.app.patch_json(
+            self.source_collection + "/records/" + records[1]["id"],
+            {"data": {"language": "unknown"}},
+            headers=self.headers,
+        )
+        self.app.post_json(
+            self.source_collection + "/records",
+            {"data": {"title": "some extra record"}},
+            headers=self.headers,
+        )
+
+        before = len(listener.received)
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
+        )
+        events = [e for e in listener.received[before:] if e.payload["resource_name"] == "record"]
+
+        self.assertEqual(len(events), 3)
+
+        self.assertEqual(events[0].payload["action"], "update")
+        self.assertEqual(len(events[0].impacted_objects), 1)
+        self.assertEqual(events[0].impacted_objects[0]["new"]["title"], "hello")
+        self.assertEqual(events[0].impacted_objects[0]["old"]["language"], "unknown")
+
+        self.assertEqual(events[1].payload["action"], "create")
+        self.assertEqual(len(events[1].impacted_objects), 1)
+        self.assertEqual(events[1].impacted_objects[0]["new"]["title"], "bonjour")
+        self.assertEqual(events[1].impacted_objects[0].get("old"), None)
+
+        self.assertEqual(events[2].payload["action"], "delete")
+        self.assertEqual(len(events[2].impacted_objects), 1)
+        self.assertEqual(events[2].impacted_objects[0]["old"]["title"], "some extra record")
+        # XXX
+        # self.assertEqual(events[2].impacted_objects[0].get("new"), None)
+
 
 class SignoffEventsTest(BaseWebTest, unittest.TestCase):
     events = []

@@ -12,7 +12,7 @@ dockerflow==2019.10.0
 docutils==0.16
 ecdsa==0.15
 hupper==1.9.1
-idna==2.8
+idna==2.9
 iso8601==0.1.12
 jmespath==0.9.4
 jsonpatch==1.25

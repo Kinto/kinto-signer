@@ -14,7 +14,7 @@ ecdsa==0.15
 hupper==1.10.1
 idna==2.9
 iso8601==0.1.12
-jmespath==0.9.4
+jmespath==0.9.5
 jsonpatch==1.25
 jsonpointer==2.0
 jsonschema==3.2.0

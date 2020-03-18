@@ -273,8 +273,7 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         self.assertEqual(events[2].payload["action"], "delete")
         self.assertEqual(len(events[2].impacted_objects), 1)
         self.assertEqual(events[2].impacted_objects[0]["old"]["title"], "some extra record")
-        # XXX
-        # self.assertEqual(events[2].impacted_objects[0].get("new"), None)
+        self.assertEqual(events[2].impacted_objects[0]["new"]["deleted"], True)
 
 
 class SignoffEventsTest(BaseWebTest, unittest.TestCase):

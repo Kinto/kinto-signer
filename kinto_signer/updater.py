@@ -176,14 +176,14 @@ class LocalUpdater(object):
             if dest_record is None:
                 # In source, but not in destination. Must be deleted.
                 if not record.get("deleted"):
-                    self.storage.delete(
+                    tombstone = self.storage.delete(
                         object_id=record[FIELD_ID],
                         last_modified=record[FIELD_LAST_MODIFIED],
                         **storage_kwargs,
                     )
                     action = ACTIONS.DELETE
                     record_before = record
-                    impacted = record
+                    impacted = tombstone
 
             # In dest_records, but not in source_records. Must be re-created.
             elif record.get("deleted"):

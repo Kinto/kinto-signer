@@ -6,7 +6,7 @@ This document describes changes between each past release.
 6.1.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Send resource events on rollback (#894)
 
 
 6.0.2 (2020-01-07)

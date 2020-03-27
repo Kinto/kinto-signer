@@ -1,10 +1,9 @@
 kinto-http
-pytest<5.4.0
+pytest
 mock
 pytest-watch
 pytest-cache
 pytest-cov
-pytest-sugar
 statsd
 tox
 webtest

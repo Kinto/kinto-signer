@@ -208,7 +208,7 @@ class LocalUpdater(object):
                     FIELD_ID: record[FIELD_ID],
                 }
                 record_uri = (
-                    "/buckets/{bucket_id}/collections" "/{collection_id}/records/{id}"
+                    "/buckets/{bucket_id}/collections/{collection_id}/records/{id}"
                 ).format(**matchdict)
 
                 notify_resource_event(

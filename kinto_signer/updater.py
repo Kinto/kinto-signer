@@ -168,26 +168,62 @@ class LocalUpdater(object):
 
         changed_count = 0
         for record in changes_since_approval:
+            action = None
+            record_before = None
+            impacted = None
+
             dest_record = dest_by_id.get(record[FIELD_ID])
             if dest_record is None:
                 # In source, but not in destination. Must be deleted.
                 if not record.get("deleted"):
-                    self.storage.delete(
+                    tombstone = self.storage.delete(
                         object_id=record[FIELD_ID],
                         last_modified=record[FIELD_LAST_MODIFIED],
                         **storage_kwargs,
                     )
-                    changed_count += 1
+                    action = ACTIONS.DELETE
+                    record_before = record
+                    impacted = tombstone
 
             # In dest_records, but not in source_records. Must be re-created.
             elif record.get("deleted"):
                 self.storage.create(obj=dest_record, **storage_kwargs)
-                changed_count += 1
+                action = ACTIONS.CREATE
+                record_before = None
+                impacted = dest_record
 
             # Differ, restore attributes of dest_record in source.
             else:
                 self.storage.update(object_id=record[FIELD_ID], obj=dest_record, **storage_kwargs)
+                action = ACTIONS.UPDATE
+                record_before = record
+                impacted = dest_record
+
+            if action is not None:
                 changed_count += 1
+                # Notify resource event, in order to leave a trace in the history.
+                matchdict = {
+                    "bucket_id": self.destination["bucket"],
+                    "collection_id": self.destination["collection"],
+                    FIELD_ID: record[FIELD_ID],
+                }
+                record_uri = (
+                    "/buckets/{bucket_id}/collections/{collection_id}/records/{id}"
+                ).format(**matchdict)
+
+                notify_resource_event(
+                    request,
+                    {
+                        "method": "DELETE" if action == ACTIONS.DELETE else "PUT",
+                        "path": record_uri,
+                    },
+                    matchdict=matchdict,
+                    resource_name="record",
+                    parent_id=self.source_collection_uri,
+                    obj=impacted,
+                    action=action,
+                    old=record_before,
+                )
 
         if refresh_last_edit:
             current_userid = request.prefixed_userid

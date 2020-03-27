@@ -3,7 +3,7 @@ Changelog
 
 This document describes changes between each past release.
 
-6.1.0 (unreleased)
+6.1.0 (2020-03-27)
 ------------------
 
 - Send resource events on rollback (#894)

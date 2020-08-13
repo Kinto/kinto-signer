@@ -8,7 +8,7 @@ colander==1.7.0
 colorama==0.4.3
 cornice==5.0.2
 cornice-swagger==1.0.0
-dockerflow==2019.10.0
+dockerflow==2020.6.0
 docutils==0.16
 ecdsa==0.15
 hupper==1.10.2

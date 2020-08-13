@@ -60,7 +60,7 @@ def _get_resource(resource):
 def parse_resources(raw_resources):
     resources = OrderedDict()
 
-    lines = [l.strip() for l in raw_resources.strip().splitlines()]
+    lines = [line.strip() for line in raw_resources.strip().splitlines()]
     for res in lines:
         error_msg = "Malformed resource: %%s (in %r). See kinto-signer README." % res
         if "->" not in res and ";" not in res:

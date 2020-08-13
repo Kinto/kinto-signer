@@ -398,7 +398,7 @@ class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):
         self.addCleanup(patch.stop)
         mocked.post.return_value.json.side_effect = lambda: [
             {
-                "signature": uuid.uuid4().hex.encode("utf-8"),
+                "signature": uuid.uuid4().hex,
                 "hash_algorithm": "",
                 "signature_encoding": "",
                 "content-signature": "",

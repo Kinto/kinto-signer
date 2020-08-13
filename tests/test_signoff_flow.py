@@ -617,8 +617,8 @@ class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
             self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
         )
 
-        self.app.get(self.source_collection + f"/records/r1", headers=self.headers, status=404)
-        self.app.get(self.source_collection + f"/records/r2", headers=self.headers, status=404)
+        self.app.get(self.source_collection + "/records/r1", headers=self.headers, status=404)
+        self.app.get(self.source_collection + "/records/r2", headers=self.headers, status=404)
 
     def test_also_resets_changes_on_preview(self):
         resp = self.app.get(self.preview_collection + "/records", headers=self.headers)

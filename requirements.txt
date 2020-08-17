@@ -1,5 +1,5 @@
 bcrypt==3.2.0
-boto3==1.14.42
+boto3==1.14.43
 botocore==1.17.43
 certifi==2020.6.20
 cffi==1.14.2

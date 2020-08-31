@@ -143,6 +143,11 @@ Here is an example of what a configuration could look like:
 |                                 | ``kinto.signer.signer.local_ecdsa`` or ``kinto.signer.signer.autograph`` |
 |                                 | Have a look at the sections below for more information.                  |
 +---------------------------------+--------------------------------------------------------------------------+
+| kinto.signer.allow_floats       | Allow float values in records (default: ``False``).                      |
+|                                 | Toggling this setting to ``True`` can lead to signature verification     |
+|                                 | errors in clients.                                                       |
+|                                 | See :ref:`kinto_signer.listeners.prevent_float_value`                    |
++---------------------------------+--------------------------------------------------------------------------+
 
 Configuration for the (default) ECDSA local signer
 --------------------------------------------------

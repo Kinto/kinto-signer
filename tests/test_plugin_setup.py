@@ -381,6 +381,32 @@ class SigningErrorTest(BaseWebTest, unittest.TestCase):
         )
 
 
+class RecordChangedTest(BaseWebTest, unittest.TestCase):
+    def setUp(self):
+        super().setUp()
+        self.headers = get_user_headers("me")
+
+        patch = mock.patch("kinto_signer.signer.autograph.requests")
+        self.mock = patch.start()
+        self.addCleanup(patch.stop)
+
+        self.collection_uri = "/buckets/alice/collections/source"
+        self.records_uri = self.collection_uri + "/records"
+        self.app.put_json("/buckets/alice", headers=self.headers)
+        self.app.put_json(self.collection_uri, headers=self.headers)
+
+    def test_returns_400_if_contains_float(self):
+        self.headers = get_user_headers("me")
+        parameters = [
+            ({"a": 3.14}, "a"),
+            ({"a": {"b": 41.0}}, "a.b"),
+        ]
+        for data, path in parameters:
+            body = {"data": data}
+            resp = self.app.post_json(self.records_uri, body, headers=self.headers, status=400)
+            assert path in resp.json["message"]
+
+
 class SourceCollectionDeletion(BaseWebTest, unittest.TestCase):
     @classmethod
     def get_app_settings(cls, extras=None):

@@ -138,8 +138,7 @@ class LocalUpdater(object):
         return changes_count
 
     def refresh_signature(self, request, next_source_status=None):
-        """Refresh the signature without moving records.
-        """
+        """Refresh the signature without moving records."""
         records, timestamp = self.get_destination_records(empty_none=False)
         serialized_records = canonical_json(records, timestamp)
         logger.debug(f"{self.source_collection_uri}:\t'{serialized_records}'")
@@ -236,8 +235,7 @@ class LocalUpdater(object):
         return changed_count
 
     def create_destination(self, request):
-        """Create the destination bucket/collection if they don't already exist.
-        """
+        """Create the destination bucket/collection if they don't already exist."""
         # With the current implementation, the destination is not writable by
         # anyone and readable by everyone.
         # https://github.com/Kinto/kinto-signer/issues/55
@@ -316,7 +314,10 @@ class LocalUpdater(object):
             deleted = record.get("deleted", False)
             if deleted:
                 try:
-                    pushed = self.storage.delete(object_id=record[FIELD_ID], **storage_kwargs,)
+                    pushed = self.storage.delete(
+                        object_id=record[FIELD_ID],
+                        **storage_kwargs,
+                    )
                     action = ACTIONS.DELETE
                 except RecordNotFoundError:
                     # If the record doesn't exists in the destination

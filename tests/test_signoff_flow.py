@@ -250,7 +250,7 @@ class ForceReviewTest(SignoffWebTest, unittest.TestCase):
 
     def test_passing_from_signed_to_to_sign_is_allowed(self):
         """This is useful when the x5u certificate changed and you want
-           to retrigger a new signature."""
+        to retrigger a new signature."""
         self.app.patch_json(
             self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
         )
@@ -661,7 +661,8 @@ class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
         )
         # Delete r1.
         self.app.delete(
-            self.source_collection + "/records/r1", headers=self.headers,
+            self.source_collection + "/records/r1",
+            headers=self.headers,
         )
         # Approve deletion of r1.
         self.app.patch_json(

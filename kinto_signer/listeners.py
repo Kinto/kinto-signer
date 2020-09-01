@@ -230,8 +230,7 @@ def send_signer_events(event):
 def check_collection_status(
     event, resources, group_check_enabled, to_review_enabled, editors_group, reviewers_group
 ):
-    """Make sure status changes are allowed.
-    """
+    """Make sure status changes are allowed."""
     payload = event.payload
 
     current_user_id = event.request.prefixed_userid
@@ -442,8 +441,7 @@ def prevent_collection_delete(event, resources):
 
 
 def check_collection_tracking(event, resources):
-    """Make sure tracking fields are not changed manually/removed.
-    """
+    """Make sure tracking fields are not changed manually/removed."""
     if event.request.prefixed_userid == PLUGIN_USERID:
         return
 
@@ -469,8 +467,7 @@ def check_collection_tracking(event, resources):
 
 
 def set_work_in_progress_status(event, resources):
-    """Put the status in work-in-progress if was signed.
-    """
+    """Put the status in work-in-progress if was signed."""
     resource, signer = pick_resource_and_signer(
         event.request,
         resources,

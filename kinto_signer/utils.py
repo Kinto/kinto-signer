@@ -168,8 +168,7 @@ def ensure_resource_exists(request, resource_name, parent_id, obj, permissions, 
 def notify_resource_event(
     request, request_options, matchdict, resource_name, parent_id, obj, action, old=None
 ):
-    """Helper that triggers resource events as real requests.
-    """
+    """Helper that triggers resource events as real requests."""
     fakerequest = build_request(request, request_options)
     fakerequest.matchdict = matchdict
     fakerequest.bound_data = request.bound_data

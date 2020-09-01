@@ -50,7 +50,8 @@ class LocalUpdaterTest(unittest.TestCase):
 
         self.updater.get_source_records()
         self.storage.list_all.assert_called_with(
-            resource_name="record", parent_id="/buckets/sourcebucket/collections/sourcecollection",
+            resource_name="record",
+            parent_id="/buckets/sourcebucket/collections/sourcecollection",
         )
 
     def test_get_destination_records(self):
@@ -64,7 +65,8 @@ class LocalUpdaterTest(unittest.TestCase):
             resource_name="record", parent_id="/buckets/destbucket/collections/destcollection"
         )
         self.storage.list_all.assert_called_with(
-            resource_name="record", parent_id="/buckets/destbucket/collections/destcollection",
+            resource_name="record",
+            parent_id="/buckets/destbucket/collections/destcollection",
         )
 
     def test_push_records_to_destination(self):

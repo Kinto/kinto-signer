@@ -227,6 +227,14 @@ def includeme(config):
         for_resources=("collection",),
     )
 
+    if not asbool(settings.get("signer.allow_floats", False)):
+        config.add_subscriber(
+            functools.partial(listeners.prevent_float_value, resources=resources),
+            ResourceChanged,
+            for_actions=(ACTIONS.CREATE, ACTIONS.UPDATE),
+            for_resources=("record",),
+        )
+
     sign_data_listener = functools.partial(
         listeners.sign_collection_data, resources=resources, **global_settings
     )

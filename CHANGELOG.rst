@@ -6,7 +6,9 @@ This document describes changes between each past release.
 6.2.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Breaking changes**
+
+- Records cannot contain float values anymore. See ``signer.allow_floats`` settings to toggle old behaviour.
 
 
 6.1.0 (2020-03-27)

@@ -345,6 +345,49 @@ def signer_impacts_resource(signer, bid, cid):
     return False
 
 
+def prevent_float_value(event, resources):
+    """This ResourceChanged event listener will reject records that
+    contain float values.
+
+    In order to be able to align our Canonical JSON implementation with
+    the most elaborated specification [0], we must forbid floats to be
+    introduced in the system.
+
+    This is indeed the only area where our implementation differs, and
+    instead of supporting complex migration paths, getting rid of floats
+    is the simplest approach. Floats can be published as strings if needed.
+
+    [0] https://github.com/gibson042/canonicaljson-spec
+    """
+
+    def scan(d, path=""):
+        for k, v in d.items():
+            path = f"{path}.{k}" if path else k
+            if isinstance(v, float):
+                raise ValueError(
+                    f"'{path}' field contains float value (tip: use integer or string)"
+                )
+            elif isinstance(v, dict):
+                scan(v, path)
+
+    # Only raise in configured resources.
+    resource, _ = pick_resource_and_signer(
+        event.request,
+        resources,
+        bucket_id=event.payload["bucket_id"],
+        collection_id=event.payload["collection_id"],
+    )
+    if resource is None:
+        return
+
+    # Check each created/updated record in the batch.
+    for impacted in event.impacted_objects:
+        try:
+            scan(impacted["new"])
+        except ValueError as e:
+            raise_invalid(message=str(e))
+
+
 def prevent_collection_delete(event, resources):
     request = event.request
     bid = event.payload["bucket_id"]

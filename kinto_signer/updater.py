@@ -1,12 +1,10 @@
 import datetime
 import logging
-import uuid
 from enum import Enum
 
 from kinto.core.events import ACTIONS
 from kinto.core.storage.exceptions import RecordNotFoundError
 from pyramid.security import Everyone
-from pyramid.settings import aslist
 
 from kinto_signer.serializer import canonical_json
 from kinto_signer.utils import STATUS, ensure_resource_exists, notify_resource_event, records_diff
@@ -132,8 +130,6 @@ class LocalUpdater(object):
         self.set_destination_signature(signature, source_attributes, request)
         if next_source_status is not None:
             self.update_source_status(next_source_status, request, previous_source_status)
-
-        self.invalidate_cloudfront_cache(request, timestamp)
 
         return changes_count
 
@@ -455,31 +451,3 @@ class LocalUpdater(object):
             action=ACTIONS.UPDATE,
             old=collection_record,
         )
-
-    def invalidate_cloudfront_cache(self, request, timestamp):
-        settings = request.registry.settings
-        distribution_id = settings.get("signer.distribution_id")
-
-        if not distribution_id:
-            return
-
-        paths = aslist(settings.get("signer.invalidation_paths", "/v1/*"))
-
-        # Paths can have placeholders with destination bucket/collection
-        bid = self.destination["bucket"]
-        cid = self.destination["collection"]
-        paths = [p.format(bucket_id=bid, collection_id=cid) for p in paths]
-
-        try:
-            # Create a boto client
-            client = boto3.client("cloudfront")
-            client.create_invalidation(
-                DistributionId=distribution_id,
-                InvalidationBatch={
-                    "Paths": {"Quantity": len(paths), "Items": paths},
-                    "CallerReference": f"{timestamp}-{uuid.uuid4()}",
-                },
-            )
-            logger.info("Invalidated CloudFront cache at %s" % ", ".join(paths))
-        except Exception:
-            logger.exception("Cache invalidation request failed.")

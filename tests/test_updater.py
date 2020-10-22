@@ -201,27 +201,22 @@ class LocalUpdaterTest(unittest.TestCase):
         self.patch(self.updater, "get_destination_records", return_value=([], "0"))
         self.patch(self.updater, "push_records_to_destination")
         self.patch(self.updater, "set_destination_signature")
-        self.patch(self.updater, "invalidate_cloudfront_cache")
 
         self.updater.sign_and_update_destination(DummyRequest(), {"id": "source"})
 
         assert self.updater.get_destination_records.call_count == 1
         assert self.updater.push_records_to_destination.call_count == 1
         assert self.updater.set_destination_signature.call_count == 1
-        assert self.updater.invalidate_cloudfront_cache.call_count == 1
 
     def test_refresh_signature_does_not_push_records(self):
         self.storage.list_all.return_value = []
         self.patch(self.updater, "set_destination_signature")
         self.patch(self.updater, "push_records_to_destination")
-        self.patch(self.updater, "invalidate_cloudfront_cache")
 
         self.updater.refresh_signature(DummyRequest(), "signed")
 
         assert self.updater.set_destination_signature.call_count == 1
         assert self.updater.push_records_to_destination.call_count == 0
-        # Does not invalidate cloudfront either
-        assert self.updater.invalidate_cloudfront_cache.call_count == 0
 
     def test_refresh_signature_restores_status_on_source(self):
         self.storage.list_all.return_value = []
@@ -241,38 +236,3 @@ class LocalUpdaterTest(unittest.TestCase):
             object_id="sourcecollection",
             obj=new_attrs,
         )
-
-    def test_if_distribution_id_a_cloudfront_invalidation_request_is_triggered(self):
-        request = mock.MagicMock()
-        request.registry.settings = {"signer.distribution_id": "DWIGHTENIS"}
-        with mock.patch("boto3.client") as boto3_client:
-            self.updater.invalidate_cloudfront_cache(request, "tz_1234")
-            call_args = boto3_client.return_value.create_invalidation.call_args
-            params = call_args[1]
-            assert params["DistributionId"] == "DWIGHTENIS"
-            assert params["InvalidationBatch"]["CallerReference"].startswith("tz_1234-")
-            assert params["InvalidationBatch"]["Paths"] == {"Quantity": 1, "Items": ["/v1/*"]}
-
-    def test_does_not_fail_when_cache_invalidation_does(self):
-        request = mock.MagicMock()
-        request.registry.settings = {"signer.distribution_id": "DWIGHTENIS"}
-        with mock.patch("boto3.client") as boto3_client:
-            boto3_client.return_value.create_invalidation.side_effect = ValueError
-            self.updater.invalidate_cloudfront_cache(request, "tz_1234")
-
-    def test_invalidation_paths_can_be_configured(self):
-        request = mock.MagicMock()
-        request.registry.settings = {
-            "signer.distribution_id": "DWIGHTENIS",
-            "signer.invalidation_paths": "/v1/blocklists* "
-            "/v1/buckets/{bucket_id}/collections/{collection_id}*",
-        }
-        with mock.patch("boto3.client") as boto3_client:
-            self.updater.invalidate_cloudfront_cache(request, "tz_1234")
-            call_args = boto3_client.return_value.create_invalidation.call_args
-            params = call_args[1]
-            assert params["InvalidationBatch"]["Paths"]["Quantity"] == 2
-            assert params["InvalidationBatch"]["Paths"]["Items"] == [
-                "/v1/blocklists*",
-                "/v1/buckets/destbucket/collections/destcollection*",
-            ]

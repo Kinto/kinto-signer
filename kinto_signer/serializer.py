@@ -1,6 +1,6 @@
 import operator
 
-from kinto_signer import canonicaljson
+import canonicaljson
 
 
 def canonical_json(records, last_modified):

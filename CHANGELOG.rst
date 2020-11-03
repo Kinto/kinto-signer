@@ -6,7 +6,7 @@ This document describes changes between each past release.
 7.0.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Replaced custom Canonical JSON with ``python-canonicaljson-rs``
 
 
 7.0.0 (2020-09-11)

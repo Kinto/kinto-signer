@@ -330,11 +330,14 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         )
 
         self.app.patch_json(
-            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
+            self.source_collection,
+            {"data": {"status": "to-review", "last_editor_comment": "Double check"}},
+            headers=self.headers,
         )
 
     def test_review_requested_is_triggered(self):
         assert isinstance(self.events[-1], signer_events.ReviewRequested)
+        assert self.events[-1].comment == "Double check"
 
     def test_events_have_details_attributes(self):
         e = self.events[-1]
@@ -351,9 +354,12 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
 
     def test_review_rejected_is_triggered(self):
         self.app.patch_json(
-            self.source_collection, {"data": {"status": "work-in-progress"}}, headers=self.headers
+            self.source_collection,
+            {"data": {"status": "work-in-progress", "last_reviewer_comment": "Wrong"}},
+            headers=self.headers,
         )
         assert isinstance(self.events[-1], signer_events.ReviewRejected)
+        assert self.events[-1].comment == "Wrong"
 
     def test_review_cancelled_is_triggered(self):
         self.app.patch_json(

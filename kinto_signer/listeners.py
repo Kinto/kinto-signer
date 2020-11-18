@@ -185,9 +185,11 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
                 # If no preview collection: just track `last_editor`
                 updater.update_source_review_request_by(event.request)
             review_event_cls = signer_events.ReviewRequested
+            review_event_kw["comment"] = new_collection.get("last_editor_comment", "")
 
         elif old_status == STATUS.TO_REVIEW and new_status == STATUS.WORK_IN_PROGRESS:
             review_event_cls = signer_events.ReviewRejected
+            review_event_kw["comment"] = new_collection.get("last_reviewer_comment", "")
 
         elif new_status == STATUS.TO_REFRESH:
             updater.refresh_signature(event.request, next_source_status=old_status)

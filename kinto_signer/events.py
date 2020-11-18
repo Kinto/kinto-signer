@@ -12,11 +12,15 @@ class BaseEvent(object):
 
 
 class ReviewRequested(BaseEvent):
-    pass
+    def __init__(self, comment, **kwargs):
+        super().__init__(**kwargs)
+        self.comment = comment
 
 
 class ReviewRejected(BaseEvent):
-    pass
+    def __init__(self, comment, **kwargs):
+        super().__init__(**kwargs)
+        self.comment = comment
 
 
 class ReviewApproved(BaseEvent):

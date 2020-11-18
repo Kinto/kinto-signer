@@ -6,7 +6,9 @@ This document describes changes between each past release.
 7.0.1 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**New feature**
+
+- Add comments to sign-off events attributes
 
 
 7.0.0 (2020-09-11)

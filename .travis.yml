@@ -1,13 +1,12 @@
-dist: trusty
 language: python
-python: 3.6
+python: 3.8
 cache: pip
 addons:
   postgresql: "9.5"
 services:
   - docker
 env:
-    - TOX_ENV=py36
+    - TOX_ENV=py38
     - TOX_ENV=kinto-master
     - TOX_ENV=lint
 sudo: false

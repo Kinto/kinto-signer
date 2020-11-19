@@ -307,6 +307,45 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
+    def test_resign_does_not_bump_destination_timestamp(self):
+        resp = self.app.head(self.destination_collection + "/records", headers=self.headers)
+        before = resp.headers["ETag"]
+
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-resign"}}, headers=self.headers
+        )
+
+        resp = self.app.head(self.destination_collection + "/records", headers=self.headers)
+        after = resp.headers["ETag"]
+        assert before == after
+
+    def test_request_review_and_re_sign_does_not_bump_destination_timestamp(self):
+        resp = self.app.head(self.destination_collection + "/records", headers=self.headers)
+        before = resp.headers["ETag"]
+
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.other_headers
+        )
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
+        )
+
+        resp = self.app.head(self.destination_collection + "/records", headers=self.headers)
+        after = resp.headers["ETag"]
+        assert before == after
+
+    def test_old_resign_does_not_bump_destination_timestamp(self):
+        resp = self.app.head(self.destination_collection + "/records", headers=self.headers)
+        before = resp.headers["ETag"]
+
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
+        )
+
+        resp = self.app.head(self.destination_collection + "/records", headers=self.headers)
+        after = resp.headers["ETag"]
+        assert before == after
+
     def test_editor_can_retrigger_a_signature(self):
         # Editor retriggers a signature, without going through review.
         self.app.patch_json(

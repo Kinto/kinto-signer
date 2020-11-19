@@ -176,7 +176,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
             if has_review_enabled:
                 # If preview collection: update and sign preview collection
                 updater.destination = resource["preview"]
-                updater.sign_and_update_destination(
+                changes_count = updater.sign_and_update_destination(
                     event.request,
                     source_attributes=new_collection,
                     next_source_status=STATUS.TO_REVIEW,
@@ -184,7 +184,9 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
             else:
                 # If no preview collection: just track `last_editor`
                 updater.update_source_review_request_by(event.request)
+                changes_count = None
             review_event_cls = signer_events.ReviewRequested
+            review_event_kw["changes_count"] = changes_count
             review_event_kw["comment"] = new_collection.get("last_editor_comment", "")
 
         elif old_status == STATUS.TO_REVIEW and new_status == STATUS.WORK_IN_PROGRESS:

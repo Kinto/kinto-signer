@@ -3,7 +3,7 @@ Changelog
 
 This document describes changes between each past release.
 
-7.0.1 (unreleased)
+8.0.0 (2020-11-19)
 ------------------
 
 **New feature**
@@ -13,6 +13,7 @@ This document describes changes between each past release.
 **Breaking changes**
 
 - Replaced custom Canonical JSON with ``python-canonicaljson-rs``
+- Removed CloudFront invalidation code (#1256)
 
 
 7.0.0 (2020-09-11)

@@ -3,6 +3,12 @@ Changelog
 
 This document describes changes between each past release.
 
+8.1.0 (unreleased)
+------------------
+
+- Nothing changed yet.
+
+
 8.0.0 (2020-11-19)
 ------------------
 

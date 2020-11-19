@@ -10,6 +10,10 @@ This document describes changes between each past release.
 
 - Add comments to sign-off events attributes
 
+**Breaking changes**
+
+- Replaced custom Canonical JSON with ``python-canonicaljson-rs``
+
 
 7.0.0 (2020-09-11)
 ------------------

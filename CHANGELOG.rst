@@ -6,6 +6,12 @@ This document describes changes between each past release.
 7.0.1 (unreleased)
 ------------------
 
+**New feature**
+
+- Add comments to sign-off events attributes
+
+**Breaking changes**
+
 - Replaced custom Canonical JSON with ``python-canonicaljson-rs``
 
 

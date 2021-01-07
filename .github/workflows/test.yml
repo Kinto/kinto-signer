@@ -62,3 +62,9 @@ jobs:
         run: |
           source .venv/bin/activate
           tox -e ${{ matrix.toxenv }}
+
+      - name: Coveralls
+        uses: AndreMiras/coveralls-python-action@develop
+        if: matrix.toxenv == 'py38'
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}

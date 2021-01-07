@@ -3,8 +3,8 @@ Kinto signer
 
 |travis| |coveralls|
 
-.. |travis| image:: https://travis-ci.org/Kinto/kinto-signer.svg?branch=master
-    :target: https://travis-ci.org/Kinto/kinto-signer
+.. |travis| image:: https://img.shields.io/github/workflow/status/Kinto/kinto-signer/test/master
+    :target: https://github.com/Kinto/kinto-attachment/actions
 
 .. |coveralls| image:: https://coveralls.io/repos/github/Kinto/kinto-signer/badge.svg?branch=master
     :target: https://coveralls.io/github/Kinto/kinto-signer?branch=master

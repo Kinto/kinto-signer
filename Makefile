@@ -1,4 +1,4 @@
-VIRTUALENV = virtualenv --python python3.6
+VIRTUALENV = virtualenv --python python3
 VENV := $(shell echo $${VIRTUAL_ENV-$$PWD/.venv})
 PYTHON = $(VENV)/bin/python
 DEV_STAMP = $(VENV)/.dev_env_installed.stamp
@@ -36,11 +36,13 @@ build-requirements:
 tests-once: install-dev
 	$(VENV)/bin/py.test --cov-report term-missing --cov-fail-under 100 --cov kinto_signer
 
-tests: install-dev
-	$(VENV)/bin/tox
+tests: tests-once
 
 black: install-dev
 	$(VENV)/bin/black kinto_signer tests scripts
+
+lint: install-dev
+	$(VENV)/bin/therapist run --use-tracked-files kinto_signer tests scripts
 
 clean:
 	find . -name '*.pyc' -delete
@@ -50,7 +52,7 @@ distclean: clean
 	rm -fr *.egg *.egg-info/
 
 maintainer-clean: distclean
-	rm -fr .venv/ .tox/ dist/ build/
+	rm -fr .venv/ dist/ build/
 
 run-kinto: install-dev
 	$(VENV)/bin/python --version
@@ -70,3 +72,4 @@ need-kinto-running:
 
 functional: install-dev need-kinto-running
 	$(VENV)/bin/py.test tests/functional.py
+	python scripts/e2e.py --editor-auth=token:edit --source-bucket=stage --source-col=e2e

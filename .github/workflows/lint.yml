@@ -18,7 +18,7 @@ jobs:
       - name: Install virtualenv
         run: |
           pip install virtualenv
-          virtualenv --python=python3 .venv
+          make install-dev
 
       - name: Print environment
         run: |
@@ -26,12 +26,6 @@ jobs:
           python --version
           pip --version
 
-      - name: Install dependencies
-        run: |
-          source .venv/bin/activate
-          pip install tox
-
       - name: Lint
         run: |
-          source .venv/bin/activate
-          tox -e lint
+          make lint

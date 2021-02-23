@@ -3,10 +3,12 @@ Changelog
 
 This document describes changes between each past release.
 
-8.1.0 (unreleased)
+8.0.1 (2021-02-23)
 ------------------
 
-- Nothing changed yet.
+**Bug fixes**
+
+- Fix behaviour with preview collection when review is disabled (#1327)
 
 
 8.0.0 (2020-11-19)

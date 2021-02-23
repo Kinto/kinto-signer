@@ -61,7 +61,7 @@ def resource_group(resource, name, default):
     return group.format(collection_id=resource["source"]["collection"])
 
 
-def sign_collection_data(event, resources, to_review_enabled, **kwargs):
+def sign_collection_data(event, resources, **kwargs):
     """
     Listen to resource change events, to check if a new signature is
     requested.
@@ -108,9 +108,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
             event.request, "collection", bucket_id=payload["bucket_id"], id=new_collection["id"]
         )
 
-        has_review_enabled = "preview" in resource and resource.get(
-            "to_review_enabled", to_review_enabled
-        )
+        has_preview_collection = "preview" in resource
 
         payload = payload.copy()
         payload["uri"] = uri
@@ -132,7 +130,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
         event.request._attachment_auto_save = True
 
         if is_new_collection:
-            if has_review_enabled:
+            if has_preview_collection:
                 updater.destination = resource["preview"]
                 updater.sign_and_update_destination(
                     event.request,
@@ -152,6 +150,14 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
 
         elif new_status == STATUS.TO_SIGN:
             # Run signature process (will set `last_reviewer` field).
+            if has_preview_collection:
+                updater.destination = resource["preview"]
+                updater.sign_and_update_destination(
+                    event.request,
+                    source_attributes=new_collection,
+                    previous_source_status=old_status,
+                )
+
             updater.destination = resource["destination"]
             changes_count = updater.sign_and_update_destination(
                 event.request, source_attributes=new_collection, previous_source_status=old_status
@@ -161,7 +167,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
                 # When we refresh the signature, it is mainly in order to make sure that
                 # the latest signer certificate was used. When a preview collection
                 # is configured, we also want to refresh its signature.
-                if has_review_enabled:
+                if has_preview_collection:
                     updater.destination = resource["preview"]
                     updater.sign_and_update_destination(
                         event.request,
@@ -173,7 +179,7 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
                 review_event_kw["changes_count"] = changes_count
 
         elif new_status == STATUS.TO_REVIEW:
-            if has_review_enabled:
+            if has_preview_collection:
                 # If preview collection: update and sign preview collection
                 updater.destination = resource["preview"]
                 changes_count = updater.sign_and_update_destination(
@@ -195,14 +201,14 @@ def sign_collection_data(event, resources, to_review_enabled, **kwargs):
 
         elif new_status == STATUS.TO_REFRESH:
             updater.refresh_signature(event.request, next_source_status=old_status)
-            if has_review_enabled:
+            if has_preview_collection:
                 updater.destination = resource["preview"]
                 updater.refresh_signature(event.request, next_source_status=old_status)
 
         elif new_status == STATUS.TO_ROLLBACK:
             # Reset source with destination content, and set status to SIGNED.
             changes_count = updater.rollback_changes(event.request)
-            if has_review_enabled:
+            if has_preview_collection:
                 # Reset preview with destination content.
                 updater.source = resource["preview"]
                 changes_count += updater.rollback_changes(event.request, refresh_last_edit=False)

@@ -248,7 +248,7 @@ class ForceReviewTest(SignoffWebTest, unittest.TestCase):
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "work-in-progress"
 
-    def test_passing_from_signed_to_to_sign_is_allowed(self):
+    def test_passing_from_signed_to_to_sign_is_not_allowed(self):
         """This is useful when the x5u certificate changed and you want
         to retrigger a new signature."""
         self.app.patch_json(
@@ -260,11 +260,13 @@ class ForceReviewTest(SignoffWebTest, unittest.TestCase):
         resp = self.app.get(self.source_collection, headers=self.other_headers)
         assert resp.json["data"]["status"] == "signed"
 
-        self.app.patch_json(
-            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
+        resp = self.app.patch_json(
+            self.source_collection,
+            {"data": {"status": "to-sign"}},
+            headers=self.other_headers,
+            status=400,
         )
-        resp = self.app.get(self.source_collection, headers=self.headers)
-        assert resp.json["data"]["status"] == "signed"
+        assert resp.json["message"] == "Collection already signed"
 
     def test_editor_cannot_be_reviewer(self):
         self.app.patch_json(
@@ -334,18 +336,6 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
         after = resp.headers["ETag"]
         assert before == after
 
-    def test_old_resign_does_not_bump_destination_timestamp(self):
-        resp = self.app.head(self.destination_collection + "/records", headers=self.headers)
-        before = resp.headers["ETag"]
-
-        self.app.patch_json(
-            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
-        )
-
-        resp = self.app.head(self.destination_collection + "/records", headers=self.headers)
-        after = resp.headers["ETag"]
-        assert before == after
-
     def test_editor_can_retrigger_a_signature(self):
         # Editor retriggers a signature, without going through review.
         self.app.patch_json(
@@ -355,23 +345,9 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
 
-        # Old way (status: to-sign)
-        self.app.patch_json(
-            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
-        )
-        resp = self.app.get(self.source_collection, headers=self.headers)
-        assert resp.json["data"]["status"] == "signed"
-
     def test_reviewer_can_retrigger_a_signature(self):
         self.app.patch_json(
             self.source_collection, {"data": {"status": "to-resign"}}, headers=self.other_headers
-        )
-        resp = self.app.get(self.source_collection, headers=self.headers)
-        assert resp.json["data"]["status"] == "signed"
-
-        # Old way (status: to-sign)
-        self.app.patch_json(
-            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.other_headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
@@ -399,13 +375,6 @@ class RefreshSignatureTest(SignoffWebTest, unittest.TestCase):
 
         self.app.patch_json(
             self.source_collection, {"data": {"status": "to-resign"}}, headers=writer_headers
-        )
-        resp = self.app.get(self.source_collection, headers=self.headers)
-        assert resp.json["data"]["status"] == "signed"
-
-        # Old way (status: to-sign)
-        self.app.patch_json(
-            self.source_collection, {"data": {"status": "to-sign"}}, headers=writer_headers
         )
         resp = self.app.get(self.source_collection, headers=self.headers)
         assert resp.json["data"]["status"] == "signed"
@@ -946,15 +915,6 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
         signature_destination_after = resp.json["data"]["signature"]
         assert signature_destination_before != signature_destination_after
         resp = self.app.get(self.preview_collection, headers=self.headers)
-        signature_preview_after = resp.json["data"]["signature"]
-        assert signature_preview_before != signature_preview_after
-
-        # Resign the old way.
-        self.app.patch_json(
-            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
-        )
-        resp = self.app.get(self.preview_collection, headers=self.headers)
-        signature_preview_before = signature_preview_after
         signature_preview_after = resp.json["data"]["signature"]
         assert signature_preview_before != signature_preview_after
 

@@ -418,7 +418,7 @@ class SignoffEventsTest(BaseWebTest, unittest.TestCase):
         )
         del self.events[:]
         self.app.patch_json(
-            self.source_collection, {"data": {"status": "to-sign"}}, headers=self.headers
+            self.source_collection, {"data": {"status": "to-resign"}}, headers=self.headers
         )
         assert len(self.events) == 0
 

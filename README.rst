@@ -4,13 +4,13 @@ Kinto signer
 |travis| |coveralls|
 
 .. |travis| image:: https://img.shields.io/github/workflow/status/Kinto/kinto-signer/test/master
-    :target: https://github.com/Kinto/kinto-attachment/actions
+    :target: https://github.com/Kinto/kinto-signer/actions
 
 .. |coveralls| image:: https://coveralls.io/repos/github/Kinto/kinto-signer/badge.svg?branch=master
     :target: https://coveralls.io/github/Kinto/kinto-signer?branch=master
 
 **Kinto signer** is a `Kinto <https://kinto.readthedocs.io>`_ plugin
-that signs records with a `content signature <https://github.com/mozilla-services/autograph/blob/e7c33d6/signer/contentsignature/README.rst>`_
+that signs records with a `content signature <https://github.com/mozilla-services/autograph/blob/3dc9cfc/signer/contentsignature/README.rst>`_
 to guarantee their integrity and authenticity.
 
 
@@ -48,66 +48,16 @@ Kinto-signer produces signatures for the content of Kinto collections using
 `ECDSA <https://fr.wikipedia.org/wiki/Elliptic_curve_digital_signature_algorithm>`_
 with the P-384 strength.
 
+* ``content = {"data": sorted(records, key=operator.itemgetter("id")), "last_modified": f"{last_modified}"}``
 * The content is prepended with ``Content-Signature:\x00`` prior to signing.
 * The signature is produced with ECDSA on P-384 using SHA-384.
 * The signature is returned as encoded using URL-safe variant of base-64.
 
-See `Content Signature <https://github.com/mozilla-services/autograph/blob/e7c33d6/signer/contentsignature/README.rst>`_
+References:
 
-The content signature is validated in Firefox using the `Personal Security Manager <https://developer.mozilla.org/en/docs/Mozilla/Projects/PSM>`_.
-
-
-Notes on canonical JSON
------------------------
-
-The ``canonical_json()`` can be used in projects with:
-
-.. code-block:: bash
-
-    pip install --no-deps kinto-signer
-
-.. code-block:: python
-
-    from kinto_signer.serializer import canonical_json
-
-Specific to Kinto:
-
-* The payload to be signed has two attributes: ``last_modified`` with the
-  current timestamp as a string, ``data`` with the array of records.
-* Records are sorted by ascending ``id``
-* Records with ``deleted: true`` are omitted
-
-Standard canonical JSON:
-
-* Object keys are sorted alphabetically
-* No extra spaces in serialized content
-* Double quotes are used
-* Hexadecimal character escape sequences are used
-* The alphabetical hexadecimal digits are lowercase
-* Duplicate or empty properties are omitted
-* ``NaN`` and ``Infinity`` are serialized as ``null``
-
-About numbers:
-
-* Scientific notation is used for numbers < 10e-6 and >= 10e21
-* Exponents use a lowercase ``e`` and have no leading zeros
-* Only significant numbers are kept (no fractional zeros)
-* Float are serialized with 8 significant numbers at most
-
-.. code-block:: python
-
-    >>> canonical_json([{'id': '4', 'a': '"quoted"', 'b': 'Ich ♥ Bücher'},
-                        {'id': '1', 'deleted': true},
-                        {'id': '26', 'a': ''}])
-
-    '[{"a":"","id":"26"},{"a":"\\"quoted\\"","b":"Ich \\u2665 B\\u00fccher","id":"4"}]'
-
-
-* `Gecko client side code <https://searchfox.org/mozilla-central/rev/7c848ac7630df5baf1314b0c03e015683599efb9/toolkit/modules/CanonicalJSON.jsm>`_
-* `ES6 Number#toString() <https://www.ecma-international.org/ecma-262/6.0/#sec-tostring-applied-to-the-number-type>`_ to obtain similar output for floats
-* See `Internet-Draft Predictable Serialization for JSON Tools <https://tools.ietf.org/html/draft-rundgren-predictable-serialization-for-json-00>`_
-* See `jsesc <https://github.com/mathiasbynens/jsesc>`_ to obtain similar output
-  for escape sequences in JavaScript.
+* `Content Signature <https://github.com/mozilla-services/autograph/blob/e7c33d6/signer/contentsignature/README.rst>`_ on Mozilla Autograph
+* `canonical json implementation <https://github.com/mozilla-services/python-canonicaljson-rs>`_
+* Signature validation in Firefox is done using the `Personal Security Manager <https://developer.mozilla.org/en/docs/Mozilla/Projects/PSM>`_.
 
 
 Setup
@@ -276,27 +226,6 @@ Or prefixed with bucket and collection:
     kinto.signer.<bucket-id>.<collection-id>.ecdsa.private_key = /path/to/private.pem
     kinto.signer.<bucket-id>.<collection-id>.ecdsa.public_key = /path/to/public.pem
 
-
-Cloudfront CDN invalidation
----------------------------
-
-When a request for review or approval is done, the changes are pushed to the preview
-or destination collection.
-
-For the setups where those public collections are served behind a Cloudfront CDN,
-*kinto-signer* can take care of invalidating some paths.
-
-.. code-block:: ini
-
-    kinto.signer.distribution_id = E155JIFUEHFGY
-
-By default, it invalidates the whole CDN (``/v1/*``). But paths can be configured:
-
-.. code-block:: ini
-
-    kinto.signer.invalidation_paths = /v1/buckets/{bucket_id}/collections/{collection_id}*
-                                      /v1/buckets/monitor/collections/changes*
-                                      /v1/blocklist/*
 
 Usage
 =====

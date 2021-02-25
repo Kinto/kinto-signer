@@ -6,7 +6,9 @@ This document describes changes between each past release.
 8.1.0 (unreleased)
 ------------------
 
-- Nothing changed yet.
+**Breaking changes**
+
+- Removed ability to resign using ``to-sign`` twice. Use to ``to-resign`` instead.
 
 
 8.0.1 (2021-02-23)

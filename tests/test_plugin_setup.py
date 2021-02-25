@@ -331,7 +331,9 @@ class BatchTest(BaseWebTest, unittest.TestCase):
 
     def test_various_collections_can_be_signed_using_batch(self):
         self.app.put_json("/buckets/alice/collections/source", headers=self.headers)
+        self.app.post_json("/buckets/alice/collections/source/records", headers=self.headers)
         self.app.put_json("/buckets/bob/collections/source", headers=self.headers)
+        self.app.post_json("/buckets/bob/collections/source/records", headers=self.headers)
 
         self.app.post_json(
             "/batch",

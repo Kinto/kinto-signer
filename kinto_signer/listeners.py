@@ -159,24 +159,11 @@ def sign_collection_data(event, resources, **kwargs):
                 )
 
             updater.destination = resource["destination"]
+            review_event_cls = signer_events.ReviewApproved
             changes_count = updater.sign_and_update_destination(
                 event.request, source_attributes=new_collection, previous_source_status=old_status
             )
-
-            if old_status == STATUS.SIGNED:
-                # When we refresh the signature, it is mainly in order to make sure that
-                # the latest signer certificate was used. When a preview collection
-                # is configured, we also want to refresh its signature.
-                if has_preview_collection:
-                    updater.destination = resource["preview"]
-                    updater.sign_and_update_destination(
-                        event.request,
-                        source_attributes=new_collection,
-                        previous_source_status=old_status,
-                    )
-            else:
-                review_event_cls = signer_events.ReviewApproved
-                review_event_kw["changes_count"] = changes_count
+            review_event_kw["changes_count"] = changes_count
 
         elif new_status == STATUS.TO_REVIEW:
             if has_preview_collection:
@@ -302,19 +289,19 @@ def check_collection_status(
         elif new_status == STATUS.TO_SIGN:
             # Refresh signature (signed -> to-sign) does not require group membership
             if old_status == STATUS.SIGNED:
-                continue
+                raise_invalid(message="Collection already signed")
 
             # Only allow to-sign from to-review if reviewer and no-editor
             if reviewers_group_uri not in user_principals and _group_check_enabled:
                 raise_forbidden(message="Not in %s group" % _reviewers_group)
 
             if old_status != STATUS.TO_REVIEW and _to_review_enabled:
-                raise_invalid(message="Collection not reviewed")
+                raise_invalid(message="Collection not under review")
 
             field_last_requester = TRACKING_FIELDS.LAST_REVIEW_REQUEST_BY.value
             is_same_editor = old_collection.get(field_last_requester) == current_user_id
             if _to_review_enabled and is_same_editor:
-                raise_forbidden(message="Editor cannot review")
+                raise_forbidden(message="Last editor cannot review")
 
         # 4. to-sign -> signed
         elif new_status == STATUS.SIGNED:

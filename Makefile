@@ -72,4 +72,4 @@ need-kinto-running:
 
 functional: install-dev need-kinto-running
 	$(VENV)/bin/py.test tests/functional.py
-	python scripts/e2e.py --editor-auth=token:edit --source-bucket=stage --source-col=e2e
+	$(VENV)/bin/python scripts/e2e.py --editor-auth=token:edit --source-bucket=stage --source-col=e2e

@@ -1,13 +1,13 @@
 actions:
   black:
-    run: black --check {files}
-    fix: black {files}
+    run: .venv/bin/black --check {files}
+    fix: .venv/bin/black {files}
     include: "*.py"
     exclude:
       - .venv/
 
   flake8:
-    run: flake8 {files}
+    run: .venv/bin/flake8 {files}
     include: "*.py"
     exclude:
       - .venv/

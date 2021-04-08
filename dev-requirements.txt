@@ -9,4 +9,5 @@ webtest
 kinto[postgresql]
 kinto-attachment
 black
+flake8
 therapist

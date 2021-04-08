@@ -13,6 +13,7 @@ OBJECTS = .venv .coverage
 all: install
 install: $(INSTALL_STAMP)
 $(INSTALL_STAMP): $(PYTHON) setup.py
+	$(VENV)/bin/pip install -r requirements.txt
 	$(VENV)/bin/pip install -e .
 	touch $(INSTALL_STAMP)
 

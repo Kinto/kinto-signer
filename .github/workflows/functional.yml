@@ -30,21 +30,16 @@ jobs:
         with:
           python-version: "3.8"
 
-      - name: Install virtualenv
+      - name: Install dependencies
         run: |
           pip install virtualenv
-          virtualenv --python=python3 .venv
+          make install-dev
 
       - name: Print environment
         run: |
           source .venv/bin/activate
           python --version
           pip --version
-
-      - name: Install dependencies
-        run: |
-          source .venv/bin/activate
-          make install-dev
 
       - name: Start autograph
         run: |
@@ -59,10 +54,8 @@ jobs:
 
       - name: Start Kinto
         run: |
-          source .venv/bin/activate
           make run-kinto & sleep 5
 
       - name: Functional Tests
         run: |
-          source .venv/bin/activate
-          tox -e functional
+          make functional

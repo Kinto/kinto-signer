@@ -45,7 +45,7 @@ class PostgresWebTest(BaseWebTest):
         settings = super().get_app_settings(extras)
 
         settings["storage_backend"] = "kinto.core.storage.postgresql"
-        db = "postgres://postgres:postgres@localhost/testdb"
+        db = "postgresql://postgres:postgres@localhost/testdb"
         settings["storage_url"] = db
         settings["permission_backend"] = "kinto.core.permission.postgresql"
         settings["permission_url"] = db

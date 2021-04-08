@@ -5,9 +5,9 @@ pytest-watch
 pytest-cache
 pytest-cov
 statsd
-tox
 webtest
 kinto[postgresql]
 kinto-attachment
 black
+flake8
 therapist

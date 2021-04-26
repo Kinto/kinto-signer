@@ -163,12 +163,11 @@ class ResourceEventsTest(BaseWebTest, unittest.TestCase):
         self._sign()
         before = len(listener.received)
 
-        self.app.patch_json(self.source_collection,
-                            {"data": {"status": "to-resign"}},
-                            headers=self.headers)
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-resign"}}, headers=self.headers
+        )
 
-        events = [e for e in listener.received[before:]
-                  if e.payload["collection_id"] == "scid"]
+        events = [e for e in listener.received[before:] if e.payload["collection_id"] == "scid"]
         assert len(events) == 2
         event_tosign = events[0]
         assert len(event_tosign.impacted_records) == 1

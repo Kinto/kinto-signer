@@ -1,0 +1,40 @@
+version: 2
+updates:
+- package-ecosystem: pip
+  directory: "/"
+  schedule:
+    interval: weekly
+  open-pull-requests-limit: 99
+  ignore:
+  - dependency-name: idna
+    versions:
+    - ">= 3.1.a, < 3.2"
+  - dependency-name: pyramid
+    versions:
+    - ">= 2.0.a, < 2.1"
+  - dependency-name: s3transfer
+    versions:
+    - 0.3.6
+    - 0.3.7
+  - dependency-name: boto3
+    versions:
+    - 1.17.22
+    - 1.17.33
+    - 1.17.39
+    - 1.17.44
+    - 1.17.53
+  - dependency-name: botocore
+    versions:
+    - 1.20.33
+    - 1.20.39
+    - 1.20.44
+    - 1.20.53
+  - dependency-name: docutils
+    versions:
+    - "0.17"
+  - dependency-name: zope-interface
+    versions:
+    - 5.3.0
+  - dependency-name: urllib3
+    versions:
+    - 1.26.4

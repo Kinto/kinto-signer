@@ -1,6 +1,6 @@
 attrs==21.2.0
 bcrypt==3.2.0
-boto3==1.17.73
+boto3==1.17.79
 botocore==1.20.78
 canonicaljson-rs==0.3.0
 certifi==2020.12.5

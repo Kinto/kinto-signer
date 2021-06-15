@@ -223,7 +223,11 @@ class LocalUpdater(object):
         if refresh_last_edit:
             current_userid = request.prefixed_userid
             current_date = datetime.datetime.now(datetime.timezone.utc).isoformat()
-            attrs = {"status": STATUS.SIGNED.value}
+            attrs = {
+                "status": STATUS.SIGNED.value,
+                "last_editor_comment": "",
+                "last_reviewer_comment": "",
+            }
             attrs[TRACKING_FIELDS.LAST_EDIT_BY.value] = current_userid
             attrs[TRACKING_FIELDS.LAST_EDIT_DATE.value] = current_date
             self._update_source_attributes(request, **attrs)
@@ -409,6 +413,9 @@ class LocalUpdater(object):
         if status == STATUS.TO_REVIEW:
             attrs[TRACKING_FIELDS.LAST_REVIEW_REQUEST_BY.value] = current_userid
             attrs[TRACKING_FIELDS.LAST_REVIEW_REQUEST_DATE.value] = current_date
+            # Make sure we reset the review comments if none is specified.
+            if "last_editor_comment" not in request.validated["body"].get("data", {}):
+                attrs["last_editor_comment"] = ""
         if status == STATUS.SIGNED:
             if old_status != STATUS.SIGNED:
                 # Do not keep track of reviewer when refreshing signature.

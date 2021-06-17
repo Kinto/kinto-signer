@@ -10,6 +10,10 @@ This document describes changes between each past release.
 
 - Removed ability to resign using ``to-sign`` twice. Use to ``to-resign`` instead.
 
+**Bug fixes**
+
+- Reset the editor/reviewer comments when not specified.
+
 
 8.0.1 (2021-02-23)
 ------------------

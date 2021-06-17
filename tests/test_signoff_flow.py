@@ -585,6 +585,26 @@ class RollbackChangesTest(SignoffWebTest, unittest.TestCase):
         after_date = resp.json["data"]["last_edit_date"]
         assert before_date != after_date
 
+    def test_comments_are_reset(self):
+        self.app.patch_json(
+            self.source_collection,
+            {
+                "data": {
+                    "last_editor_comment": "please check that",
+                    "last_reviewer_comment": "looks good",
+                }
+            },
+            headers=self.headers,
+        )
+
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-rollback"}}, headers=self.headers
+        )
+
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["last_editor_comment"] == ""
+        assert resp.json["data"]["last_reviewer_comment"] == ""
+
     def test_recreates_deleted_record(self):
         resp = self.app.delete(
             self.source_collection + "/records?_limit=1&_sort=last_modified", headers=self.headers
@@ -954,6 +974,25 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
         resp = self.app.get(self.preview_collection + "/records", headers=self.headers)
         records = resp.json["data"]
         assert len(records) == 0
+
+    def test_last_editor_comment_are_reset_on_review(self):
+        self.app.patch_json(
+            self.source_collection,
+            {
+                "data": {
+                    "last_editor_comment": "please check that",
+                    "last_reviewer_comment": "looks good",
+                }
+            },
+            headers=self.headers,
+        )
+
+        self.app.patch_json(
+            self.source_collection, {"data": {"status": "to-review"}}, headers=self.headers
+        )
+
+        resp = self.app.get(self.source_collection, headers=self.headers)
+        assert resp.json["data"]["last_editor_comment"] == ""
 
 
 class CollectionDelete(SignoffWebTest, unittest.TestCase):

@@ -904,12 +904,19 @@ class PreviewCollectionTest(SignoffWebTest, unittest.TestCase):
     def test_the_preview_collection_receives_kinto_admin_ui_attributes(self):
         self.app.patch_json(
             self.source_collection,
-            {"data": {"status": "to-review", "displayFields": ["age"]}},
+            {
+                "data": {
+                    "status": "to-review",
+                    "displayFields": ["age"],
+                    "schema": {"type": "object"},
+                }
+            },
             headers=self.headers,
         )
 
         resp = self.app.get(self.preview_collection, headers=self.headers)
         assert resp.json["data"]["displayFields"] == ["age"]
+        assert "schema" in resp.json["data"]
 
     def test_the_preview_collection_is_also_resigned(self):
         self.app.patch_json(

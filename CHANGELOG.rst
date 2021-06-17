@@ -10,6 +10,10 @@ This document describes changes between each past release.
 
 - Removed ability to resign using ``to-sign`` twice. Use to ``to-resign`` instead.
 
+**New feature**
+
+- Copy ``schema`` field to destination metadata (fixes #518)
+
 **Bug fixes**
 
 - Reset the editor/reviewer comments when not specified.

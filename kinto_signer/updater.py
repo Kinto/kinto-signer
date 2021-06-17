@@ -19,6 +19,8 @@ logger = logging.getLogger(__name__)
 
 FIELD_ID = "id"
 FIELD_LAST_MODIFIED = "last_modified"
+# Source collection fields to be copied to destination.
+PUBLISHED_COLLECTION_FIELDS = ("schema", "sort", "displayFields", "attachment")
 
 
 class TRACKING_FIELDS(Enum):
@@ -371,8 +373,7 @@ class LocalUpdater(object):
         new_collection = dict(**collection_record)
         new_collection.pop(FIELD_LAST_MODIFIED, None)
         new_collection["signature"] = signature
-        # Copy some Kinto-Admin UI attributes from source to destination.
-        for attr in ("sort", "displayFields", "attachment"):
+        for attr in PUBLISHED_COLLECTION_FIELDS:
             if attr in source_attributes:
                 new_collection.setdefault(attr, source_attributes[attr])
 

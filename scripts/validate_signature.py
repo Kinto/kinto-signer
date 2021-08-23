@@ -4,7 +4,7 @@ from kinto_signer.hasher import compute_hash
 from kinto_signer.signer.local_ecdsa import ECDSASigner
 
 
-DEFAULT_SERVER = "https://settings-cdn.stage.mozaws.net/v1"
+DEFAULT_SERVER = "https://kinto.stage.mozaws.net/v1"
 DEST_BUCKET = "blocklists"
 DEST_COLLECTION = "certificates"
 

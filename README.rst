@@ -1,9 +1,9 @@
 Kinto signer
 ############
 
-|travis| |coveralls|
+|ci| |coveralls|
 
-.. |travis| image:: https://img.shields.io/github/workflow/status/Kinto/kinto-signer/test/master
+.. |ci| image:: https://github.com/Kinto/kinto-signer/actions/workflows/test.yml/badge.svg
     :target: https://github.com/Kinto/kinto-signer/actions
 
 .. |coveralls| image:: https://coveralls.io/repos/github/Kinto/kinto-signer/badge.svg?branch=master

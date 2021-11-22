@@ -14,7 +14,7 @@ dockerflow==2021.7.0
 ecdsa==0.17.0
 hupper==1.10.3
 idna==3.3
-iso8601==1.0.0
+iso8601==1.0.1
 jmespath==0.10.0
 jsonpatch==1.32
 jsonpointer==2.2
